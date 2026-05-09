@@ -1,0 +1,11 @@
+Symbol,Name,Quantity,Avg_Buy_Price,Asset_Type,Exchange,Sector
+RELIANCE.NS,Reliance Industries,10,2400.00,Equity,NSE,Energy
+INFY.NS,Infosys Ltd,25,1500.00,Equity,NSE,IT
+HDFCBANK.NS,HDFC Bank,15,1600.00,Equity,NSE,Banking
+TCS.NS,Tata Consultancy Services,8,3800.00,Equity,NSE,IT
+WIPRO.NS,Wipro Ltd,30,480.00,Equity,NSE,IT
+VTI,Vanguard Total Market ETF,5,220.00,ETF,NYSE,US Market
+QQQ,Invesco QQQ Trust,3,430.00,ETF,NASDAQ,US Tech
+INDA,iShares MSCI India ETF,20,45.00,ETF,NYSE,India Index
+GOLDBEES.NS,Nippon Gold BeES,50,58.00,Gold ETF,NSE,Gold
+LIQUIDBEES.NS,Nippon Liquid BeES,100,1000.00,Liquid ETF,NSE,Liquid

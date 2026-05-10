@@ -20,7 +20,7 @@ def render_news_page():
     with col1:
         news_query = st.text_input(
             "",
-            placeholder="Ask about market news — e.g. What is the outlook for Indian IT sector?",
+            placeholder="Ask about market news - e.g. What is the outlook for Indian IT sector?",
             label_visibility="collapsed"
         )
     with col2:
@@ -59,7 +59,15 @@ def render_news_page():
                         <span style="color:#4A5A72; font-size:0.75rem;"><i class="fa-solid fa-calendar"></i> {pub}</span>
                     </div>
                     """, unsafe_allow_html=True)
-                if article.get('url'):
-                    st.markdown(f'<a href="{article[\"url\"]}" target="_blank" style="color:#C9A84C; font-size:0.8rem;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Read Full Article</a>', unsafe_allow_html=True)
+                # Extract URL before using in f-string to avoid escaped quote SyntaxError
+                article_url = article.get('url', '')
+                if article_url:
+                    link_html = (
+                        f'<a href="{article_url}" target="_blank" '
+                        f'style="color:#C9A84C; font-size:0.8rem; text-decoration:none;">'
+                        f'<i class="fa-solid fa-arrow-up-right-from-square"></i> '
+                        f'Read Full Article</a>'
+                    )
+                    st.markdown(link_html, unsafe_allow_html=True)
     else:
         st.warning("No articles found. Check your NewsAPI key in the .env file.")

@@ -112,7 +112,7 @@ with st.sidebar:
 # ===== IMPORTS =====
 from ui.dashboard    import render_dashboard
 from ui.upload_page  import render_upload_page
-from ui.cfo_page     import render_cfo_page
+from ui.advisor_page import render_advisor_page
 from ui.news_page    import render_news_page
 
 # ===== ROUTING =====
@@ -121,6 +121,6 @@ if "Dashboard" in page:
 elif "Upload" in page:
     render_upload_page()
 elif "CFO" in page:
-    render_cfo_page()
+  render_advisor_page()
 elif "News" in page:
     render_news_page()

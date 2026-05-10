@@ -73,15 +73,17 @@ def render_dashboard():
     section_title("fa-solid fa-chart-donut", "Asset Allocation")
     allocation_by_type = compute_allocation_by_type(portfolio_df)
 
+    # Build target — start with defaults, allow user to override via expander
+    target = dict(DEFAULT_TARGET_ALLOCATION)
     with st.expander("Configure Target Allocation", expanded=False):
-        target = {}
+        custom_target = {}
         for cat, pct in DEFAULT_TARGET_ALLOCATION.items():
-            target[cat] = st.slider(cat, 0.0, 100.0, float(pct), step=1.0)
-        total_target = sum(target.values())
+            custom_target[cat] = st.slider(cat, 0.0, 100.0, float(pct), step=1.0)
+        total_target = sum(custom_target.values())
         if abs(total_target - 100) > 0.1:
             st.warning(f"Target sums to {total_target:.0f}% — should be 100%")
-    else:
-        target = DEFAULT_TARGET_ALLOCATION
+        else:
+            target = custom_target
 
     render_allocation_charts(allocation_by_type, target)
 

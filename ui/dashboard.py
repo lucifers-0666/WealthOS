@@ -1,179 +1,212 @@
 import streamlit as st
-from core.portfolio_engine import compute_portfolio_metrics, compute_allocation_by_type, get_summary_stats, compute_portfolio_value_over_time
-from core.target_tracker import compute_target_deviation
-from charts.allocation_chart import render_allocation_charts
-from charts.performance_chart import render_performance_chart
-from charts.gains_chart import render_gains_chart
-from charts.drawdown_chart import render_drawdown_chart
-from ui.components import page_header, section_title, metric_card, render_portfolio_images
-from config import DEFAULT_TARGET_ALLOCATION
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+from loguru import logger
+
+from core.data_loader       import get_sample_holdings
+from core.price_fetcher     import fetch_live_prices
+from core.portfolio_engine  import compute_portfolio_metrics, get_summary_stats
+from ui.components          import page_header, section_title, metric_card
+
+# ---- Plotly base layout matching Deep Space theme ----
+BG         = "rgba(0,0,0,0)"
+GRID       = "rgba(148,163,184,0.08)"
+TEXT       = "#94A3B8"
+BLUE       = "#3B82F6"
+CYAN       = "#22D3EE"
+VIOLET     = "#8B5CF6"
+GREEN      = "#34D399"
+RED        = "#F87171"
+PALETTE    = [BLUE, CYAN, VIOLET, "#F59E0B", GREEN, "#EC4899", "#FB923C", "#A78BFA"]
+
+
+def _base_layout(**kwargs):
+    base = dict(
+        paper_bgcolor=BG, plot_bgcolor=BG,
+        font=dict(family="Inter, Space Grotesk, sans-serif", color=TEXT, size=12),
+        margin=dict(l=16, r=16, t=40, b=16),
+        legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color=TEXT, size=11)),
+        xaxis=dict(gridcolor=GRID, zerolinecolor=GRID, tickfont=dict(color=TEXT)),
+        yaxis=dict(gridcolor=GRID, zerolinecolor=GRID, tickfont=dict(color=TEXT)),
+        colorway=PALETTE,
+    )
+    base.update(kwargs)
+    return base
+
+
+def _load_portfolio():
+    df = st.session_state.get("portfolio_data")
+    prices = st.session_state.get("live_prices", {})
+    if df is None:
+        return None, {}
+    if not prices:
+        with st.spinner("Fetching live prices..."):
+            prices = fetch_live_prices(df['Symbol'].tolist())
+        st.session_state.live_prices = prices
+    df = compute_portfolio_metrics(df, prices)
+    return df, prices
 
 
 def render_dashboard():
-    if st.session_state.portfolio_data is None:
-        _render_welcome()
+    page_header("📊", "Portfolio Dashboard", "Real-time overview of your holdings, gains & allocation")
+
+    df, prices = _load_portfolio()
+
+    if df is None:
+        st.markdown("""
+        <div style="text-align:center;padding:4rem 2rem;">
+          <div style="font-size:3rem;margin-bottom:1rem">📁</div>
+          <p style="font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:600;color:#F8FAFC;margin:0 0 .5rem">No Portfolio Loaded</p>
+          <p style="color:#94A3B8;font-size:.9rem;margin:0 0 1.5rem">Upload your holdings CSV or load the demo portfolio to get started.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Load Demo Portfolio →", type="primary"):
+            st.session_state.portfolio_data = get_sample_holdings()
+            st.rerun()
         return
 
-    df = st.session_state.portfolio_data
-    live_prices = st.session_state.live_prices or {}
-    portfolio_df = compute_portfolio_metrics(df, live_prices)
-    summary = get_summary_stats(portfolio_df)
+    stats = get_summary_stats(df)
 
-    page_header(
-        "fa-solid fa-chart-pie",
-        "Portfolio Dashboard",
-        "Real-time overview of your wealth"
-    )
+    # ---- KPI Row ----
+    section_title("💰", "Portfolio Overview")
+    c1, c2, c3, c4 = st.columns(4)
+    total_val   = stats.get('total_current_value', 0)
+    total_inv   = stats.get('total_invested', 0)
+    total_pnl   = stats.get('total_pnl', 0)
+    total_pnl_p = stats.get('total_pnl_pct', 0)
+    day_pnl     = stats.get('day_pnl', 0)
+    day_pnl_p   = stats.get('day_pnl_pct', 0)
+    num_h       = stats.get('num_holdings', 0)
 
-    # ===== KPI ROW =====
-    pnl = summary['total_pnl']
-    pnl_pct = summary['total_pnl_pct']
-    is_pos = pnl >= 0
-    pnl_sign = "+" if is_pos else ""
+    with c1:
+        metric_card("Portfolio Value",
+                    f"₹{total_val:,.0f}",
+                    f"{total_pnl_p:+.2f}% all-time",
+                    total_pnl >= 0)
+    with c2:
+        metric_card("Total Invested",
+                    f"₹{total_inv:,.0f}",
+                    f"{num_h} holdings")
+    with c3:
+        metric_card("Unrealized P&L",
+                    f"₹{total_pnl:+,.0f}",
+                    f"{total_pnl_p:+.2f}%",
+                    total_pnl >= 0)
+    with c4:
+        metric_card("Today's Change",
+                    f"₹{day_pnl:+,.0f}",
+                    f"{day_pnl_p:+.2f}%",
+                    day_pnl >= 0)
 
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        metric_card(
-            "PORTFOLIO VALUE",
-            f"\u20b9{summary['total_current_value']:,.0f}",
-            delta=f"{pnl_sign}\u20b9{abs(pnl):,.0f} ({pnl_pct:+.1f}%)",
-            positive=is_pos,
-            icon="fa-solid fa-briefcase"
-        )
-    with col2:
-        metric_card(
-            "TOTAL INVESTED",
-            f"\u20b9{summary['total_invested']:,.0f}",
-            icon="fa-solid fa-indian-rupee-sign"
-        )
-    with col3:
-        metric_card(
-            "BEST PERFORMER",
-            summary['best_performer'],
-            positive=True,
-            icon="fa-solid fa-trophy"
-        )
-    with col4:
-        metric_card(
-            "WEAKEST HOLDING",
-            summary['worst_performer'],
-            positive=False,
-            icon="fa-solid fa-triangle-exclamation"
-        )
+    st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    # ---- Charts Row 1: Allocation + P&L Bar ----
+    section_title("🎯", "Allocation & Performance")
+    col_a, col_b = st.columns([1, 1])
 
-    # ===== PORTFOLIO IMAGES =====
-    if st.session_state.get("portfolio_images"):
-        section_title("fa-solid fa-images", "Portfolio Statements & References")
-        render_portfolio_images()
-        st.markdown("<br>", unsafe_allow_html=True)
+    with col_a:
+        fig_pie = go.Figure(go.Pie(
+            labels=df['Symbol'].tolist(),
+            values=df['Current_Value'].tolist(),
+            hole=.52,
+            marker=dict(colors=PALETTE, line=dict(color='rgba(5,8,22,0.8)', width=2)),
+            textfont=dict(size=11, color="#F8FAFC"),
+            hovertemplate="<b>%{label}</b><br>Value: ₹%{value:,.0f}<br>Weight: %{percent}<extra></extra>"
+        ))
+        fig_pie.update_layout(**_base_layout(
+            title=dict(text="Portfolio Allocation", font=dict(size=14, color="#F8FAFC"), x=.5),
+            showlegend=True,
+            legend=dict(orientation="v", x=1.02, y=.5, bgcolor="rgba(0,0,0,0)"),
+            height=340,
+        ))
+        fig_pie.add_annotation(text=f"<b style='font-size:16px'>{num_h}</b><br><span style='font-size:11px;color:#94A3B8'>Holdings</span>",
+                               x=.5, y=.5, showarrow=False, font=dict(color="#F8FAFC", size=14))
+        st.plotly_chart(fig_pie, use_container_width=True)
 
-    # ===== ALLOCATION =====
-    section_title("fa-solid fa-chart-donut", "Asset Allocation")
-    allocation_by_type = compute_allocation_by_type(portfolio_df)
+    with col_b:
+        df_sorted = df.sort_values('PnL_Pct', ascending=True)
+        colors_bar = [GREEN if v >= 0 else RED for v in df_sorted['PnL_Pct']]
+        fig_bar = go.Figure(go.Bar(
+            y=df_sorted['Symbol'],
+            x=df_sorted['PnL_Pct'],
+            orientation='h',
+            marker=dict(color=colors_bar, line=dict(width=0)),
+            hovertemplate="<b>%{y}</b><br>P&L: %{x:.2f}%<extra></extra>",
+            text=[f"{v:+.1f}%" for v in df_sorted['PnL_Pct']],
+            textposition='outside',
+            textfont=dict(size=10, color="#94A3B8")
+        ))
+        fig_bar.update_layout(**_base_layout(
+            title=dict(text="P&L % by Holding", font=dict(size=14, color="#F8FAFC"), x=.5),
+            xaxis=dict(gridcolor=GRID, zerolinecolor="rgba(148,163,184,0.3)",
+                       ticksuffix="%", tickfont=dict(color=TEXT)),
+            yaxis=dict(gridcolor=GRID, tickfont=dict(color=TEXT)),
+            height=340,
+            bargap=.3,
+        ))
+        st.plotly_chart(fig_bar, use_container_width=True)
 
-    target = dict(DEFAULT_TARGET_ALLOCATION)
-    with st.expander("Configure Target Allocation", expanded=False):
-        custom_target = {}
-        for cat, pct in DEFAULT_TARGET_ALLOCATION.items():
-            custom_target[cat] = st.slider(cat, 0.0, 100.0, float(pct), step=1.0)
-        total_target = sum(custom_target.values())
-        if abs(total_target - 100) > 0.1:
-            st.warning(f"Target sums to {total_target:.0f}% — should be 100%")
-        else:
-            target = custom_target
+    # ---- Charts Row 2: Sector + Value vs Invested ----
+    section_title("📈", "Sector Breakdown & Cost Basis")
+    col_c, col_d = st.columns([1, 1])
 
-    render_allocation_charts(allocation_by_type, target)
+    with col_c:
+        if 'Sector' in df.columns:
+            sector_df = df.groupby('Sector')['Current_Value'].sum().reset_index()
+            fig_sec = go.Figure(go.Pie(
+                labels=sector_df['Sector'],
+                values=sector_df['Current_Value'],
+                hole=.45,
+                marker=dict(colors=PALETTE, line=dict(color='rgba(5,8,22,0.8)', width=2)),
+                textfont=dict(size=11, color="#F8FAFC"),
+            ))
+            fig_sec.update_layout(**_base_layout(
+                title=dict(text="By Sector", font=dict(size=14, color="#F8FAFC"), x=.5),
+                showlegend=True, height=300,
+            ))
+            st.plotly_chart(fig_sec, use_container_width=True)
 
-    deviation_df = compute_target_deviation(allocation_by_type, target)
-    section_title("fa-solid fa-bullseye", "Target vs Actual Deviation")
-    st.dataframe(deviation_df, use_container_width=True, hide_index=False)
+    with col_d:
+        fig_cost = go.Figure()
+        fig_cost.add_trace(go.Bar(
+            name="Invested", x=df['Symbol'], y=df['Invested_Amount'],
+            marker_color=VIOLET, opacity=.8,
+        ))
+        fig_cost.add_trace(go.Bar(
+            name="Current Value", x=df['Symbol'], y=df['Current_Value'],
+            marker_color=CYAN, opacity=.9,
+        ))
+        fig_cost.update_layout(**_base_layout(
+            title=dict(text="Value vs Cost Basis", font=dict(size=14, color="#F8FAFC"), x=.5),
+            barmode='group', bargap=.25, height=300,
+            legend=dict(orientation="h", y=1.08, x=.5, xanchor="center"),
+        ))
+        st.plotly_chart(fig_cost, use_container_width=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ===== PERFORMANCE =====
-    section_title("fa-solid fa-chart-line", "Portfolio Performance Over Time")
-    txns = st.session_state.transactions_data
-    portfolio_ts = compute_portfolio_value_over_time(txns, live_prices)
-    if not portfolio_ts.empty:
-        render_performance_chart(portfolio_ts)
-    else:
-        st.info("Upload transaction history to see performance timeline.")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ===== GAINS =====
-    section_title("fa-solid fa-arrow-trend-up", "Gains & Losses by Holding")
-    render_gains_chart(portfolio_df)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ===== DRAWDOWN =====
-    section_title("fa-solid fa-chart-waterfall", "Drawdown Analysis")
-    render_drawdown_chart(portfolio_df, live_prices)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ===== HOLDINGS TABLE =====
-    section_title("fa-solid fa-table", "Holdings Detail")
+    # ---- Holdings Table ----
+    section_title("📋", "Holdings Detail")
     display_cols = ['Symbol', 'Name', 'Quantity', 'Avg_Buy_Price', 'Current_Price',
-                    'Current_Value', 'Invested_Amount', 'Unrealized_PnL', 'PnL_Pct', 'Weight_Pct']
-    display_cols = [c for c in display_cols if c in portfolio_df.columns]
+                    'Invested_Amount', 'Current_Value', 'PnL', 'PnL_Pct', 'Weight_Pct']
+    cols_present = [c for c in display_cols if c in df.columns]
+    tbl = df[cols_present].copy()
+    tbl.rename(columns={
+        'Avg_Buy_Price': 'Avg Price', 'Current_Price': 'CMP',
+        'Invested_Amount': 'Invested', 'Current_Value': 'Value',
+        'PnL_Pct': 'P&L %', 'Weight_Pct': 'Weight %'
+    }, inplace=True)
 
-    def _color_pnl(v):
-        """Cell-level styler: green for positive, red for negative numbers."""
-        if isinstance(v, (int, float)):
-            if v > 0:
-                return 'color: #00D4A0'
-            elif v < 0:
-                return 'color: #FF4D6A'
+    def color_pnl(val):
+        if isinstance(val, (int, float)):
+            return 'color: #34D399' if val >= 0 else 'color: #F87171'
         return ''
 
-    styled = (
-        portfolio_df[display_cols]
-        .style
+    styled = tbl.style\
+        .applymap(color_pnl, subset=[c for c in ['PnL', 'P&L %'] if c in tbl.columns])\
         .format({
-            'Avg_Buy_Price':   '\u20b9{:.2f}',
-            'Current_Price':   '\u20b9{:.2f}',
-            'Current_Value':   '\u20b9{:,.0f}',
-            'Invested_Amount': '\u20b9{:,.0f}',
-            'Unrealized_PnL':  '\u20b9{:+,.0f}',
-            'PnL_Pct':         '{:+.2f}%',
-            'Weight_Pct':      '{:.1f}%',
-        })
-        # applymap was renamed to map in pandas 2.1+
-        .map(_color_pnl, subset=['Unrealized_PnL', 'PnL_Pct'])
-    )
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+            'Avg Price': '₹{:.2f}', 'CMP': '₹{:.2f}',
+            'Invested': '₹{:,.0f}', 'Value': '₹{:,.0f}',
+            'PnL': '₹{:+,.0f}', 'P&L %': '{:+.2f}%', 'Weight %': '{:.1f}%'
+        }, na_rep="—")
 
-
-def _render_welcome():
-    page_header(
-        "fa-solid fa-chart-pie",
-        "Portfolio Dashboard",
-        "Load your holdings to get started"
-    )
-
-    st.markdown("""
-    <div class="wealth-card" style="text-align:center; padding:3rem 2rem;">
-        <i class="fa-solid fa-chart-pie" style="font-size:3rem; color:#C9A84C; opacity:0.4; display:block; margin-bottom:1.5rem;"></i>
-        <h3 style="color:#F0EDE6; font-family:'Playfair Display',serif; margin-bottom:0.5rem;">No Portfolio Loaded</h3>
-        <p style="color:#8A9BB5; font-size:0.9rem; margin-bottom:2rem;">Upload your holdings CSV or try the demo portfolio to see your dashboard</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns([1, 1, 2])
-    with col1:
-        if st.button("Load Demo Portfolio", type="primary", use_container_width=True):
-            from core.data_loader import get_sample_holdings, get_sample_transactions
-            from core.price_fetcher import fetch_live_prices
-            st.session_state.portfolio_data = get_sample_holdings()
-            st.session_state.transactions_data = get_sample_transactions()
-            st.session_state.live_prices = fetch_live_prices(st.session_state.portfolio_data['Symbol'].tolist())
-            st.rerun()
-    with col2:
-        if st.button("Go to Upload", use_container_width=True):
-            st.info("Navigate to Upload Data in the sidebar")
+    st.dataframe(styled, use_container_width=True, height=280)

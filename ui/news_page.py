@@ -1,73 +1,82 @@
 import streamlit as st
-from ai.rag_engine import fetch_news_for_symbols, build_rag_vectorstore, query_rag
 from ui.components import page_header, section_title
 
 
 def render_news_page():
-    page_header(
-        "fa-solid fa-newspaper",
-        "News & Market Insights",
-        "RAG-powered financial news relevant to your holdings"
-    )
+    page_header("📰", "Market News", "Live financial news for your watchlist and Indian markets")
 
-    if st.session_state.portfolio_data is None:
-        st.info("Load your portfolio first to see relevant news.")
+    try:
+        from ai.rag_engine import fetch_news_for_symbols
+    except ImportError:
+        st.error("RAG engine not available. Check your installation.")
         return
 
-    symbols = st.session_state.portfolio_data['Symbol'].tolist()
-
-    col1, col2 = st.columns([4, 1])
+    col1, col2 = st.columns([3, 1])
     with col1:
-        news_query = st.text_input(
-            "",
-            placeholder="Ask about market news - e.g. What is the outlook for Indian IT sector?",
+        query = st.text_input(
+            "Search topics",
+            placeholder="e.g. Nifty, Infosys, RBI rate, US Fed, oil prices...",
             label_visibility="collapsed"
         )
     with col2:
-        refresh = st.button("Refresh News", use_container_width=True, type="primary")
+        fetch_btn = st.button("🔄  Fetch News", type="primary", use_container_width=True)
 
-    if refresh or 'news_articles' not in st.session_state:
-        with st.spinner("Fetching latest financial news..."):
-            st.session_state.news_articles = fetch_news_for_symbols(tuple(symbols))
-            st.session_state.rag_vectorstore = build_rag_vectorstore(st.session_state.news_articles)
+    # Build symbols list
+    symbols = ["NIFTY", "SENSEX", "RBI", "India"]
+    if st.session_state.get("portfolio_data") is not None:
+        port_symbols = st.session_state.portfolio_data['Symbol']\
+            .str.replace(r'\.(NS|BO)$', '', regex=True).tolist()
+        symbols = list(set(symbols + port_symbols))
 
-    if news_query and st.session_state.get('rag_vectorstore'):
-        with st.spinner("Searching through news..."):
-            context = query_rag(st.session_state.rag_vectorstore, news_query)
-        if context:
-            section_title("fa-solid fa-magnifying-glass", "Relevant Excerpts")
-            st.markdown(f"""
-            <div class="wealth-card">
-                <p style="color:#8A9BB5; font-size:0.875rem; line-height:1.7;">{context}</p>
+    if query:
+        symbols = [query] + symbols
+
+    if fetch_btn or query:
+        with st.spinner("Fetching latest market news..."):
+            articles = fetch_news_for_symbols(symbols[:8])
+
+        if not articles:
+            st.markdown("""
+            <div class="w-panel" style="text-align:center;padding:2.5rem">
+              <div style="font-size:2.5rem;margin-bottom:.75rem">📰</div>
+              <p style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:#F8FAFC;margin:0 0 .4rem">
+                No Articles Found
+              </p>
+              <p style="color:#94A3B8;font-size:.85rem;margin:0">
+                Add your NewsAPI key to .env to enable live news.
+              </p>
             </div>
             """, unsafe_allow_html=True)
-
-    articles = st.session_state.get('news_articles', [])
-    if articles:
-        section_title("fa-solid fa-list", f"Latest Articles ({len(articles)} found)")
-        for article in articles[:15]:
-            with st.expander(article.get('title', 'No Title')):
-                col_a, col_b = st.columns([3, 1])
-                with col_a:
-                    st.write(article.get('description', 'No description available.'))
-                with col_b:
-                    src = article.get('source', {}).get('name', 'Unknown')
-                    pub = article.get('publishedAt', '')[:10]
-                    st.markdown(f"""
-                    <div style="text-align:right">
-                        <div class="badge-gold"><i class="fa-solid fa-newspaper"></i> {src}</div><br><br>
-                        <span style="color:#4A5A72; font-size:0.75rem;"><i class="fa-solid fa-calendar"></i> {pub}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                # Extract URL before using in f-string to avoid escaped quote SyntaxError
+        else:
+            section_title("📰", f"{len(articles)} Articles Found")
+            for article in articles:
+                title   = article.get('title', 'No title')
+                desc    = article.get('description', '') or ''
+                source  = article.get('source', {}).get('name', 'Unknown')
+                pub     = article.get('publishedAt', '')[:10]
                 article_url = article.get('url', '')
+
+                link_btn = ''
                 if article_url:
-                    link_html = (
-                        f'<a href="{article_url}" target="_blank" '
-                        f'style="color:#C9A84C; font-size:0.8rem; text-decoration:none;">'
-                        f'<i class="fa-solid fa-arrow-up-right-from-square"></i> '
-                        f'Read Full Article</a>'
-                    )
-                    st.markdown(link_html, unsafe_allow_html=True)
+                    link_btn = f'<a href="{article_url}" target="_blank" style="font-size:.75rem;color:#3B82F6;text-decoration:none;font-weight:500">↗ Read full article</a>'
+
+                st.markdown(f"""
+                <div class="news-card">
+                  <div class="news-card-source">{source}</div>
+                  <div class="news-card-title">{title}</div>
+                  <div class="news-card-desc">{desc[:160]}{'...' if len(desc) > 160 else ''}</div>
+                  <div class="news-card-meta">{pub} &nbsp;&bull;&nbsp; {link_btn}</div>
+                </div>
+                """, unsafe_allow_html=True)
     else:
-        st.warning("No articles found. Check your NewsAPI key in the .env file.")
+        st.markdown("""
+        <div class="w-panel" style="text-align:center;padding:3rem">
+          <div style="font-size:2.5rem;margin-bottom:.75rem">📰</div>
+          <p style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.05rem;color:#F8FAFC;margin:0 0 .5rem">
+            Search for Financial News
+          </p>
+          <p style="color:#94A3B8;font-size:.88rem;margin:0">
+            Enter a topic above or click Fetch News to load headlines for your portfolio holdings.
+          </p>
+        </div>
+        """, unsafe_allow_html=True)

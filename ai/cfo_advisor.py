@@ -67,13 +67,11 @@ def chat_with_cfo(user_message: str, portfolio_context: str, history: list) -> s
 
     try:
         if sdk == "new":
-            # Build history for new SDK
             contents = []
             for msg in history[-10:]:
                 role = "user" if msg['role'] == 'user' else "model"
                 contents.append(genai_types.Content(role=role, parts=[genai_types.Part(text=msg['content'])]))
             contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=full_message)]))
-
             response = client.models.generate_content(
                 model=GEMINI_MODEL,
                 contents=contents,
@@ -122,5 +120,5 @@ def run_full_portfolio_analysis(portfolio_df: pd.DataFrame, summary_stats: dict)
             response = client.generate_content(prompt)
         return response.text
     except Exception as e:
-tml        logger.error(f"Analysis error: {e}")
+        logger.error(f"Analysis error: {e}")
         return f"Analysis failed: {str(e)}"

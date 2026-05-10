@@ -3,7 +3,7 @@ from loguru import logger
 
 st.set_page_config(
     page_title="WealthOS — Personal Finance Dashboard",
-    page_icon="⚡",
+  page_icon="W",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -22,7 +22,7 @@ for k, v in defaults.items():
         st.session_state[k] = v
 
 # ===== GLOBAL CSS =====
-st.markdown("""
+st.html("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -206,7 +206,142 @@ code, pre { font-family: 'JetBrains Mono', monospace !important; }
   gap: .3rem;
 }
 
+/* ---- Topbar ---- */
+.topbar-shell {
+  background: rgba(11,17,32,0.78);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  padding: 1rem 1.25rem;
+  margin: 0 0 1.25rem;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 50px rgba(2,6,23,0.35);
+}
+.topbar-kicker {
+  font-size: .68rem;
+  color: var(--muted);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  margin-bottom: .35rem;
+}
+.topbar-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.topbar-subtitle {
+  font-size: .82rem;
+  color: var(--muted);
+  margin-top: .2rem;
+}
+
 /* ---- Section Header ---- */
+.glass-surface {
+  background: rgba(148,163,184,0.08);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 14px 36px rgba(2,6,23,0.22);
+}
+.hero-shell {
+  padding: 1.35rem 1.45rem;
+  margin-bottom: 1.2rem;
+}
+.hero-eyebrow {
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  color: var(--cyan);
+  margin-bottom: .4rem;
+}
+.hero-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.15;
+  letter-spacing: -.04em;
+}
+.hero-subtitle {
+  color: var(--muted);
+  font-size: .92rem;
+  margin-top: .45rem;
+  max-width: 72ch;
+}
+.section-shell {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  margin: 1.4rem 0 .9rem;
+}
+.section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+.section-meta {
+  margin-top: .2rem;
+  font-size: .72rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.section-rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(148,163,184,0.18), rgba(59,130,246,0.22), rgba(148,163,184,0.1));
+  margin-bottom: .45rem;
+}
+.metric-card {
+  padding: 1.15rem 1.25rem;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.metric-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(59,130,246,0.08), transparent 40%, rgba(139,92,246,0.05));
+  opacity: 0;
+  transition: var(--transition);
+}
+.metric-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(59,130,246,0.35);
+  box-shadow: 0 18px 40px rgba(2,6,23,0.28), 0 0 24px rgba(59,130,246,0.12);
+}
+.metric-card:hover::before { opacity: 1; }
+.metric-label {
+  font-size: .68rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .35rem;
+}
+.metric-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+}
+.metric-delta-positive,
+.metric-delta-negative,
+.metric-hint {
+  position: relative;
+  z-index: 1;
+  margin-top: .35rem;
+  font-size: .78rem;
+}
+.metric-delta-positive { color: var(--cyan); }
+.metric-delta-negative { color: #F87171; }
+.metric-hint { color: var(--muted); }
 .w-section {
   display: flex;
   align-items: center;
@@ -564,25 +699,25 @@ hr { border-color: var(--glass-border) !important; margin: 1.25rem 0 !important;
 [data-testid="stDecoration"] { display: none !important; }
 
 </style>
-""", unsafe_allow_html=True)
+""")
 
 # ===== SIDEBAR =====
 with st.sidebar:
     st.markdown("""
     <div class="sidebar-logo">
-      <p class="sidebar-logo-title">⚡ WealthOS</p>
+      <p class="sidebar-logo-title">WealthOS</p>
       <p class="sidebar-logo-sub">Personal Finance Dashboard</p>
     </div>
     """, unsafe_allow_html=True)
 
     page = st.radio(
         "Navigation",
-        ["Dashboard", "Upload Data", "AI CFO Advisor", "Market News"],
+        ["Dashboard", "Upload Data", "AI Advisor", "Market News"],
         format_func=lambda x: {
-            "Dashboard": "  📊  Dashboard",
-            "Upload Data": "  📁  Upload Data",
-            "AI CFO Advisor": "  🤖  AI CFO Advisor",
-            "Market News": "  📰  Market News",
+            "Dashboard": "Dashboard",
+            "Upload Data": "Upload Data",
+            "AI Advisor": "AI Advisor",
+            "Market News": "Market News",
         }[x],
         label_visibility="collapsed"
     )
@@ -604,7 +739,7 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
 
-    if st.button("🔄  Refresh Prices", use_container_width=True):
+    if st.button("Refresh Prices", use_container_width=True):
         if st.session_state.portfolio_data is not None:
             from core.price_fetcher import fetch_live_prices
             symbols = st.session_state.portfolio_data['Symbol'].tolist()
@@ -614,12 +749,48 @@ with st.sidebar:
         else:
             st.warning("Load a portfolio first.")
 
-    st.markdown("""
-    <div style='position:absolute;bottom:1.5rem;left:0;right:0;text-align:center;
-                font-size:.68rem;color:rgba(148,163,184,0.4);letter-spacing:.05em'>
-      WEALTHOS v1.0 &nbsp;&bull;&nbsp; POWERED BY GEMINI
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown(f"""
+<div class="topbar-shell">
+  <div class="topbar-kicker">{page}</div>
+  <div class="topbar-title">Premium AI-powered wealth intelligence</div>
+  <div class="topbar-subtitle">Portfolio monitoring, research, and contextual CFO guidance in one surface.</div>
+</div>
+""", unsafe_allow_html=True)
+
+top_left, top_mid, top_right = st.columns([2.2, 1.9, 1.0])
+
+with top_left:
+    st.text_input(
+        "Search",
+        placeholder="Search holdings, symbols, reports, or market news",
+        key="global_search",
+        label_visibility="collapsed"
+    )
+
+with top_mid:
+    st.markdown(
+        f"<div style='padding:.74rem 1rem;border:1px solid var(--glass-border);border-radius:14px;background:rgba(148,163,184,0.06);color:var(--muted);font-size:.82rem'>"
+        f"{len(st.session_state.portfolio_data) if st.session_state.portfolio_data is not None else 0} holdings monitored"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+
+with top_right:
+    if st.button("Sync", use_container_width=True):
+        if st.session_state.portfolio_data is not None:
+            from core.price_fetcher import fetch_live_prices
+            symbols = st.session_state.portfolio_data['Symbol'].tolist()
+            with st.spinner("Refreshing prices..."):
+                st.session_state.live_prices = fetch_live_prices(symbols, force_refresh=True)
+            st.success("Synced")
+        else:
+            st.warning("Load a portfolio first.")
+
+st.markdown("""
+<div style='text-align:center;font-size:.68rem;color:rgba(148,163,184,0.4);letter-spacing:.05em;margin-top:1rem'>
+  WEALTHOS v1.0 &nbsp;&bull;&nbsp; POWERED BY GEMINI
+</div>
+""", unsafe_allow_html=True)
 
 # ===== IMPORTS =====
 from ui.dashboard    import render_dashboard
@@ -632,7 +803,7 @@ if page == "Dashboard":
     render_dashboard()
 elif page == "Upload Data":
     render_upload_page()
-elif page == "AI CFO Advisor":
+elif page == "AI Advisor":
     render_advisor_page()
 elif page == "Market News":
     render_news_page()

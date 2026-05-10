@@ -3,7 +3,7 @@ from ui.components import page_header, section_title
 
 
 def render_news_page():
-    page_header("📰", "Market News", "Live financial news for your watchlist and Indian markets")
+    page_header("Market News", "Live financial news for your watchlist and major markets.", "RESEARCH FEED")
 
     try:
         from ai.rag_engine import fetch_news_for_symbols
@@ -14,12 +14,12 @@ def render_news_page():
     col1, col2 = st.columns([3, 1])
     with col1:
         query = st.text_input(
-            "Search topics",
-            placeholder="e.g. Nifty, Infosys, RBI rate, US Fed, oil prices...",
-            label_visibility="collapsed"
+        "Search topics",
+        placeholder="Search Nifty, Infosys, RBI rate, Fed, oil prices, or any symbol...",
+        label_visibility="collapsed",
         )
     with col2:
-        fetch_btn = st.button("🔄  Fetch News", type="primary", use_container_width=True)
+      fetch_btn = st.button("Fetch News", type="primary", use_container_width=True)
 
     # Build symbols list
     symbols = ["NIFTY", "SENSEX", "RBI", "India"]
@@ -37,10 +37,9 @@ def render_news_page():
 
         if not articles:
             st.markdown("""
-            <div class="w-panel" style="text-align:center;padding:2.5rem">
-              <div style="font-size:2.5rem;margin-bottom:.75rem">📰</div>
+            <div class="glass-surface" style="text-align:center;padding:2.5rem">
               <p style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:#F8FAFC;margin:0 0 .4rem">
-                No Articles Found
+                No articles found
               </p>
               <p style="color:#94A3B8;font-size:.85rem;margin:0">
                 Add your NewsAPI key to .env to enable live news.
@@ -48,17 +47,17 @@ def render_news_page():
             </div>
             """, unsafe_allow_html=True)
         else:
-            section_title("📰", f"{len(articles)} Articles Found")
+            section_title(f"{len(articles)} Articles Found")
             for article in articles:
-                title   = article.get('title', 'No title')
-                desc    = article.get('description', '') or ''
-                source  = article.get('source', {}).get('name', 'Unknown')
-                pub     = article.get('publishedAt', '')[:10]
-                article_url = article.get('url', '')
+                title = article.get("title", "No title")
+                desc = article.get("description", "") or ""
+                source = article.get("source", {}).get("name", "Unknown")
+                pub = article.get("publishedAt", "")[:10]
+                article_url = article.get("url", "")
 
-                link_btn = ''
+                link_btn = ""
                 if article_url:
-                    link_btn = f'<a href="{article_url}" target="_blank" style="font-size:.75rem;color:#3B82F6;text-decoration:none;font-weight:500">↗ Read full article</a>'
+                    link_btn = f'<a href="{article_url}" target="_blank" style="font-size:.75rem;color:#3B82F6;text-decoration:none;font-weight:500">Read full article</a>'
 
                 st.markdown(f"""
                 <div class="news-card">
@@ -70,8 +69,7 @@ def render_news_page():
                 """, unsafe_allow_html=True)
     else:
         st.markdown("""
-        <div class="w-panel" style="text-align:center;padding:3rem">
-          <div style="font-size:2.5rem;margin-bottom:.75rem">📰</div>
+        <div class="glass-surface" style="text-align:center;padding:3rem">
           <p style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.05rem;color:#F8FAFC;margin:0 0 .5rem">
             Search for Financial News
           </p>

@@ -6,7 +6,7 @@ load_dotenv()
 # App Info
 APP_NAME = "WealthOS"
 APP_VERSION = "1.0.0"
-APP_ICON = "💰"
+APP_ICON = "W"
 
 # API Keys
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")

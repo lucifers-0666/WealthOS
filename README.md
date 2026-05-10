@@ -1,4 +1,4 @@
-# 💰 WealthOS — Personal Finance Dashboard
+# WealthOS — Personal Finance Dashboard
 
 > Your AI-powered CFO for managing Indian equities, international ETFs, and personal wealth.
 
@@ -9,15 +9,15 @@
 
 ---
 
-## 🧠 What is WealthOS?
+## What is WealthOS?
 
 WealthOS is a full-featured personal finance dashboard that:
-- 📊 Visualizes your **portfolio allocation**, **gains/losses**, and **drawdowns**
-- 📈 Pulls **live prices** for NSE/BSE Indian equities and international ETFs
-- 🤖 Uses **AI (Gemini 1.5 Pro / HuggingFace)** as your personal CFO advisor
-- 📰 Provides **RAG-powered news insights** from financial news sources
-- 🎯 Tracks **progress toward your target allocation mix**
-- 📂 Supports **CSV/XLSX upload** of holdings and transaction exports
+- Visualizes your **portfolio allocation**, **gains/losses**, and **drawdowns**
+- Pulls **live prices** for NSE/BSE Indian equities and international ETFs
+- Uses **AI (Gemini / HuggingFace)** as your personal CFO advisor
+- Provides **RAG-powered news insights** from financial news sources
+- Tracks **progress toward your target allocation mix**
+- Supports **CSV/XLSX upload** of holdings and transaction exports
 
 ---
 
@@ -70,7 +70,7 @@ WealthOS/
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ### 1. Clone the repository
 ```bash
@@ -106,9 +106,9 @@ streamlit run app.py
 
 | Key | Purpose | Free Tier? |
 |-----|---------|------------|
-| `GOOGLE_API_KEY` | Gemini 1.5 Pro (AI CFO) | ✅ Yes |
-| `NEWSAPI_KEY` | Financial news for RAG | ✅ Yes |
-| `ALPHA_VANTAGE_KEY` | Backup price data | ✅ Yes |
+| `GOOGLE_API_KEY` | Gemini (AI CFO) | Yes |
+| `NEWSAPI_KEY` | Financial news for RAG | Yes |
+| `ALPHA_VANTAGE_KEY` | Backup price data | Yes |
 
 ---
 
@@ -131,7 +131,7 @@ Date,Symbol,Type,Quantity,Price,Fees
 
 ---
 
-## 🤖 AI CFO Capabilities
+## AI CFO Capabilities
 
 - **Portfolio Analysis**: Deep analysis of your current allocation vs targets
 - **Risk Assessment**: Identify concentration risk, sector exposure
@@ -142,7 +142,7 @@ Date,Symbol,Type,Quantity,Price,Fees
 
 ---
 
-## 📊 Dashboard Sections
+## Dashboard Sections
 
 1. **Overview** — Net worth, day change, total returns
 2. **Allocation** — Pie charts vs target mix with deviation alerts

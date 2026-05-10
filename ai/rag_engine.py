@@ -1,9 +1,9 @@
 import streamlit as st
 from newsapi import NewsApiClient
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain.docstore.document import Document
+from langchain_core.documents import Document
 from loguru import logger
 from datetime import datetime, timedelta
 from config import NEWSAPI_KEY, NEWS_LOOKBACK_DAYS, NEWS_MAX_ARTICLES, RAG_CHUNK_SIZE, RAG_CHUNK_OVERLAP, RAG_TOP_K, NEWS_CACHE_TTL

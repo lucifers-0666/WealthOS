@@ -52,11 +52,13 @@ RAG_CHUNK_SIZE = 500
 RAG_CHUNK_OVERLAP = 50
 RAG_TOP_K = 5
 
-# Gemini Model
-GEMINI_MODEL = "gemini-1.5-pro"
+# Gemini Model — gemini-2.0-flash is current stable on v1beta
+# gemini-1.5-pro and gemini-1.5-flash were removed from v1beta API
+GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_VISION_MODEL = "gemini-2.0-flash"  # used for image OCR
 GEMINI_MAX_TOKENS = 2048
 GEMINI_TEMPERATURE = 0.3
 
 # Cache TTL (seconds)
-PRICE_CACHE_TTL = 300  # 5 minutes
-NEWS_CACHE_TTL = 1800  # 30 minutes
+PRICE_CACHE_TTL = 300   # 5 minutes
+NEWS_CACHE_TTL = 1800   # 30 minutes

@@ -1,5 +1,5 @@
-"""OCR pipeline to extract holdings data from uploaded portfolio screenshots.
-
+"""
+OCR pipeline to extract holdings data from uploaded portfolio screenshots.
 Uses pytesseract (local) or falls back to Gemini Vision if available.
 Extracted data is merged into session_state.portfolio_data.
 """
@@ -18,13 +18,13 @@ from loguru import logger
 
 def _clean_rupee(text: str) -> str:
     """Strip ₹, commas, whitespace from a numeric string."""
-    return re.sub(r'[\u20b9,\s]', '', text)
+    return re.sub(r'[₹,\s]', '', text)
 
 
 def _try_tesseract(image: Image.Image) -> str | None:
     """Return OCR text using pytesseract, or None if not installed."""
     try:
-        import pytesseract  # optional dependency
+        import pytesseract
         return pytesseract.image_to_string(image, lang='eng')
     except Exception as e:
         logger.debug(f"Tesseract unavailable: {e}")
@@ -34,9 +34,16 @@ def _try_tesseract(image: Image.Image) -> str | None:
 def _try_gemini_vision(image: Image.Image) -> str | None:
     """Use Gemini Vision to extract text from the image."""
     try:
-        from config import GOOGLE_API_KEY, GEMINI_MODEL
+        from config import GOOGLE_API_KEY, GEMINI_VISION_MODEL
         if not GOOGLE_API_KEY:
             return None
+
+        VISION_PROMPT = (
+            "Extract all stock/ETF holdings from this portfolio screenshot. "
+            "Return a plain table with columns: Symbol, Name, Quantity, AvgPrice, CurrentPrice, PnL. "
+            "Use numbers only (no \u20b9 or commas). If a value is unknown write NA."
+        )
+
         try:
             from google import genai
             from google.genai import types as gt
@@ -45,29 +52,20 @@ def _try_gemini_vision(image: Image.Image) -> str | None:
             image.save(buf, format='PNG')
             image_bytes = buf.getvalue()
             response = client.models.generate_content(
-                model="gemini-1.5-flash",
+                model=GEMINI_VISION_MODEL,
                 contents=[
                     gt.Part(inline_data=gt.Blob(mime_type="image/png", data=image_bytes)),
-                    gt.Part(text=(
-                        "Extract all stock/ETF holdings from this portfolio screenshot. "
-                        "Return a plain table with columns: Symbol, Name, Quantity, AvgPrice, CurrentPrice, PnL. "
-                        "Use numbers only (no ₹ or commas). If a value is unknown write NA."
-                    ))
+                    gt.Part(text=VISION_PROMPT)
                 ]
             )
             return response.text
         except ImportError:
             import google.generativeai as genai_legacy
-            import PIL
             genai_legacy.configure(api_key=GOOGLE_API_KEY)
-            model = genai_legacy.GenerativeModel("gemini-1.5-flash")
-            response = model.generate_content([
-                image,
-                "Extract all stock/ETF holdings from this portfolio screenshot. "
-                "Return a plain table with columns: Symbol, Name, Quantity, AvgPrice, CurrentPrice, PnL. "
-                "Use numbers only (no ₹ or commas). If a value is unknown write NA."
-            ])
+            model = genai_legacy.GenerativeModel(GEMINI_VISION_MODEL)
+            response = model.generate_content([image, VISION_PROMPT])
             return response.text
+
     except Exception as e:
         logger.error(f"Gemini Vision error: {e}")
         return None
@@ -84,7 +82,6 @@ def _parse_extracted_text(text: str) -> pd.DataFrame | None:
         line = line.strip()
         if not line or line.lower().startswith('symbol'):
             continue
-        # split on 2+ spaces or tabs or pipe
         parts = re.split(r'\s{2,}|\t|\|', line)
         parts = [p.strip() for p in parts if p.strip()]
         if len(parts) >= 3:
@@ -93,7 +90,6 @@ def _parse_extracted_text(text: str) -> pd.DataFrame | None:
     if not rows:
         return None
 
-    # Best-effort column mapping
     cols = ['Symbol', 'Name', 'Quantity', 'Avg_Buy_Price', 'Current_Price', 'PnL_Raw']
     df_rows = []
     for r in rows:
@@ -103,7 +99,6 @@ def _parse_extracted_text(text: str) -> pd.DataFrame | None:
         df_rows.append(row_dict)
 
     df = pd.DataFrame(df_rows)
-    # Numeric coercion
     for col in ['Quantity', 'Avg_Buy_Price', 'Current_Price']:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col].apply(_clean_rupee), errors='coerce')
@@ -119,7 +114,6 @@ def extract_holdings_from_image(image: Image.Image) -> pd.DataFrame | None:
     Attempt to extract holdings from a portfolio screenshot.
     Returns a DataFrame with at least [Symbol, Quantity, Avg_Buy_Price] or None.
     """
-    # Try Gemini Vision first (more accurate for Indian broker UIs)
     text = _try_gemini_vision(image)
     if not text:
         text = _try_tesseract(image)

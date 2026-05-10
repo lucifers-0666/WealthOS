@@ -47,6 +47,10 @@ def load_holdings(file) -> Optional[pd.DataFrame]:
         raise e
 
 
+# Alias used by upload_page.py
+load_holdings_from_file = load_holdings
+
+
 def load_transactions(file) -> Optional[pd.DataFrame]:
     """Load transaction history from uploaded CSV or XLSX file."""
     try:
@@ -74,6 +78,10 @@ def load_transactions(file) -> Optional[pd.DataFrame]:
     except Exception as e:
         logger.error(f"Error loading transactions: {e}")
         raise e
+
+
+# Alias for consistency
+load_transactions_from_file = load_transactions
 
 
 def get_sample_holdings() -> pd.DataFrame:

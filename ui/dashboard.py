@@ -73,7 +73,6 @@ def render_dashboard():
     section_title("fa-solid fa-chart-donut", "Asset Allocation")
     allocation_by_type = compute_allocation_by_type(portfolio_df)
 
-    # Build target — start with defaults, allow user to override via expander
     target = dict(DEFAULT_TARGET_ALLOCATION)
     with st.expander("Configure Target Allocation", expanded=False):
         custom_target = {}
@@ -121,23 +120,32 @@ def render_dashboard():
     display_cols = ['Symbol', 'Name', 'Quantity', 'Avg_Buy_Price', 'Current_Price',
                     'Current_Value', 'Invested_Amount', 'Unrealized_PnL', 'PnL_Pct', 'Weight_Pct']
     display_cols = [c for c in display_cols if c in portfolio_df.columns]
-    st.dataframe(
-        portfolio_df[display_cols].style.format({
-            'Avg_Buy_Price': '\u20b9{:.2f}',
-            'Current_Price': '\u20b9{:.2f}',
-            'Current_Value': '\u20b9{:,.0f}',
+
+    def _color_pnl(v):
+        """Cell-level styler: green for positive, red for negative numbers."""
+        if isinstance(v, (int, float)):
+            if v > 0:
+                return 'color: #00D4A0'
+            elif v < 0:
+                return 'color: #FF4D6A'
+        return ''
+
+    styled = (
+        portfolio_df[display_cols]
+        .style
+        .format({
+            'Avg_Buy_Price':   '\u20b9{:.2f}',
+            'Current_Price':   '\u20b9{:.2f}',
+            'Current_Value':   '\u20b9{:,.0f}',
             'Invested_Amount': '\u20b9{:,.0f}',
-            'Unrealized_PnL': '\u20b9{:+,.0f}',
-            'PnL_Pct': '{:+.2f}%',
-            'Weight_Pct': '{:.1f}%',
-        }).applymap(
-            lambda v: 'color: #00D4A0' if isinstance(v, (int, float)) and v > 0
-            else 'color: #FF4D6A' if isinstance(v, (int, float)) and v < 0 else '',
-            subset=['Unrealized_PnL', 'PnL_Pct']
-        ),
-        use_container_width=True,
-        hide_index=True
+            'Unrealized_PnL':  '\u20b9{:+,.0f}',
+            'PnL_Pct':         '{:+.2f}%',
+            'Weight_Pct':      '{:.1f}%',
+        })
+        # applymap was renamed to map in pandas 2.1+
+        .map(_color_pnl, subset=['Unrealized_PnL', 'PnL_Pct'])
     )
+    st.dataframe(styled, use_container_width=True, hide_index=True)
 
 
 def _render_welcome():

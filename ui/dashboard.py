@@ -245,7 +245,7 @@ def render_dashboard():
         return ""
 
     styled = (
-        tbl.style.applymap(color_pnl, subset=[c for c in ["PnL", "P&L %"] if c in tbl.columns])
+        tbl.style.map(color_pnl, subset=[c for c in ["PnL", "P&L %"] if c in tbl.columns])
         .format(
             {
                 "Avg Price": "₹{:.2f}",

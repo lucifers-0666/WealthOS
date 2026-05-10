@@ -1,11 +1,11 @@
 export default function SectionHeader({ title, subtitle, action }) {
   return (
-    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
+    <div className="flex items-start justify-between mb-4">
       <div>
-        <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:600, fontSize:14, color:'#F8FAFC', marginBottom:2 }}>{title}</h2>
-        {subtitle && <p style={{ fontSize:12, color:'#94A3B8' }}>{subtitle}</p>}
+        <h2 className="text-sm font-semibold" style={{color:'var(--text-1)'}}>{title}</h2>
+        {subtitle && <p className="text-xs mt-0.5" style={{color:'var(--text-2)'}}>{subtitle}</p>}
       </div>
-      {action}
+      {action && <div>{action}</div>}
     </div>
   )
 }

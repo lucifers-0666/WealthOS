@@ -1,17 +1,23 @@
 import { TrendingUp, TrendingDown } from 'lucide-react'
+import { motion } from 'framer-motion'
 
-export default function KpiCard({ label, value, delta, up, sub }) {
+export default function KpiCard({ label, value, delta, up, sub, delay=0 }) {
   return (
-    <div className="glass" style={{ padding:'20px 22px' }}>
-      <p className="label" style={{ marginBottom:10 }}>{label}</p>
-      <p style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:22, color:'#F8FAFC', lineHeight:1.2 }}>{value}</p>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:8 }}>
-        <span style={{ display:'flex', alignItems:'center', gap:4, fontSize:12, fontWeight:500, color: up ? '#34D399' : '#F87171' }}>
-          {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+    <motion.div
+      className="card p-5 flex flex-col gap-2"
+      initial={{ opacity:0, y:16 }}
+      animate={{ opacity:1, y:0 }}
+      transition={{ delay, duration:0.45, ease:[0.16,1,0.3,1] }}
+    >
+      <p className="section-label">{label}</p>
+      <p className="font-display font-bold text-xl" style={{color:'var(--text-1)'}}>{value}</p>
+      <div className="flex items-center justify-between">
+        <span className={`flex items-center gap-1 text-xs font-semibold ${up ? 'pos':'neg'}`}>
+          {up ? <TrendingUp size={12}/> : <TrendingDown size={12}/>}
           {delta}
         </span>
-        <span style={{ fontSize:11, color:'#475569' }}>{sub}</span>
+        <span className="text-xs" style={{color:'var(--text-3)'}}>{sub}</span>
       </div>
-    </div>
+    </motion.div>
   )
 }

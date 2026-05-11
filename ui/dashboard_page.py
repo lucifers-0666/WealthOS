@@ -236,7 +236,7 @@ def render_dashboard_page() -> None:
         "Ticker","Name","Qty","Avg Cost","CMP","Invested","Current","PnL","PnL%","Weight%","Sector"
     ]].copy()
     st.dataframe(
-        display_df.style.applymap(colour_pnl, subset=["PnL","PnL%"]),
+        display_df.style.map(colour_pnl, subset=["PnL","PnL%"]),
         use_container_width=True,
         height=310,
         column_config={

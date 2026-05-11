@@ -1,103 +1,139 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { ArrowUpRight, ExternalLink, RefreshCw, Search, Signal } from 'lucide-react'
-import { NEWS } from '../lib/data'
+import React, { useState, useEffect } from 'react';
+import { usePortfolio } from '../lib/usePortfolio.js';
+import SectionHeader from '../components/SectionHeader.jsx';
 
-const CATS = ['All', ...new Set(NEWS.map((n) => n.cat))]
-const SENT_CFG = {
-  positive: { cls: 'badge-green', label: 'Bullish' },
-  negative: { cls: 'badge-red', label: 'Bearish' },
-  neutral: { cls: 'badge-gray', label: 'Neutral' },
+const NEWSAPI_KEY = import.meta.env.VITE_NEWSAPI_KEY || '';
+const CATEGORIES = ['All', 'Markets', 'Economy', 'Stocks', 'Mutual Funds', 'Global'];
+
+function fetchNews(query) {
+  const q = query || 'Indian stock market NSE BSE';
+  const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${NEWSAPI_KEY}`;
+  return fetch(url).then((r) => r.json());
 }
 
-const ticker = ['NIFTY +0.62%', 'BANKNIFTY -0.14%', 'GOLD -0.80%', 'USDINR 83.41', 'VIX 12.8']
-
-export default function News() {
-  const [cat, setCat] = useState('All')
-  const [query, setQuery] = useState('')
-  const filtered = NEWS.filter((n) => (cat === 'All' || n.cat === cat) && (n.title + n.summary).toLowerCase().includes(query.toLowerCase()))
-  const lead = filtered[0] || NEWS[0]
+function ArticleCard({ article }) {
+  const articleUrl = article.url || '#';
+  const domain = articleUrl !== '#' ? new URL(articleUrl).hostname.replace('www.', '') : '';
+  const pub = article.publishedAt ? new Date(article.publishedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
 
   return (
-    <div style={{ maxWidth: 1360, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <section className="lux-card" style={{ padding: 24, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 22 }}>
+    <article className="news-card">
+      {article.urlToImage && (
+        <div className="news-image">
+          <img
+            src={article.urlToImage}
+            alt={article.title}
+            width="280" height="160"
+            loading="lazy"
+            onError={(e) => { e.target.parentElement.style.display = 'none'; }}
+          />
+        </div>
+      )}
+      <div className="news-body">
+        <div className="news-meta">
+          <span className="news-source">{article.source?.name || domain}</span>
+          <span className="news-date">{pub}</span>
+        </div>
+        <h3 className="news-title">{article.title}</h3>
+        {article.description && (
+          <p className="news-desc">{article.description}</p>
+        )}
+        <a
+          href={articleUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="news-link"
+        >
+          Read Full Article
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+        </a>
+      </div>
+    </article>
+  );
+}
+
+export default function News() {
+  const { holdings } = usePortfolio();
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [category, setCategory] = useState('All');
+  const [search, setSearch] = useState('');
+  const [error, setError] = useState(null);
+
+  const tickers = holdings.slice(0, 5).map((h) => h.ticker.replace('.NS', '').replace('.BO', '')).join(' OR ');
+
+  useEffect(() => {
+    if (!NEWSAPI_KEY) {
+      setError('Add VITE_NEWSAPI_KEY to your .env to load live news.');
+      return;
+    }
+    setLoading(true);
+    const q = search || (tickers ? `(${tickers}) stock India` : 'Indian stock market NSE');
+    fetchNews(q)
+      .then((data) => {
+        if (data.status === 'ok') setArticles(data.articles || []);
+        else setError(data.message || 'Failed to load news');
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [search, tickers]);
+
+  return (
+    <div className="page">
+      <div className="page-header">
         <div>
-          <div className="badge badge-gold" style={{ marginBottom: 16 }}>Market Intelligence Feed</div>
-          <h2 className="editorial-title" style={{ fontSize: 39, lineHeight: 1.04, maxWidth: 760 }}>Editorial finance signals distilled for portfolio decisions.</h2>
-          <p style={{ color: '#94A3B8', marginTop: 13, maxWidth: 640 }}>Track macro, earnings, flows, and watchlist-linked events through sentiment-aware cards with analyst summaries.</p>
+          <h1 className="page-title">Market Intelligence</h1>
+          <p className="page-subtitle">News contextualised for your portfolio positions</p>
         </div>
-        <div style={{ borderRadius: 16, border: '1px solid rgba(148,163,184,0.12)', background: 'rgba(2,6,23,0.36)', padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, color: '#D6C7A1', fontWeight: 800 }}>
-            <Signal size={16} /> Live Ticker
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
-            {ticker.map((t) => <span key={t} className="badge badge-blue mono" style={{ letterSpacing: 0, textTransform: 'none', justifyContent: 'center' }}>{t}</span>)}
-          </div>
+      </div>
+
+      {/* Search + filter */}
+      <div className="news-controls">
+        <input
+          className="news-search"
+          type="search"
+          placeholder="Search news..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <div className="news-categories">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c}
+              className={`cat-chip ${category === c ? 'active' : ''}`}
+              onClick={() => setCategory(c)}
+            >{c}</button>
+          ))}
         </div>
-      </section>
+      </div>
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 14 }}>
-        <motion.article className="lux-card" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ padding: 24, minHeight: 240 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-            <span className="badge badge-gold">Lead Signal</span>
-            <span className={`badge ${SENT_CFG[lead.sent]?.cls || 'badge-gray'}`}>{SENT_CFG[lead.sent]?.label || 'Neutral'}</span>
-          </div>
-          <h3 className="editorial-title" style={{ fontSize: 30, lineHeight: 1.08, maxWidth: 780 }}>{lead.title}</h3>
-          <p style={{ color: '#94A3B8', marginTop: 14, maxWidth: 720, fontSize: 15 }}>{lead.summary}</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(148,163,184,0.12)' }}>
-            <div className="mono" style={{ color: '#64748B', fontSize: 12 }}>{lead.source} · {lead.time}</div>
-            <a href="#" style={{ color: '#7DD3FC', display: 'flex', alignItems: 'center', gap: 7, fontWeight: 800, fontSize: 13 }}>Open Brief <ArrowUpRight size={14} /></a>
-          </div>
-        </motion.article>
+      {error && <div className="page-error">{error}</div>}
 
-        <div className="lux-card" style={{ padding: 18 }}>
-          <div className="section-label">Sentiment Stack</div>
-          <div style={{ display: 'grid', gap: 11, marginTop: 15 }}>
-            {['Macro neutral', 'IT earnings bullish', 'Banking risk elevated', 'FII flows positive'].map((item, i) => (
-              <div key={item} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 11, borderBottom: i === 3 ? 0 : '1px solid rgba(148,163,184,0.09)' }}>
-                <span style={{ color: '#94A3B8', fontSize: 13 }}>{item}</span>
-                <span className="mono" style={{ color: i === 2 ? '#FDA4AF' : i === 0 ? '#64748B' : '#86EFAC', fontSize: 12 }}>{i === 2 ? 'watch' : i === 0 ? 'hold' : 'long'}</span>
+      {loading ? (
+        <div className="news-grid">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="news-card skeleton">
+              <div className="shimmer-block" style={{ height: 160 }} />
+              <div style={{ padding: 16 }}>
+                <div className="shimmer-block" style={{ height: 12, width: '40%', marginBottom: 8 }} />
+                <div className="shimmer-block" style={{ height: 18, marginBottom: 8 }} />
+                <div className="shimmer-block" style={{ height: 14, width: '80%' }} />
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      </section>
-
-      <section className="lux-card" style={{ padding: 18 }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: '1 1 260px' }}>
-            <Search size={14} color="#64748B" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)' }} />
-            <input className="input" style={{ paddingLeft: 38 }} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search market notes, tickers, sources..." />
-          </div>
-          <div className="tab-strip">
-            {CATS.map((c) => <button key={c} onClick={() => setCat(c)} className={`tab ${cat === c ? 'active' : ''}`}>{c}</button>)}
-          </div>
-          <button className="btn-icon" aria-label="Refresh"><RefreshCw size={14} /></button>
+      ) : (
+        <div className="news-grid">
+          {articles.map((a, i) => <ArticleCard key={i} article={a} />)}
+          {!articles.length && !error && (
+            <div className="empty-state">No articles found. Try a different search.</div>
+          )}
         </div>
-      </section>
-
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
-        {filtered.map((n, i) => {
-          const sc = SENT_CFG[n.sent] || SENT_CFG.neutral
-          return (
-            <motion.article key={n.id} className="lux-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.035 }} style={{ padding: 19, minHeight: 226, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                <span className="badge badge-blue">{n.cat}</span>
-                <span className={`badge ${sc.cls}`}>{sc.label}</span>
-              </div>
-              <h3 className="editorial-title" style={{ fontSize: 18, lineHeight: 1.2 }}>{n.title}</h3>
-              <p style={{ color: '#94A3B8', lineHeight: 1.65, fontSize: 13 }}>{n.summary}</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 12, borderTop: '1px solid rgba(148,163,184,0.1)' }}>
-                <div className="mono" style={{ fontSize: 11, color: '#64748B' }}>{n.source} · {n.time}</div>
-                <a href="#" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#7DD3FC', fontWeight: 800 }}>
-                  Read <ExternalLink size={12} />
-                </a>
-              </div>
-            </motion.article>
-          )
-        })}
-      </section>
-      {filtered.length === 0 && <div className="lux-card" style={{ textAlign: 'center', padding: 48, color: '#64748B' }}>No market notes match the current filters.</div>}
+      )}
     </div>
-  )
+  );
 }

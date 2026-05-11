@@ -1,118 +1,113 @@
-import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { Eye, EyeOff, Key, LockKeyhole, RefreshCw, Save, SlidersHorizontal } from 'lucide-react'
-import toast from 'react-hot-toast'
-import SectionHeader from '../components/SectionHeader'
-import { TARGET } from '../lib/data'
+import React, { useState, useEffect } from 'react';
+import { usePortfolio } from '../lib/usePortfolio.js';
+import { useAuth } from '../lib/useAuth.js';
+import SectionHeader from '../components/SectionHeader.jsx';
 
-function ApiField({ label, placeholder, hint }) {
-  const [show, setShow] = useState(false)
-  const [val, setVal] = useState('')
-
-  return (
-    <div style={{ display: 'grid', gap: 7 }}>
-      <label className="section-label">{label}</label>
-      <div style={{ position: 'relative' }}>
-        <Key size={14} color="#64748B" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)' }} />
-        <input className="input mono" type={show ? 'text' : 'password'} value={val} onChange={(e) => setVal(e.target.value)} placeholder={placeholder} style={{ paddingLeft: 38, paddingRight: 42 }} />
-        <button onClick={() => setShow((s) => !s)} className="btn-icon" style={{ position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)', border: 0, background: 'transparent' }} aria-label="Toggle secret visibility">
-          {show ? <EyeOff size={14} /> : <Eye size={14} />}
-        </button>
-      </div>
-      <div style={{ color: '#64748B', fontSize: 12 }}>{hint}</div>
-    </div>
-  )
-}
+const ASSET_CLASSES = [
+  { key: 'equity_IN', label: 'Indian Equity' },
+  { key: 'equity_US', label: 'US Equity / ETFs' },
+  { key: 'gold', label: 'Gold' },
+  { key: 'debt', label: 'Debt / Bonds' },
+  { key: 'cash', label: 'Cash & Liquid' },
+  { key: 'crypto', label: 'Crypto' },
+];
 
 export default function Settings() {
-  const [targets, setTargets] = useState(TARGET)
-  const [apiHealth, setApiHealth] = useState(null)
-  const total = targets.reduce((sum, item) => sum + item.target, 0)
+  const { targetAllocation, saveTargetAllocation } = usePortfolio();
+  const { user, signOut } = useAuth();
+  const [allocations, setAllocations] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    fetch('/api/health')
-      .then((res) => res.json())
-      .then(setApiHealth)
-      .catch(() => setApiHealth({ status: 'offline' }))
-  }, [])
+    const map = {};
+    ASSET_CLASSES.forEach((a) => { map[a.key] = 0; });
+    (targetAllocation || []).forEach((t) => { map[t.asset_class] = t.target_pct; });
+    setAllocations(map);
+  }, [targetAllocation]);
 
-  const save = () => {
-    if (Math.abs(total - 100) > 0.5) {
-      toast.error(`Targets must sum to 100%. Current total is ${total}%.`)
-      return
+  const total = Object.values(allocations).reduce((s, v) => s + Number(v || 0), 0);
+  const valid = Math.abs(total - 100) < 0.01 || total === 0;
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const arr = Object.entries(allocations)
+        .filter(([, v]) => Number(v) > 0)
+        .map(([asset_class, target_pct]) => ({ asset_class, target_pct: Number(target_pct) }));
+      await saveTargetAllocation(arr);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
     }
-    toast.success('System settings saved')
   }
 
   return (
-    <div style={{ maxWidth: 1120, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <section className="lux-card" style={{ padding: 24, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 22 }}>
+    <div className="page">
+      <div className="page-header">
         <div>
-          <span className="badge badge-gold">System Control</span>
-          <h2 className="editorial-title" style={{ fontSize: 36, lineHeight: 1.06, marginTop: 16, maxWidth: 720 }}>Private configuration for market data, AI reasoning, and allocation policy.</h2>
-          <p style={{ color: '#94A3B8', marginTop: 13, maxWidth: 650 }}>A restrained control surface for credentials and portfolio targets without breaking the terminal aesthetic.</p>
+          <h1 className="page-title">Settings</h1>
+          <p className="page-subtitle">Configure your investment strategy and preferences</p>
         </div>
-        <div style={{ borderRadius: 16, border: '1px solid rgba(134,239,172,0.16)', background: 'rgba(34,197,94,0.055)', padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, color: '#86EFAC', fontWeight: 800 }}><LockKeyhole size={16} /> Local Secret Boundary</div>
-          <p style={{ color: '#94A3B8', marginTop: 9, fontSize: 13, lineHeight: 1.6 }}>Keys are intended for environment configuration and should never be committed or exposed through frontend bundles.</p>
+      </div>
+
+      {/* Profile */}
+      <div className="settings-card">
+        <SectionHeader title="Account" subtitle="Your WealthOS profile" />
+        <div className="settings-row">
+          <span className="settings-label">Email</span>
+          <span className="settings-value">{user?.email || '—'}</span>
         </div>
-      </section>
+        <div className="settings-row">
+          <span className="settings-label">User ID</span>
+          <span className="settings-value mono">{user?.id?.slice(0, 16)}...</span>
+        </div>
+        <button className="btn-danger" onClick={signOut} style={{ marginTop: 16 }}>Sign Out</button>
+      </div>
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 420px', gap: 14 }}>
-        <motion.div className="lux-card" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} style={{ padding: 22 }}>
-          <SectionHeader eyebrow="Credentials" title="API key vault" sub="Premium terminal fields with controlled visibility" right={<Key size={16} color="#D6C7A1" />} />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginBottom: 18 }}>
-            {[
-              ['Gemini', apiHealth?.gemini_configured],
-              ['NewsAPI', apiHealth?.news_configured],
-              ['Alpha Vantage', apiHealth?.alpha_vantage_configured],
-            ].map(([label, ok]) => (
-              <div key={label} style={{ padding: 12, borderRadius: 13, border: '1px solid rgba(148,163,184,0.12)', background: 'rgba(2,6,23,0.34)' }}>
-                <div className="section-label">{label}</div>
-                <div style={{ marginTop: 7 }}><span className={`badge ${ok ? 'badge-green' : 'badge-red'}`}>{apiHealth ? ok ? 'Loaded' : 'Missing' : 'Checking'}</span></div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'grid', gap: 18 }}>
-            <ApiField label="Google Gemini API Key" placeholder="AIza..." hint="Used by the AI analyst for portfolio-aware reasoning." />
-            <ApiField label="NewsAPI Key" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" hint="Used for editorial market intelligence ingestion." />
-            <ApiField label="Alpha Vantage Key" placeholder="DEMO or your key" hint="Fallback price and market data source." />
-          </div>
-          <button onClick={save} className="btn btn-primary" style={{ marginTop: 20 }}><Save size={14} /> Save Keys</button>
-        </motion.div>
-
-        <motion.div className="lux-card" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} style={{ padding: 22 }}>
-          <SectionHeader
-            eyebrow="Policy"
-            title="Target allocation"
-            sub={`Current total: ${total}%`}
-            right={<SlidersHorizontal size={16} color={Math.abs(total - 100) > 0.5 ? '#FDA4AF' : '#86EFAC'} />}
-          />
-          <div style={{ display: 'grid', gap: 16 }}>
-            {targets.map((t, i) => (
-              <div key={t.name}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
-                  <label style={{ color: '#F3F4F6', fontWeight: 700, fontSize: 13 }}>{t.name}</label>
-                  <span className="mono" style={{ color: '#7DD3FC', fontWeight: 700 }}>{t.target}%</span>
-                </div>
+      {/* Target Allocation */}
+      <div className="settings-card">
+        <SectionHeader
+          title="Target Allocation"
+          subtitle={`Total: ${total.toFixed(1)}% ${!valid && total > 0 ? '— must equal 100%' : ''}`}
+        />
+        <div className="allocation-grid">
+          {ASSET_CLASSES.map(({ key, label }) => (
+            <div key={key} className="allocation-row">
+              <label htmlFor={key} className="allocation-label">{label}</label>
+              <div className="allocation-input-wrap">
                 <input
-                  type="range"
-                  min={0}
-                  max={60}
-                  step={1}
-                  value={t.target}
-                  onChange={(e) => setTargets((items) => items.map((x, j) => j === i ? { ...x, target: +e.target.value } : x))}
-                  style={{ width: '100%', accentColor: '#7DD3FC' }}
+                  id={key}
+                  type="number"
+                  min={0} max={100} step={1}
+                  value={allocations[key] || ''}
+                  onChange={(e) => setAllocations((prev) => ({ ...prev, [key]: e.target.value }))}
+                  className="allocation-input"
+                  placeholder="0"
                 />
-                <div className="progress-track" style={{ marginTop: 7 }}>
-                  <div className="progress-fill" style={{ width: `${t.target}%`, background: 'linear-gradient(90deg, #D6C7A1, #7DD3FC)' }} />
-                </div>
+                <span className="allocation-pct">%</span>
               </div>
-            ))}
-          </div>
-          <button onClick={save} className="btn btn-primary" style={{ marginTop: 20 }}><RefreshCw size={14} /> Save Targets</button>
-        </motion.div>
-      </section>
+              <div className="allocation-bar">
+                <div
+                  className="allocation-fill"
+                  style={{ width: `${Math.min(Number(allocations[key] || 0), 100)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          className="btn-primary"
+          onClick={handleSave}
+          disabled={saving || (!valid && total > 0)}
+          style={{ marginTop: 20 }}
+        >
+          {saving ? 'Saving...' : saved ? 'Saved' : 'Save Target Allocation'}
+        </button>
+      </div>
     </div>
-  )
+  );
 }

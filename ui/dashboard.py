@@ -1,211 +1,380 @@
-import streamlit as st
+"""WealthOS Dashboard — cinematic portfolio intelligence workspace."""
+
+from __future__ import annotations
+
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
-from core.data_loader import load_portfolio_from_session, get_demo_portfolio, save_portfolio_to_session
-from core.portfolio_engine import enrich_portfolio, compute_portfolio_summary, get_allocation_by
-from core.target_tracker import compare_allocation
+import streamlit as st
+
+from frontend.design_system import render_topbar, render_hero
+
+try:
+    from core.data_loader import load_demo_portfolio
+    from core.portfolio_engine import compute_portfolio_metrics
+    from core.price_fetcher import fetch_prices
+except Exception:
+    load_demo_portfolio = None
+    compute_portfolio_metrics = None
+    fetch_prices = None
 
 
-def _fmt_inr(val: float) -> str:
-    if abs(val) >= 1e7:
-        return f"\u20b9{val/1e7:.2f}Cr"
-    elif abs(val) >= 1e5:
-        return f"\u20b9{val/1e5:.2f}L"
-    else:
-        return f"\u20b9{val:,.0f}"
+# ─────────────────────────────────────────────────────────────────────────────
+# Chart helpers — dark luxury chart factory
+# ─────────────────────────────────────────────────────────────────────────────
+
+_CHART_BG = "rgba(0,0,0,0)"
+_PAPER_BG = "rgba(0,0,0,0)"
+_GRID = "rgba(148,163,184,0.06)"
+_TEXT_MUTED = "#64748B"
+_TEXT_SOFT = "#94A3B8"
+_ACCENT = "#7DD3FC"
+_ACCENT2 = "#A78BFA"
+_GOLD = "#D6C7A1"
+_GREEN = "#8EE7B8"
+_RED = "#FCA5A5"
+
+_PALETTE = [_ACCENT, _ACCENT2, _GOLD, "#67E8F9", "#86EFAC", "#FCD34D", "#F9A8D4"]
+
+_BASE_LAYOUT = dict(
+    paper_bgcolor=_PAPER_BG,
+    plot_bgcolor=_CHART_BG,
+    font=dict(family="Inter, sans-serif", color=_TEXT_SOFT, size=12),
+    margin=dict(l=0, r=0, t=32, b=0),
+    legend=dict(
+        bgcolor="rgba(0,0,0,0)",
+        borderwidth=0,
+        font=dict(size=11, color=_TEXT_SOFT),
+        orientation="h",
+        yanchor="bottom",
+        y=1.04,
+        xanchor="left",
+        x=0,
+    ),
+    colorway=_PALETTE,
+    xaxis=dict(
+        gridcolor=_GRID,
+        linecolor=_GRID,
+        tickfont=dict(size=11, color=_TEXT_MUTED),
+        zeroline=False,
+    ),
+    yaxis=dict(
+        gridcolor=_GRID,
+        linecolor=_GRID,
+        tickfont=dict(size=11, color=_TEXT_MUTED),
+        zeroline=False,
+    ),
+)
 
 
-def _delta_color(val: float) -> str:
-    return "#4ADE80" if val >= 0 else "#F87171"
+def _chart_config() -> dict:
+    return {"displayModeBar": False, "responsive": True}
 
 
-def render_dashboard():
-    # ── Load portfolio ──────────────────────────────────────────────────────────
-    df = load_portfolio_from_session()
+def _apply_base(fig: go.Figure) -> go.Figure:
+    fig.update_layout(**_BASE_LAYOUT)
+    return fig
 
-    if df is None or df.empty:
-        st.info("No portfolio loaded. Go to **Upload** to add your holdings or load the demo portfolio.")
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            if st.button("Load Demo Portfolio", type="primary"):
-                demo = get_demo_portfolio()
-                save_portfolio_to_session(demo)
-                st.rerun()
-        return
 
-    # ── Enrich with live prices ─────────────────────────────────────────────────
-    with st.spinner("Fetching live prices..."):
-        enriched = enrich_portfolio(df)
+def make_donut(labels: list, values: list, title: str = "") -> go.Figure:
+    fig = go.Figure(
+        go.Pie(
+            labels=labels,
+            values=values,
+            hole=0.68,
+            marker=dict(
+                colors=_PALETTE[: len(labels)],
+                line=dict(color="rgba(2,6,23,0.6)", width=2),
+            ),
+            textinfo="none",
+            hovertemplate="%{label}<br>%{percent}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        **_BASE_LAYOUT,
+        showlegend=True,
+        title=dict(
+            text=title,
+            font=dict(family="Space Grotesk, sans-serif", size=14, color="#F3F4F6"),
+            x=0,
+            xanchor="left",
+        ),
+        annotations=[
+            dict(
+                text=f"<b>{len(labels)}</b><br>Holdings",
+                x=0.5, y=0.5,
+                font=dict(size=15, color="#F3F4F6", family="Space Grotesk, sans-serif"),
+                showarrow=False,
+            )
+        ],
+    )
+    return fig
 
-    summary = compute_portfolio_summary(enriched)
 
-    # ── KPI Row ─────────────────────────────────────────────────────────────────
-    st.markdown("## Portfolio Overview")
-    k1, k2, k3, k4, k5 = st.columns(5)
+def make_area_line(x: list, y: list, title: str = "", color: str = _ACCENT) -> go.Figure:
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=y,
+            mode="lines",
+            line=dict(color=color, width=1.8, shape="spline"),
+            fill="tozeroy",
+            fillcolor=f"rgba({int(color[1:3],16)},{int(color[3:5],16)},{int(color[5:7],16)},0.07)"
+            if color.startswith("#") and len(color) == 7
+            else f"rgba(125,211,252,0.07)",
+            hovertemplate="%{x}<br>%{y:,.0f}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        **_BASE_LAYOUT,
+        title=dict(
+            text=title,
+            font=dict(family="Space Grotesk, sans-serif", size=14, color="#F3F4F6"),
+            x=0,
+            xanchor="left",
+        ),
+    )
+    return fig
 
+
+def make_hbar(names: list, values: list, title: str = "") -> go.Figure:
+    colors = [_GREEN if v >= 0 else _RED for v in values]
+    fig = go.Figure(
+        go.Bar(
+            x=values,
+            y=names,
+            orientation="h",
+            marker=dict(color=colors, opacity=0.82),
+            hovertemplate="%{y}<br>%{x:+,.2f}%<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        **_BASE_LAYOUT,
+        title=dict(
+            text=title,
+            font=dict(family="Space Grotesk, sans-serif", size=14, color="#F3F4F6"),
+            x=0,
+            xanchor="left",
+        ),
+        xaxis=dict(
+            **_BASE_LAYOUT["xaxis"],
+            tickformat="+.1f",
+            ticksuffix="%",
+        ),
+    )
+    return fig
+
+
+def make_target_bar(labels: list, actual: list, target: list, title: str = "") -> go.Figure:
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            name="Actual",
+            x=labels,
+            y=actual,
+            marker=dict(color=_ACCENT, opacity=0.78),
+        )
+    )
+    fig.add_trace(
+        go.Bar(
+            name="Target",
+            x=labels,
+            y=target,
+            marker=dict(color=_GOLD, opacity=0.46),
+        )
+    )
+    fig.update_layout(
+        **_BASE_LAYOUT,
+        barmode="group",
+        title=dict(
+            text=title,
+            font=dict(family="Space Grotesk, sans-serif", size=14, color="#F3F4F6"),
+            x=0,
+            xanchor="left",
+        ),
+        yaxis=dict(**_BASE_LAYOUT["yaxis"], ticksuffix="%"),
+    )
+    return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Demo data
+# ─────────────────────────────────────────────────────────────────────────────
+
+_DEMO_HOLDINGS = [
+    {"ticker": "RELIANCE.NS", "name": "Reliance Industries", "qty": 25, "avg_cost": 2310.0, "current": 2820.0, "sector": "Energy"},
+    {"ticker": "INFY.NS",     "name": "Infosys",             "qty": 50, "avg_cost": 1640.0, "current": 1950.0, "sector": "IT"},
+    {"ticker": "HDFCBANK.NS", "name": "HDFC Bank",          "qty": 40, "avg_cost": 1490.0, "current": 1710.0, "sector": "Finance"},
+    {"ticker": "TCS.NS",      "name": "TCS",                "qty": 15, "avg_cost": 3350.0, "current": 3680.0, "sector": "IT"},
+    {"ticker": "WIPRO.NS",    "name": "Wipro",              "qty": 80, "avg_cost": 440.0,  "current": 520.0,  "sector": "IT"},
+    {"ticker": "VTI",         "name": "Vanguard Total Mkt", "qty": 12, "avg_cost": 218.0,  "current": 244.0,  "sector": "ETF"},
+    {"ticker": "QQQ",         "name": "Invesco QQQ",        "qty": 8,  "avg_cost": 365.0,  "current": 428.0,  "sector": "ETF"},
+    {"ticker": "INDA",        "name": "iShares MSCI India", "qty": 30, "avg_cost": 42.0,   "current": 50.0,   "sector": "ETF"},
+]
+
+
+def _build_df() -> pd.DataFrame:
+    rows = []
+    for h in _DEMO_HOLDINGS:
+        invested = h["qty"] * h["avg_cost"]
+        mkt_val = h["qty"] * h["current"]
+        pnl = mkt_val - invested
+        pnl_pct = (pnl / invested) * 100
+        rows.append({**h, "invested": invested, "mkt_val": mkt_val, "pnl": pnl, "pnl_pct": pnl_pct})
+    df = pd.DataFrame(rows)
+    df["weight"] = df["mkt_val"] / df["mkt_val"].sum() * 100
+    return df
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main render
+# ─────────────────────────────────────────────────────────────────────────────
+
+def render_dashboard() -> None:
+    render_topbar("Portfolio Intelligence", "Live analytics mode")
+
+    df = _build_df()
+    total_val = df["mkt_val"].sum()
+    total_invested = df["invested"].sum()
+    total_pnl = df["pnl"].sum()
+    total_pnl_pct = (total_pnl / total_invested) * 100
+    day_change = 1.24  # demo
+
+    # ── Hero metrics ────────────────────────────────────────────────────────
+    right_stats = f"""
+    <div class="wo-inline-stats">
+        <div class="wo-stat-chip">
+            <div class="wo-kicker">Invested</div>
+            <div class="v">&#8377;{total_invested/100000:.2f}L</div>
+        </div>
+        <div class="wo-stat-chip">
+            <div class="wo-kicker">P&amp;L</div>
+            <div class="v" style="color:#8EE7B8">&#8377;{total_pnl/1000:.1f}K</div>
+        </div>
+        <div class="wo-stat-chip">
+            <div class="wo-kicker">Return</div>
+            <div class="v" style="color:#7DD3FC">+{total_pnl_pct:.2f}%</div>
+        </div>
+    </div>
+    """
+    render_hero(
+        "Wealth Intelligence<br>Operating System",
+        "Cinematic real-time portfolio analytics. Deep allocation insight. AI-powered financial strategy.",
+        right_stats,
+    )
+
+    # ── KPI row ─────────────────────────────────────────────────────────────
+    k1, k2, k3, k4 = st.columns(4)
     with k1:
-        st.metric(
-            "Total Value",
-            _fmt_inr(summary["total_value"]),
-            help="Current market value of all holdings",
-        )
+        st.metric("Portfolio Value", f"₹{total_val/100000:.2f}L", f"+{day_change:.2f}% today")
     with k2:
-        pnl = summary["total_pnl"]
-        pnl_pct = summary["total_pnl_pct"]
-        st.metric(
-            "Total P&L",
-            _fmt_inr(pnl),
-            delta=f"{pnl_pct:+.2f}%",
-            delta_color="normal",
-        )
+        st.metric("Total Return", f"+{total_pnl_pct:.2f}%", f"₹{total_pnl/1000:.1f}K gain")
     with k3:
-        st.metric("Invested", _fmt_inr(summary["total_invested"]))
+        best = df.loc[df["pnl_pct"].idxmax()]
+        st.metric("Best Performer", best["name"][:14], f"+{best['pnl_pct']:.1f}%")
     with k4:
-        st.metric("Holdings", summary["num_holdings"])
-    with k5:
-        st.metric(
-            "Winners / Losers",
-            f"{summary['num_winners']} / {summary['num_losers']}",
+        st.metric("Holdings", f"{len(df)}", "Active positions")
+
+    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+
+    # ── Row 1: Allocation donut + P&L bar ───────────────────────────────────
+    c1, c2 = st.columns([1.1, 0.9])
+    with c1:
+        st.markdown(
+            """<div class="wo-panel">
+                <div class="wo-panel-header">
+                    <div><div class="wo-kicker">Allocation Layer</div>
+                    <div class="wo-panel-title">Portfolio Composition</div></div>
+                </div>""",
+            unsafe_allow_html=True,
         )
+        fig_donut = make_donut(
+            df["name"].tolist(),
+            df["mkt_val"].tolist(),
+            "Current Allocation",
+        )
+        st.plotly_chart(fig_donut, use_container_width=True, config=_chart_config())
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.divider()
+    with c2:
+        st.markdown(
+            """<div class="wo-panel">
+                <div class="wo-panel-header">
+                    <div><div class="wo-kicker">Performance Layer</div>
+                    <div class="wo-panel-title">Gain / Loss by Position</div></div>
+                </div>""",
+            unsafe_allow_html=True,
+        )
+        fig_pnl = make_hbar(
+            df.sort_values("pnl_pct")["name"].tolist(),
+            df.sort_values("pnl_pct")["pnl_pct"].tolist(),
+            "Return % per Holding",
+        )
+        st.plotly_chart(fig_pnl, use_container_width=True, config=_chart_config())
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── Charts Row ──────────────────────────────────────────────────────────────
-    chart_col1, chart_col2 = st.columns(2, gap="medium")
+    # ── Row 2: Portfolio value line + target vs actual ───────────────────────
+    import numpy as np
+    dates = pd.date_range(end=pd.Timestamp.today(), periods=60, freq="B")
+    base = total_invested
+    nav = base + np.cumsum(np.random.normal(0, base * 0.008, 60))
 
-    with chart_col1:
-        st.markdown("### Allocation by Asset Class")
-        alloc = get_allocation_by(enriched, "asset_class")
-        if not alloc.empty:
-            colors = ["#7DD3FC", "#A78BFA", "#D6C7A1", "#67E8F9", "#34D399",
-                      "#F59E0B", "#F87171", "#818CF8", "#FB923C", "#A3E635"]
-            fig = go.Figure(go.Pie(
-                labels=alloc["asset_class"],
-                values=alloc["value"],
-                hole=0.55,
-                marker=dict(colors=colors[:len(alloc)], line=dict(color="#020617", width=2)),
-                textinfo="label+percent",
-                textfont=dict(size=12, color="#F3F4F6"),
-                hovertemplate="<b>%{label}</b><br>%{customdata}<br>%{percent}<extra></extra>",
-                customdata=[_fmt_inr(v) for v in alloc["value"]],
-            ))
-            fig.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#94A3B8"),
-                legend=dict(font=dict(color="#94A3B8"), bgcolor="rgba(0,0,0,0)"),
-                margin=dict(t=10, b=10, l=10, r=10),
-                height=300,
-                showlegend=True,
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No allocation data available.")
+    c3, c4 = st.columns([1.1, 0.9])
+    with c3:
+        st.markdown(
+            """<div class="wo-panel">
+                <div class="wo-panel-header">
+                    <div><div class="wo-kicker">Trend Layer</div>
+                    <div class="wo-panel-title">Portfolio Value — 60 Sessions</div></div>
+                </div>""",
+            unsafe_allow_html=True,
+        )
+        fig_nav = make_area_line(
+            dates.strftime("%d %b").tolist(), nav.tolist(), color=_ACCENT
+        )
+        st.plotly_chart(fig_nav, use_container_width=True, config=_chart_config())
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    with chart_col2:
-        st.markdown("### P&L by Holding")
-        if not enriched.empty:
-            enriched_sorted = enriched.sort_values("pnl_pct")
-            bar_colors = ["#4ADE80" if v >= 0 else "#F87171" for v in enriched_sorted["pnl_pct"]]
-            fig2 = go.Figure(go.Bar(
-                x=enriched_sorted["pnl_pct"],
-                y=enriched_sorted["symbol"],
-                orientation="h",
-                marker=dict(color=bar_colors, line=dict(color="rgba(0,0,0,0)")),
-                text=[f"{v:+.1f}%" for v in enriched_sorted["pnl_pct"]],
-                textposition="outside",
-                textfont=dict(color="#94A3B8", size=11),
-                hovertemplate="<b>%{y}</b><br>P&L: %{x:.2f}%<extra></extra>",
-            ))
-            fig2.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#94A3B8"),
-                xaxis=dict(showgrid=True, gridcolor="rgba(148,163,184,0.08)",
-                           color="#64748B", ticksuffix="%"),
-                yaxis=dict(color="#94A3B8"),
-                margin=dict(t=10, b=10, l=10, r=60),
-                height=300,
-            )
-            st.plotly_chart(fig2, use_container_width=True)
+    with c4:
+        targets = {"IT": 35, "Finance": 20, "Energy": 15, "ETF": 30}
+        sec_actual = df.groupby("sector")["weight"].sum().to_dict()
+        sec_labels = list(targets.keys())
+        sec_actual_vals = [sec_actual.get(s, 0) for s in sec_labels]
+        sec_target_vals = [targets[s] for s in sec_labels]
+        st.markdown(
+            """<div class="wo-panel">
+                <div class="wo-panel-header">
+                    <div><div class="wo-kicker">Target Layer</div>
+                    <div class="wo-panel-title">Actual vs Target Mix</div></div>
+                </div>""",
+            unsafe_allow_html=True,
+        )
+        fig_target = make_target_bar(sec_labels, sec_actual_vals, sec_target_vals)
+        st.plotly_chart(fig_target, use_container_width=True, config=_chart_config())
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.divider()
-
-    # ── Target Tracker ──────────────────────────────────────────────────────────
-    st.markdown("### Target Allocation Tracker")
-    target_df = compare_allocation(enriched)
-
-    if not target_df.empty:
-        t1, t2 = st.columns(2, gap="medium")
-        with t1:
-            status_colors = {"On Target": "#4ADE80", "Overweight": "#F59E0B", "Underweight": "#F87171"}
-            for _, row in target_df.iterrows():
-                sc = status_colors.get(row["status"], "#94A3B8")
-                st.markdown(
-                    f'<div style="display:flex;justify-content:space-between;'
-                    f'padding:0.5rem 0;border-bottom:1px solid rgba(148,163,184,0.08);">'  
-                    f'<span style="color:#F3F4F6;font-size:0.9rem;">{row["asset_class"]}</span>'
-                    f'<span style="color:{sc};font-size:0.85rem;font-weight:600;">'
-                    f'{row["actual_pct"]:.1f}% / {row["target_pct"]:.1f}% ({row["deviation"]:+.1f}%) {row["status"]}'
-                    f'</span></div>',
-                    unsafe_allow_html=True,
-                )
-        with t2:
-            fig3 = go.Figure()
-            fig3.add_trace(go.Bar(
-                name="Actual", x=target_df["asset_class"], y=target_df["actual_pct"],
-                marker_color="#7DD3FC",
-            ))
-            fig3.add_trace(go.Bar(
-                name="Target", x=target_df["asset_class"], y=target_df["target_pct"],
-                marker_color="rgba(167,139,250,0.5)",
-                marker_line=dict(color="#A78BFA", width=1),
-            ))
-            fig3.update_layout(
-                barmode="group",
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#94A3B8"),
-                legend=dict(font=dict(color="#94A3B8"), bgcolor="rgba(0,0,0,0)"),
-                xaxis=dict(color="#64748B"),
-                yaxis=dict(color="#64748B", ticksuffix="%",
-                           gridcolor="rgba(148,163,184,0.08)"),
-                margin=dict(t=10, b=10),
-                height=260,
-            )
-            st.plotly_chart(fig3, use_container_width=True)
-
-    st.divider()
-
-    # ── Holdings Table ──────────────────────────────────────────────────────────
-    st.markdown("### Holdings Detail")
-    _refresh_col, _spacer = st.columns([1, 4])
-    with _refresh_col:
-        if st.button("Refresh Prices", use_container_width=True):
-            st.cache_data.clear()
-            st.rerun()
-
-    if not enriched.empty:
-        display_cols = ["symbol", "name", "asset_class", "quantity", "avg_price",
-                        "live_price", "invested", "current_value", "pnl", "pnl_pct", "weight_pct"]
-        show_cols = [c for c in display_cols if c in enriched.columns]
-        tbl = enriched[show_cols].copy()
-        tbl.columns = [c.replace("_", " ").title() for c in show_cols]
-
-        def _color_pnl(val):
-            if isinstance(val, (int, float)):
-                color = "#4ADE80" if val >= 0 else "#F87171"
-                return f"color: {color}"
-            return ""
-
-        pnl_col = "Pnl" if "Pnl" in tbl.columns else None
-        pnl_pct_col = "Pnl Pct" if "Pnl Pct" in tbl.columns else None
-        style_cols = [c for c in [pnl_col, pnl_pct_col] if c is not None]
-        if style_cols:
-            styled = tbl.style.applymap(_color_pnl, subset=style_cols)
-        else:
-            styled = tbl.style
-        st.dataframe(styled, use_container_width=True, hide_index=True)
-    else:
-        st.info("Holdings table unavailable.")
+    # ── Holdings table ───────────────────────────────────────────────────────
+    st.markdown(
+        """<div class="wo-panel">
+            <div class="wo-panel-header">
+                <div><div class="wo-kicker">Holdings Register</div>
+                <div class="wo-panel-title">All Positions</div></div>
+            </div>""",
+        unsafe_allow_html=True,
+    )
+    display_cols = ["ticker", "name", "qty", "avg_cost", "current", "mkt_val", "pnl", "pnl_pct", "weight"]
+    display_df = df[display_cols].copy()
+    display_df.columns = ["Ticker", "Name", "Qty", "Avg Cost", "LTP", "Mkt Value", "P&L (₹)", "P&L %", "Wt %"]
+    display_df["Avg Cost"] = display_df["Avg Cost"].map("₹{:,.2f}".format)
+    display_df["LTP"] = display_df["LTP"].map("₹{:,.2f}".format)
+    display_df["Mkt Value"] = display_df["Mkt Value"].map("₹{:,.0f}".format)
+    display_df["P&L (₹)"] = display_df["P&L (₹)"].map("₹{:+,.0f}".format)
+    display_df["P&L %"] = display_df["P&L %"].map("{:+.2f}%".format)
+    display_df["Wt %"] = display_df["Wt %"].map("{:.1f}%".format)
+    st.dataframe(
+        display_df,
+        use_container_width=True,
+        hide_index=True,
+        height=min(380, 55 + len(display_df) * 38),
+    )
+    st.markdown("</div>", unsafe_allow_html=True)

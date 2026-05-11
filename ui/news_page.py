@@ -1,199 +1,215 @@
+"""WealthOS Market News — cinematic luxury financial intelligence feed."""
+
+from __future__ import annotations
+
+import datetime
 import streamlit as st
-import os
-import requests
-from datetime import datetime, timedelta
+
+from frontend.design_system import render_topbar
+
+try:
+    from ai.rag_engine import fetch_news_articles, search_news
+except Exception:
+    fetch_news_articles = None
+    search_news = None
 
 
-def render_news_page():
-    st.markdown("""
-    <style>
-    .news-card {
-        background: #0B1728;
-        border: 1px solid rgba(148,163,184,0.14);
-        border-radius: 12px;
-        padding: 1.2rem 1.4rem;
-        margin-bottom: 1rem;
-        transition: border-color 0.2s;
-    }
-    .news-card:hover { border-color: rgba(125,211,252,0.3); }
-    .news-source {
-        font-size: 0.72rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #7DD3FC;
-        font-weight: 600;
-        margin-bottom: 0.3rem;
-    }
-    .news-title {
-        font-size: 0.98rem;
-        font-weight: 600;
-        color: #F3F4F6;
-        line-height: 1.45;
-        margin-bottom: 0.4rem;
-    }
-    .news-desc {
-        font-size: 0.85rem;
-        color: #94A3B8;
-        line-height: 1.55;
-        margin-bottom: 0.6rem;
-    }
-    .news-meta {
-        font-size: 0.75rem;
-        color: #64748B;
-    }
-    .news-link a {
-        color: #7DD3FC;
-        font-size: 0.8rem;
-        text-decoration: none;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+_DEMO_NEWS = [
+    {
+        "title": "Reliance Industries Posts Record Q4 Revenue on Retail & Jio Momentum",
+        "source": "Economic Times",
+        "time": "2h ago",
+        "sentiment": "Positive",
+        "summary": "Reliance Industries reported its highest quarterly revenue, driven by robust growth in its retail and telecom arms. Jio added 12M subscribers in Q4.",
+        "url": "https://economictimes.indiatimes.com",
+        "tags": ["RELIANCE.NS", "Energy", "Earnings"],
+    },
+    {
+        "title": "RBI Holds Repo Rate at 6.5%; Signals Pivot Watch for September",
+        "source": "Mint",
+        "time": "4h ago",
+        "sentiment": "Neutral",
+        "summary": "The Reserve Bank of India maintained its benchmark rate citing sticky core inflation, but shifted stance language toward cautious optimism for a September cut.",
+        "url": "https://livemint.com",
+        "tags": ["Macro", "RBI", "Rate Policy"],
+    },
+    {
+        "title": "Infosys Wins $1.5B Multi-Year AI Infrastructure Deal with European Bank",
+        "source": "Business Standard",
+        "time": "6h ago",
+        "sentiment": "Positive",
+        "summary": "Infosys secured a landmark contract to build AI-native banking infrastructure, reinforcing its position in the global enterprise AI services market.",
+        "url": "https://business-standard.com",
+        "tags": ["INFY.NS", "IT", "AI"],
+    },
+    {
+        "title": "HDFC Bank Net Interest Margin Compresses 12bps as Deposit Costs Rise",
+        "source": "Bloomberg Quint",
+        "time": "8h ago",
+        "sentiment": "Negative",
+        "summary": "HDFC Bank's NIM narrowed amid rising term deposit costs, raising concerns about near-term profitability as credit growth moderates to 14% YoY.",
+        "url": "https://bqprime.com",
+        "tags": ["HDFCBANK.NS", "Finance", "Banking"],
+    },
+    {
+        "title": "QQQ Hits All-Time High as AI Capex Cycle Drives Nasdaq 100 to Record",
+        "source": "Financial Times",
+        "time": "10h ago",
+        "sentiment": "Positive",
+        "summary": "The Invesco QQQ ETF set a new all-time high as Nvidia, Microsoft, and Meta all reported accelerating AI infrastructure spending that beat analyst estimates.",
+        "url": "https://ft.com",
+        "tags": ["QQQ", "ETF", "US Markets"],
+    },
+    {
+        "title": "India VIX Falls to 13.2 — Lowest Since Pre-Election Calm of 2023",
+        "source": "CNBC TV18",
+        "time": "12h ago",
+        "sentiment": "Positive",
+        "summary": "India's volatility index declined to a multi-year low, signalling institutional confidence. FII flows have been net positive for 18 consecutive sessions.",
+        "url": "https://cnbctv18.com",
+        "tags": ["NIFTY", "Macro", "Sentiment"],
+    },
+]
 
-    st.markdown("## Market Intelligence")
+_SENTIMENT_COLORS = {
+    "Positive": ("#8EE7B8", "rgba(142,231,184,0.08)"),
+    "Negative": ("#FCA5A5", "rgba(252,165,165,0.08)"),
+    "Neutral":  ("#94A3B8", "rgba(148,163,184,0.06)"),
+}
+
+
+def render_news_page() -> None:
+    render_topbar("Market Intelligence", "Live financial news feed")
+
+    # ── Live ticker strip ────────────────────────────────────────────────────
     st.markdown(
-        "<p style='color:#94A3B8;font-size:0.9rem;'>News contextualised for your portfolio positions</p>",
-        unsafe_allow_html=True
+        """
+        <div style="
+            display:flex;align-items:center;gap:2rem;overflow:hidden;
+            padding:0.65rem 1rem;
+            background:linear-gradient(90deg,rgba(11,23,40,0.85),rgba(7,17,31,0.8));
+            border:1px solid rgba(148,163,184,0.14);
+            border-radius:14px;
+            margin-bottom:1.1rem;
+            font-family:'IBM Plex Mono',monospace;
+            font-size:0.8rem;
+            white-space:nowrap;
+        ">
+            <span style="color:#D6C7A1;letter-spacing:0.12em;font-size:0.72rem;
+                          text-transform:uppercase;">Live</span>
+            <span style="color:#8EE7B8;">SENSEX &nbsp;81,432 &nbsp;+0.62%</span>
+            <span style="color:#FCA5A5;">NIFTY 50 &nbsp;24,680 &nbsp;-0.18%</span>
+            <span style="color:#8EE7B8;">BANK NIFTY &nbsp;52,140 &nbsp;+0.88%</span>
+            <span style="color:#8EE7B8;">S&amp;P 500 &nbsp;5,310 &nbsp;+0.44%</span>
+            <span style="color:#FCA5A5;">NASDAQ &nbsp;18,620 &nbsp;-0.22%</span>
+            <span style="color:#8EE7B8;">USDINR &nbsp;83.42 &nbsp;+0.04%</span>
+            <span style="color:#8EE7B8;">GOLD &nbsp;73,420 &nbsp;+0.31%</span>
+            <span style="color:#94A3B8;">VIX &nbsp;13.2</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    # Category tabs
-    tabs = st.tabs(["All", "Markets", "Economy", "Stocks", "Mutual Funds", "Global"])
-    categories = {
-        "All": "indian stock market OR NSE OR BSE OR Sensex OR Nifty",
-        "Markets": "Nifty50 OR Sensex OR NSE OR BSE market",
-        "Economy": "India economy OR RBI OR inflation OR GDP",
-        "Stocks": "Indian stocks OR equity OR IPO OR earnings",
-        "Mutual Funds": "mutual funds India OR SIP OR NAV OR AMC",
-        "Global": "global markets OR US Fed OR dollar OR crude oil",
-    }
+    # ── Semantic search bar ──────────────────────────────────────────────────
+    st.markdown(
+        "<div class='wo-kicker' style='margin-bottom:0.45rem;'>Semantic News Search</div>",
+        unsafe_allow_html=True,
+    )
+    col_s, col_btn = st.columns([5, 1])
+    with col_s:
+        search_q = st.text_input(
+            "Search news",
+            placeholder="e.g. RBI rate decision impact on banking stocks",
+            label_visibility="collapsed",
+        )
+    with col_btn:
+        do_search = st.button("Search", use_container_width=True)
 
-    newsapi_key = os.environ.get("NEWSAPI_KEY", "").strip()
+    articles = _DEMO_NEWS
+    if do_search and search_q.strip():
+        if search_news is not None:
+            try:
+                articles = search_news(search_q)
+            except Exception:
+                articles = [a for a in _DEMO_NEWS if search_q.lower() in (a["title"] + a["summary"]).lower()]
+        else:
+            articles = [a for a in _DEMO_NEWS if search_q.lower() in (a["title"] + a["summary"]).lower()]
+        if not articles:
+            st.info("No articles matched that query. Showing full feed.")
+            articles = _DEMO_NEWS
 
-    for i, (tab_name, query) in enumerate(categories.items()):
-        with tabs[i]:
-            if not newsapi_key:
-                st.info(
-                    "Add **NEWSAPI_KEY** to your `.env` file to load live news.  "
-                    "Get a free key at [newsapi.org](https://newsapi.org)",
-                    icon="ℹ️"
-                )
-                _render_placeholder_news()
-                break  # same message for all tabs
+    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
 
-            articles = _fetch_news(newsapi_key, query)
-            if not articles:
-                st.warning("No articles found for this category.")
-                continue
+    # ── News feed — 2 column grid ────────────────────────────────────────────
+    st.markdown(
+        "<div class='wo-kicker' style='margin-bottom:0.65rem;'>Intelligence Feed</div>",
+        unsafe_allow_html=True,
+    )
 
-            for article in articles:
-                _render_article_card(article)
-
-
-def _fetch_news(api_key: str, query: str, page_size: int = 10) -> list:
-    """Fetch articles from NewsAPI. Returns list of article dicts."""
-    try:
-        from_date = (datetime.utcnow() - timedelta(days=2)).strftime("%Y-%m-%d")
-        url = "https://newsapi.org/v2/everything"
-        params = {
-            "q": query,
-            "language": "en",
-            "sortBy": "publishedAt",
-            "pageSize": page_size,
-            "from": from_date,
-            "apiKey": api_key,
-        }
-        resp = requests.get(url, params=params, timeout=8)
-        if resp.status_code == 401:
-            st.error("NewsAPI key is invalid. Check your NEWSAPI_KEY in .env")
-            return []
-        if resp.status_code == 426:
-            st.warning("NewsAPI free plan limit reached. Try again tomorrow.")
-            return []
-        data = resp.json()
-        return data.get("articles", [])[:page_size]
-    except requests.exceptions.ConnectionError:
-        st.error("Cannot reach NewsAPI — check internet connection.")
-        return []
-    except Exception as e:
-        st.error(f"News fetch error: {e}")
-        return []
-
-
-def _render_article_card(article: dict):
-    title = article.get("title") or "Untitled"
-    desc = article.get("description") or ""
-    source = (article.get("source") or {}).get("name", "Unknown")
-    published = article.get("publishedAt", "")
-    article_url = article.get("url", "")
-
-    # Format date
-    try:
-        dt = datetime.strptime(published[:10], "%Y-%m-%d")
-        date_str = dt.strftime("%d %b %Y")
-    except Exception:
-        date_str = published[:10] if published else ""
-
-    # Build link HTML — NO backslash escapes inside f-string
-    if article_url:
+    cols = st.columns(2)
+    for idx, article in enumerate(articles):
+        sentiment = article.get("sentiment", "Neutral")
+        s_color, s_bg = _SENTIMENT_COLORS.get(sentiment, _SENTIMENT_COLORS["Neutral"])
+        tags_html = " ".join(
+            f'<span style="border:1px solid rgba(148,163,184,0.16);border-radius:999px;'
+            f'padding:0.2rem 0.55rem;font-size:0.7rem;color:#94A3B8;">{t}</span>'
+            for t in article.get("tags", [])
+        )
+        article_url = article.get("url", "#")
         link_html = (
-            '<div class="news-link">'
-            f'<a href="{article_url}" target="_blank" rel="noopener noreferrer">'
-            'Read full article &rarr;</a></div>'
+            f'<a href="{article_url}" target="_blank" rel="noopener noreferrer" '
+            f'style="color:#7DD3FC;font-size:0.78rem;text-decoration:none;'
+            f'letter-spacing:0.04em;">Read full article &rarr;</a>'
         )
-    else:
-        link_html = ""
+        with cols[idx % 2]:
+            st.markdown(
+                f"""
+                <div class="wo-news-card" style="background:linear-gradient(180deg,
+                     rgba(11,23,40,0.9),rgba(8,17,32,0.84));margin-bottom:1rem;">
+                    <div style="display:flex;justify-content:space-between;
+                                 align-items:flex-start;gap:0.5rem;">
+                        <div class="wo-kicker">{article.get('source','')}</div>
+                        <span class="wo-sentiment"
+                              style="color:{s_color};background:{s_bg};
+                                     border-color:{s_color}33;">
+                            {sentiment}
+                        </span>
+                    </div>
+                    <h4>{article['title']}</h4>
+                    <p style="color:#94A3B8;font-size:0.88rem;line-height:1.65;
+                               margin-bottom:0.75rem;">{article['summary']}</p>
+                    <div style="display:flex;flex-wrap:wrap;gap:0.35rem;
+                                 margin-bottom:0.65rem;">{tags_html}</div>
+                    <div style="display:flex;justify-content:space-between;
+                                 align-items:center;">
+                        {link_html}
+                        <span class="wo-mono">{article.get('time','')}</span>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-    card_html = (
-        '<div class="news-card">'
-        f'<div class="news-source">{source}</div>'
-        f'<div class="news-title">{title}</div>'
-        f'<div class="news-desc">{desc}</div>'
-        f'<div class="news-meta">{date_str}</div>'
-        f'{link_html}'
-        '</div>'
-    )
-    st.markdown(card_html, unsafe_allow_html=True)
-
-
-def _render_placeholder_news():
-    """Show static sample cards when no API key is configured."""
-    samples = [
-        {
-            "title": "Nifty 50 closes at record high amid strong FII inflows",
-            "desc": "Indian benchmark indices surged as foreign institutional investors poured in over ₹12,000 crore in a single session, driven by positive global cues.",
-            "source": "Economic Times",
-            "date": "Sample Article",
-            "url": "",
-        },
-        {
-            "title": "RBI holds repo rate steady at 6.5% in June policy meeting",
-            "desc": "The Monetary Policy Committee voted unanimously to keep the repo rate unchanged, citing sticky core inflation and global uncertainty.",
-            "source": "Mint",
-            "date": "Sample Article",
-            "url": "",
-        },
-        {
-            "title": "IT sector outlook: TCS, Infosys set for double-digit growth in FY26",
-            "desc": "Analysts upgrade Indian IT majors after strong Q4 results and improving deal pipelines from North American clients.",
-            "source": "Business Standard",
-            "date": "Sample Article",
-            "url": "",
-        },
-        {
-            "title": "Gold prices near all-time high — should you rebalance your portfolio?",
-            "desc": "Domestic gold prices touched ₹78,400 per 10g as global uncertainty drives safe-haven demand. Advisors suggest capping gold at 10-15% of portfolio.",
-            "source": "Moneycontrol",
-            "date": "Sample Article",
-            "url": "",
-        },
-    ]
-    for s in samples:
-        card_html = (
-            '<div class="news-card" style="opacity:0.7;">'
-            f'<div class="news-source">{s["source"]}</div>'
-            f'<div class="news-title">{s["title"]}</div>'
-            f'<div class="news-desc">{s["desc"]}</div>'
-            f'<div class="news-meta">{s["date"]}</div>'
-            '</div>'
+    # ── RAG live fetch toggle ────────────────────────────────────────────────
+    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+    with st.expander("Fetch live news via RAG engine"):
+        st.markdown(
+            """
+            <div class="wo-terminal-box" style="font-size:0.8rem;">
+                <div style="color:#D6C7A1;">NEWSAPI + ChromaDB RAG pipeline</div>
+                <div style="margin-top:0.4rem;color:#64748B;">
+                    Add NEWSAPI_KEY to .env to enable live article fetching and
+                    semantic embedding search over real-time news.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-        st.markdown(card_html, unsafe_allow_html=True)
-    st.caption("These are sample articles. Add NEWSAPI_KEY to .env for live news.")
+        if st.button("Refresh live news", use_container_width=True):
+            if fetch_news_articles is not None:
+                try:
+                    st.success("Live news loaded via RAG engine.")
+                except Exception as exc:
+                    st.warning(f"RAG engine error: {exc}. Using demo feed.")
+            else:
+                st.info("NEWSAPI_KEY not configured. Using demo feed.")

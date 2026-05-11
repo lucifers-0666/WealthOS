@@ -1,4 +1,3 @@
-import streamlit as st
 try:
     from google import genai
     from google.genai import types as genai_types
@@ -122,3 +121,18 @@ def run_full_portfolio_analysis(portfolio_df: pd.DataFrame, summary_stats: dict)
     except Exception as e:
         logger.error(f"Analysis error: {e}")
         return f"Analysis failed: {str(e)}"
+
+
+def get_cfo_response(user_message: str, portfolio, history: list) -> str:
+    """Backward-compatible wrapper for the FastAPI endpoint."""
+    if isinstance(portfolio, str):
+        portfolio_context = portfolio
+    elif portfolio is None:
+        portfolio_context = ""
+    else:
+        try:
+            portfolio_context = str(portfolio)
+        except Exception:
+            portfolio_context = ""
+
+    return chat_with_cfo(user_message=user_message, portfolio_context=portfolio_context, history=history)

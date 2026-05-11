@@ -80,6 +80,50 @@ def load_transactions(file) -> Optional[pd.DataFrame]:
         raise e
 
 
+def parse_holdings_csv(file) -> list[dict]:
+    """Backward-compatible CSV/XLSX parser used by the FastAPI upload routes."""
+    df = load_holdings(file)
+    if df is None or df.empty:
+        return []
+
+    normalized: list[dict] = []
+    for _, row in df.iterrows():
+        normalized.append({
+            "ticker": str(row.get("Symbol", "")).strip().upper(),
+            "company_name": str(row.get("Name", "") or row.get("Symbol", "")).strip(),
+            "quantity": float(row.get("Quantity", 0) or 0),
+            "avg_buy_price": float(row.get("Avg_Buy_Price", 0) or 0),
+            "exchange": str(row.get("Exchange", "NSE") or "NSE").strip().upper(),
+            "asset_class": str(row.get("Asset_Type", "equity") or "equity").strip().lower(),
+            "currency": str(row.get("Currency", "INR") or "INR").strip().upper(),
+            "sector": row.get("Sector"),
+        })
+
+    return [item for item in normalized if item["ticker"]]
+
+
+def parse_transactions_csv(file) -> list[dict]:
+    """Backward-compatible CSV/XLSX parser used by the FastAPI upload routes."""
+    df = load_transactions(file)
+    if df is None or df.empty:
+        return []
+
+    normalized: list[dict] = []
+    for _, row in df.iterrows():
+        normalized.append({
+            "ticker": str(row.get("Symbol", "")).strip().upper(),
+            "action": str(row.get("Type", "")).strip().upper(),
+            "quantity": float(row.get("Quantity", 0) or 0),
+            "price": float(row.get("Price", 0) or 0),
+            "transaction_date": row.get("Date").date().isoformat() if hasattr(row.get("Date"), "date") else str(row.get("Date", "")),
+            "exchange": str(row.get("Exchange", "NSE") or "NSE").strip().upper(),
+            "broker": row.get("Broker"),
+            "notes": row.get("Notes"),
+        })
+
+    return [item for item in normalized if item["ticker"] and item["action"]]
+
+
 # Alias for consistency
 load_transactions_from_file = load_transactions
 

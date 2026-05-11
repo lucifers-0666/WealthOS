@@ -1,1 +1,1 @@
-# WealthOS UI Module
+# WealthOS UI pages

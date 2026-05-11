@@ -1,179 +1,101 @@
 import pandas as pd
 import numpy as np
-from io import StringIO, BytesIO
-from loguru import logger
-from typing import Optional
+import streamlit as st
+from pathlib import Path
+from datetime import datetime
 
-# ─────────────────────────────────────────────
-# Canonical column names — ALL LOWERCASE
-# This eliminates the 'column "symbol" does not exist'
-# error caused by PascalCase vs lowercase mismatches
-# in SQL queries and pandas groupby operations.
-# ─────────────────────────────────────────────
-REQUIRED_HOLDINGS_COLS  = ["symbol", "quantity", "avg_buy_price"]
-REQUIRED_TRANSACTION_COLS = ["date", "symbol", "type", "quantity", "price"]
+REQUIRED_COLS = {"symbol", "quantity", "avg_price"}
+OPTIONAL_COLS = {"name", "sector", "asset_class", "exchange", "notes"}
 
 
 def _normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Strip whitespace, replace spaces with underscores, force lowercase."""
-    df.columns = [c.strip().replace(' ', '_').lower() for c in df.columns]
-    return df
-
-
-def load_holdings(file) -> Optional[pd.DataFrame]:
-    """Load holdings from uploaded CSV or XLSX file."""
-    try:
-        if hasattr(file, 'name') and file.name.endswith('.xlsx'):
-            df = pd.read_excel(file)
-        else:
-            df = pd.read_csv(file)
-
-        df = _normalise_columns(df)
-
-        missing = [c for c in REQUIRED_HOLDINGS_COLS if c not in df.columns]
-        if missing:
-            raise ValueError(f"Missing required columns: {missing}")
-
-        df['quantity']      = pd.to_numeric(df['quantity'],      errors='coerce')
-        df['avg_buy_price'] = pd.to_numeric(df['avg_buy_price'], errors='coerce')
-        df.dropna(subset=['symbol', 'quantity', 'avg_buy_price'], inplace=True)
-
-        # Add defaults if absent
-        if 'asset_type' not in df.columns:
-            df['asset_type'] = 'Equity'
-        if 'exchange' not in df.columns:
-            df['exchange'] = 'NSE'
-        if 'name' not in df.columns:
-            df['name'] = df['symbol']
-        if 'sector' not in df.columns:
-            df['sector'] = 'Unknown'
-
-        df['invested_amount'] = df['quantity'] * df['avg_buy_price']
-
-        logger.info(f"Loaded {len(df)} holdings successfully.")
-        return df
-
-    except Exception as e:
-        logger.error(f"Error loading holdings: {e}")
-        raise e
-
-
-# Alias used by upload_page.py
-load_holdings_from_file = load_holdings
-
-
-def load_transactions(file) -> Optional[pd.DataFrame]:
-    """Load transaction history from uploaded CSV or XLSX file."""
-    try:
-        if hasattr(file, 'name') and file.name.endswith('.xlsx'):
-            df = pd.read_excel(file)
-        else:
-            df = pd.read_csv(file)
-
-        df = _normalise_columns(df)
-
-        missing = [c for c in REQUIRED_TRANSACTION_COLS if c not in df.columns]
-        if missing:
-            raise ValueError(f"Missing required columns: {missing}")
-
-        df['date']     = pd.to_datetime(df['date'],     errors='coerce')
-        df['quantity'] = pd.to_numeric(df['quantity'],  errors='coerce')
-        df['price']    = pd.to_numeric(df['price'],     errors='coerce')
-        df['fees']     = pd.to_numeric(df.get('fees', 0), errors='coerce').fillna(0)
-        df.dropna(subset=['date', 'symbol', 'type', 'quantity', 'price'], inplace=True)
-        df.sort_values('date', inplace=True)
-
-        logger.info(f"Loaded {len(df)} transactions successfully.")
-        return df
-
-    except Exception as e:
-        logger.error(f"Error loading transactions: {e}")
-        raise e
-
-
-def parse_holdings_csv(file) -> list[dict]:
-    """Backward-compatible CSV/XLSX parser used by the FastAPI upload routes."""
-    df = load_holdings(file)
-    if df is None or df.empty:
-        return []
-
-    normalized: list[dict] = []
-    for _, row in df.iterrows():
-        normalized.append({
-            "ticker": str(row.get("Symbol", "")).strip().upper(),
-            "company_name": str(row.get("Name", "") or row.get("Symbol", "")).strip(),
-            "quantity": float(row.get("Quantity", 0) or 0),
-            "avg_buy_price": float(row.get("Avg_Buy_Price", 0) or 0),
-            "exchange": str(row.get("Exchange", "NSE") or "NSE").strip().upper(),
-            "asset_class": str(row.get("Asset_Type", "equity") or "equity").strip().lower(),
-            "currency": str(row.get("Currency", "INR") or "INR").strip().upper(),
-            "sector": row.get("Sector"),
-        })
-
-    return [item for item in normalized if item["ticker"]]
-
-
-def parse_transactions_csv(file) -> list[dict]:
-    """Backward-compatible CSV/XLSX parser used by the FastAPI upload routes."""
-    df = load_transactions(file)
-    if df is None or df.empty:
-        return []
-
-    normalized: list[dict] = []
-    for _, row in df.iterrows():
-        normalized.append({
-            "ticker": str(row.get("Symbol", "")).strip().upper(),
-            "action": str(row.get("Type", "")).strip().upper(),
-            "quantity": float(row.get("Quantity", 0) or 0),
-            "price": float(row.get("Price", 0) or 0),
-            "transaction_date": row.get("Date").date().isoformat() if hasattr(row.get("Date"), "date") else str(row.get("Date", "")),
-            "exchange": str(row.get("Exchange", "NSE") or "NSE").strip().upper(),
-            "broker": row.get("Broker"),
-            "notes": row.get("Notes"),
-        })
-
-    return [item for item in normalized if item["ticker"] and item["action"]]
-
-
-# Alias for consistency
-load_transactions_from_file = load_transactions
-
-
-def get_sample_holdings() -> pd.DataFrame:
-    """Return sample holdings for demo purposes (lowercase columns)."""
-    data = {
-        'symbol':        ['RELIANCE.NS', 'INFY.NS', 'HDFCBANK.NS', 'TCS.NS', 'WIPRO.NS',
-                          'VTI', 'QQQ', 'INDA', 'GOLDBEES.NS', 'LIQUIDBEES.NS'],
-        'name':          ['Reliance Industries', 'Infosys Ltd', 'HDFC Bank', 'TCS', 'Wipro',
-                          'Vanguard Total Market', 'Invesco QQQ Trust', 'iShares MSCI India',
-                          'Nippon Gold BeES', 'Nippon Liquid BeES'],
-        'quantity':      [10, 25, 15, 8, 30, 5, 3, 20, 50, 100],
-        'avg_buy_price': [2400, 1500, 1600, 3800, 480, 220, 430, 45, 58, 1000],
-        'asset_type':    ['Equity', 'Equity', 'Equity', 'Equity', 'Equity',
-                          'ETF', 'ETF', 'ETF', 'Gold ETF', 'Liquid ETF'],
-        'exchange':      ['NSE', 'NSE', 'NSE', 'NSE', 'NSE',
-                          'NYSE', 'NASDAQ', 'NYSE', 'NSE', 'NSE'],
-        'sector':        ['Energy', 'IT', 'Banking', 'IT', 'IT',
-                          'US Market', 'US Tech', 'India Index', 'Gold', 'Liquid'],
+    """Lower-case and strip column names, map common aliases."""
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+    aliases = {
+        "ticker": "symbol",
+        "stock": "symbol",
+        "scrip": "symbol",
+        "isin": "symbol",
+        "qty": "quantity",
+        "shares": "quantity",
+        "units": "quantity",
+        "avg_cost": "avg_price",
+        "average_price": "avg_price",
+        "buy_price": "avg_price",
+        "purchase_price": "avg_price",
+        "cost": "avg_price",
+        "ltp": "current_price",
+        "last_price": "current_price",
+        "cmp": "current_price",
     }
-    df = pd.DataFrame(data)
-    df['invested_amount'] = df['quantity'] * df['avg_buy_price']
+    df.rename(columns=aliases, inplace=True)
     return df
 
 
-def get_sample_transactions() -> pd.DataFrame:
-    """Return sample transactions for demo (lowercase columns)."""
-    data = {
-        'date':     ['2024-01-15', '2024-02-20', '2024-03-10', '2024-04-05', '2024-05-12',
-                     '2024-06-18', '2024-07-22', '2024-08-14', '2024-09-30', '2024-11-05'],
-        'symbol':   ['RELIANCE.NS', 'INFY.NS', 'HDFCBANK.NS', 'VTI', 'TCS.NS',
-                     'QQQ', 'GOLDBEES.NS', 'WIPRO.NS', 'INDA', 'LIQUIDBEES.NS'],
-        'type':     ['BUY', 'BUY', 'BUY', 'BUY', 'BUY',
-                     'BUY', 'BUY', 'BUY', 'BUY', 'BUY'],
-        'quantity': [10, 25, 15, 5, 8, 3, 50, 30, 20, 100],
-        'price':    [2400, 1500, 1600, 220, 3800, 430, 58, 480, 45, 1000],
-        'fees':     [20, 15, 18, 5, 25, 8, 10, 12, 6, 3],
-    }
-    df = pd.DataFrame(data)
-    df['date'] = pd.to_datetime(df['date'])
+def load_from_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Validate and enrich a raw uploaded DataFrame."""
+    df = _normalise_columns(df.copy())
+    missing = REQUIRED_COLS - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}. Found: {list(df.columns)}")
+
+    df["quantity"] = pd.to_numeric(df["quantity"], errors="coerce")
+    df["avg_price"] = pd.to_numeric(df["avg_price"], errors="coerce")
+    df.dropna(subset=["symbol", "quantity", "avg_price"], inplace=True)
+    df = df[df["quantity"] > 0]
+    df["symbol"] = df["symbol"].str.strip().str.upper()
+    df["invested"] = (df["quantity"] * df["avg_price"]).round(2)
+
+    for col in OPTIONAL_COLS:
+        if col not in df.columns:
+            df[col] = ""
+
+    df["asset_class"] = df["asset_class"].replace("", "Equity")
+    df.reset_index(drop=True, inplace=True)
     return df
+
+
+def load_from_file(uploaded_file) -> pd.DataFrame:
+    """Load holdings from Streamlit UploadedFile (CSV or XLSX)."""
+    name = uploaded_file.name.lower()
+    try:
+        if name.endswith(".csv"):
+            df = pd.read_csv(uploaded_file)
+        elif name.endswith((".xlsx", ".xls")):
+            df = pd.read_excel(uploaded_file)
+        else:
+            raise ValueError("Unsupported file type. Upload CSV or XLSX.")
+        return load_from_dataframe(df)
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(f"Could not parse file: {e}")
+
+
+def get_demo_portfolio() -> pd.DataFrame:
+    """Return a realistic demo portfolio for Indian + international holdings."""
+    data = [
+        {"symbol": "RELIANCE",  "name": "Reliance Industries",    "quantity": 25,   "avg_price": 2450.00, "sector": "Energy",          "asset_class": "Equity",    "exchange": "NSE"},
+        {"symbol": "INFY",      "name": "Infosys Ltd",           "quantity": 40,   "avg_price": 1380.00, "sector": "IT",             "asset_class": "Equity",    "exchange": "NSE"},
+        {"symbol": "HDFCBANK",  "name": "HDFC Bank",             "quantity": 30,   "avg_price": 1620.00, "sector": "Banking",        "asset_class": "Equity",    "exchange": "NSE"},
+        {"symbol": "TCS",       "name": "Tata Consultancy Svcs", "quantity": 15,   "avg_price": 3480.00, "sector": "IT",             "asset_class": "Equity",    "exchange": "NSE"},
+        {"symbol": "WIPRO",     "name": "Wipro Ltd",             "quantity": 60,   "avg_price": 420.00,  "sector": "IT",             "asset_class": "Equity",    "exchange": "NSE"},
+        {"symbol": "TATAMOTORS","name": "Tata Motors",          "quantity": 50,   "avg_price": 580.00,  "sector": "Auto",           "asset_class": "Equity",    "exchange": "NSE"},
+        {"symbol": "BAJFINANCE","name": "Bajaj Finance",        "quantity": 8,    "avg_price": 6800.00, "sector": "NBFC",           "asset_class": "Equity",    "exchange": "NSE"},
+        {"symbol": "VTI",       "name": "Vanguard Total Mkt ETF","quantity": 10,   "avg_price": 220.00,  "sector": "Diversified",    "asset_class": "ETF",       "exchange": "NYSE"},
+        {"symbol": "QQQ",       "name": "Invesco QQQ Trust",    "quantity": 5,    "avg_price": 380.00,  "sector": "Technology",     "asset_class": "ETF",       "exchange": "NASDAQ"},
+        {"symbol": "GOLDBEES",  "name": "Nippon Gold ETF",       "quantity": 100,  "avg_price": 52.00,   "sector": "Gold",           "asset_class": "Gold ETF",  "exchange": "NSE"},
+    ]
+    df = pd.DataFrame(data)
+    df["invested"] = (df["quantity"] * df["avg_price"]).round(2)
+    return df
+
+
+def save_portfolio_to_session(df: pd.DataFrame) -> None:
+    st.session_state["portfolio_df"] = df
+    st.session_state["portfolio_loaded"] = True
+    st.session_state["portfolio_load_time"] = datetime.now()
+
+
+def load_portfolio_from_session() -> pd.DataFrame | None:
+    return st.session_state.get("portfolio_df", None)

@@ -1,115 +1,89 @@
-# WealthOS — Complete Setup Guide
+# WealthOS — Setup Guide
 
-A cinematic AI-powered personal finance operating system.
-
----
-
-## Architecture
-
-```
-frontend/       React + Vite + Recharts (cinematic dark UI)
-api.py          FastAPI backend (all endpoints)
-database/       SQLAlchemy models + Supabase CRUD
-core/           Price fetcher, data loader, OCR, cache
-ai/             Gemini CFO advisor + RAG news engine
-ui/             Streamlit layer (legacy, optional)
-```
+## Prerequisites
+- Python 3.11+
+- pip
+- Git
 
 ---
 
-## 1. Supabase Setup (Free)
+## Step-by-Step Setup
 
-1. Go to [supabase.com](https://supabase.com) → Create new project
-2. Go to **SQL Editor** → paste contents of `database/schema.sql` → Run
-3. Go to **SQL Editor** → paste contents of `database/seed.sql` → Run (optional demo data)
-4. Go to **Settings → Database** → copy the **Transaction pooler** connection string → put in `.env` as `DATABASE_URL`
-5. Go to **Settings → API** → copy `Project URL` and `anon public` key → put in `.env` and `frontend/.env`
-
----
-
-## 2. Backend Setup
-
-```bash
+### 1. Clone the repo
+```powershell
+git clone https://github.com/lucifers-0666/WealthOS.git
 cd WealthOS
+```
+
+### 2. Create virtual environment
+```powershell
 python -m venv venv
+.\venv\Scripts\activate
+```
 
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
-source venv/bin/activate
-
+### 3. Install dependencies
+```powershell
 pip install -r requirements.txt
-
-# Copy and fill environment variables
-cp .env.example .env
-# Edit .env with your keys
-
-# Run FastAPI backend
-uvicorn api:app --reload --port 8000
 ```
 
----
-
-## 3. Frontend Setup
-
-```bash
-cd frontend
-npm install
-
-# Copy and fill frontend environment variables
-cp .env.example .env
-# Edit frontend/.env with your Supabase + API keys
-
-npm run dev
-# Open http://localhost:5173
+### 4. Configure environment variables
+```powershell
+copy .env.example .env
+# Now edit .env in VS Code or Notepad and add your API keys
 ```
 
----
-
-## 4. Redis Cache (Optional — Recommended)
-
-1. Go to [upstash.com](https://upstash.com) → Create Redis database (free tier)
-2. Copy the **Redis URL** (starts with `rediss://`) → put in `.env` as `REDIS_URL`
-3. Prices will now be cached for 5 minutes — much faster refreshes
-
-If `REDIS_URL` is blank, WealthOS uses an in-memory fallback automatically.
+### 5. Run the app
+```powershell
+streamlit run app.py
+```
+Open http://localhost:8501 in your browser.
 
 ---
 
-## 5. API Keys Summary
+## API Keys (All Free)
 
 | Key | Where to get | Used for |
-|---|---|---|
-| `GOOGLE_API_KEY` | [aistudio.google.com](https://aistudio.google.com) | AI CFO (Gemini 1.5 Pro) |
-| `NEWSAPI_KEY` | [newsapi.org](https://newsapi.org) | Live news + RAG |
-| `ALPHA_VANTAGE_KEY` | [alphavantage.co](https://www.alphavantage.co) | Backup price data |
-| `SUPABASE_URL` | supabase.com → Settings → API | Auth + DB |
-| `SUPABASE_ANON_KEY` | supabase.com → Settings → API | Auth + DB |
-| `REDIS_URL` | upstash.com | Price caching (optional) |
-
-All services have **free tiers** — no credit card needed to start.
+|-----|-------------|----------|
+| `GOOGLE_API_KEY` | https://aistudio.google.com | AI Advisor (Gemini 1.5 Flash) |
+| `NEWSAPI_KEY` | https://newsapi.org | Live market news |
+| `ALPHA_VANTAGE_KEY` | https://alphavantage.co | Optional backup prices |
 
 ---
 
-## 6. Local Dev Without Supabase Auth
+## Quick Test (No API Keys Needed)
 
-For rapid local testing without creating a Supabase account:
-
-1. Add `DEV_USER_ID=any-uuid-string` to `.env`
-2. All API calls will use this fixed user ID — no JWT required
-3. Remove `DEV_USER_ID` before deploying to production
+1. Run the app: `streamlit run app.py`
+2. Click **Upload** in the sidebar
+3. Click **Load Demo Portfolio**
+4. Go to **Dashboard** — you will see live prices loaded from yfinance (no key needed)
 
 ---
 
-## 7. Run Both Servers
+## Troubleshooting
 
-```bash
-# Terminal 1 — Backend
-uvicorn api:app --reload --port 8000
+### "Failed to fetch" / blank dashboard
+- Make sure you are on the **Upload** page first and have loaded a portfolio
+- Or click **Load Demo Portfolio** on the Upload page
 
-# Terminal 2 — Frontend
-cd frontend && npm run dev
+### "Add NEWSAPI_KEY to .env"
+- Open `.env`, add: `NEWSAPI_KEY=your_key_here`
+- Restart: `streamlit run app.py`
+
+### "Add GOOGLE_API_KEY to .env"
+- Open `.env`, add: `GOOGLE_API_KEY=your_key_here`
+- Restart: `streamlit run app.py`
+
+### Module not found errors
+```powershell
+pip install -r requirements.txt
 ```
 
-Open [http://localhost:5173](http://localhost:5173) — create an account and start importing your portfolio.
+### yfinance rate limit / prices show 0
+- Wait 5 minutes and refresh — yfinance has rate limits
+- NSE stocks: symbol must be like `RELIANCE` (auto-appends `.NS`)
+- US ETFs: use bare symbol like `VTI`, `QQQ`
+
+### Port already in use
+```powershell
+streamlit run app.py --server.port 8502
+```

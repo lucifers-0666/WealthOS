@@ -1,54 +1,56 @@
 import pandas as pd
-from typing import Dict
 
 DEFAULT_TARGET = {
-    'Equity':    50.0,
-    'ETF':       25.0,
-    'Gold ETF':  10.0,
-    'Liquid ETF': 5.0,
-    'Bonds':     10.0,
+    "Equity": 60.0,
+    "ETF": 20.0,
+    "Gold ETF": 10.0,
+    "Debt": 5.0,
+    "Cash": 5.0,
 }
 
 
-def compute_deviation(actual: pd.Series, target: Dict[str, float]) -> pd.DataFrame:
+def compare_allocation(enriched: pd.DataFrame, target: dict = None) -> pd.DataFrame:
     """
-    Compare actual allocation (%) against target allocation (%).
-    Returns DataFrame with columns: asset_type, actual_pct, target_pct, deviation_pct, status.
+    Compare actual allocation vs target allocation.
+    Returns DataFrame with columns: asset_class, actual_pct, target_pct, deviation, status
     """
+    if target is None:
+        target = DEFAULT_TARGET
+
+    if enriched is None or enriched.empty:
+        rows = []
+        for ac, tgt in target.items():
+            rows.append({"asset_class": ac, "actual_pct": 0.0, "target_pct": tgt,
+                         "deviation": -tgt, "status": "Underweight"})
+        return pd.DataFrame(rows)
+
+    total_val = enriched["current_value"].sum()
+    actual = (
+        enriched.groupby("asset_class")["current_value"]
+        .sum()
+        .reset_index()
+    )
+    actual["actual_pct"] = (actual["current_value"] / total_val * 100).round(1)
+
     rows = []
-    all_types = set(actual.index) | set(target.keys())
-
-    for asset_type in sorted(all_types):
-        actual_pct = actual.get(asset_type, 0.0)
-        target_pct = target.get(asset_type, 0.0)
-        deviation  = actual_pct - target_pct
-
-        if deviation > 3:
-            status = 'Overweight'
-        elif deviation < -3:
-            status = 'Underweight'
+    all_classes = set(target.keys()) | set(actual["asset_class"].tolist())
+    for ac in all_classes:
+        act_row = actual[actual["asset_class"] == ac]
+        act_pct = float(act_row["actual_pct"].iloc[0]) if not act_row.empty else 0.0
+        tgt_pct = target.get(ac, 0.0)
+        dev = round(act_pct - tgt_pct, 1)
+        if dev > 3:
+            status = "Overweight"
+        elif dev < -3:
+            status = "Underweight"
         else:
-            status = 'On Target'
-
+            status = "On Target"
         rows.append({
-            'asset_type':   asset_type,
-            'actual_pct':   round(actual_pct,  2),
-            'target_pct':   round(target_pct,  2),
-            'deviation_pct': round(deviation,  2),
-            'status':       status,
+            "asset_class": ac,
+            "actual_pct": act_pct,
+            "target_pct": tgt_pct,
+            "deviation": dev,
+            "status": status,
         })
 
-    return pd.DataFrame(rows)
-
-
-def rebalance_suggestions(deviation_df: pd.DataFrame, total_value: float) -> pd.DataFrame:
-    """
-    Calculate the rupee/dollar amount to buy or sell per asset type to rebalance.
-    """
-    df = deviation_df.copy()
-    df['action_amount'] = -(df['deviation_pct'] / 100) * total_value
-    df['action'] = df['action_amount'].apply(
-        lambda x: 'BUY' if x > 0 else ('SELL' if x < 0 else 'HOLD')
-    )
-    df['action_amount'] = df['action_amount'].abs().round(2)
-    return df[['asset_type', 'actual_pct', 'target_pct', 'deviation_pct', 'action', 'action_amount']]
+    return pd.DataFrame(rows).sort_values("target_pct", ascending=False)

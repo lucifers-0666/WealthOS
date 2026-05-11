@@ -1,83 +1,94 @@
 import yfinance as yf
 import pandas as pd
-from typing import Dict, List, Optional
-from loguru import logger
+from datetime import datetime
+import streamlit as st
+import time
 
-try:
-    import streamlit as st
-    _STREAMLIT = True
-except ImportError:
-    _STREAMLIT = False
+# ---------- helpers ----------
+
+def _safe_ticker(symbol: str) -> str:
+    """Ensure NSE tickers end with .NS, BSE with .BO, leave others alone."""
+    s = symbol.strip().upper()
+    if s in ("GOLDBEES", "LIQUIDBEES", "NIFTYBEES"):
+        return s + ".NS"
+    # already qualified
+    if "." in s:
+        return s
+    # international ETFs / US stocks — leave bare
+    intl = {"VTI", "QQQ", "SPY", "IVV", "INDA", "EEM", "GLD", "IAU", "TLT", "AGG"}
+    if s in intl:
+        return s
+    # default: assume NSE
+    return s + ".NS"
 
 
-def _cache(fn):
-    """Apply st.cache_data when Streamlit is available, else no-op."""
-    if _STREAMLIT:
-        return st.cache_data(ttl=300)(fn)
-    return fn
-
-
-@_cache
-def fetch_live_prices(symbols: tuple) -> Dict[str, float]:
-    """
-    Fetch latest prices for a tuple of ticker symbols via yfinance.
-    symbols must be a tuple (not list) so Streamlit cache can hash it.
-    Returns dict: {symbol: price}.
-    """
-    prices: Dict[str, float] = {}
-    for sym in symbols:
-        try:
-            ticker = yf.Ticker(sym)
-            hist   = ticker.history(period='1d')
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_price(symbol: str) -> dict:
+    """Fetch latest price data for one symbol. Returns dict with price, change, pct."""
+    ticker_sym = _safe_ticker(symbol)
+    try:
+        t = yf.Ticker(ticker_sym)
+        info = t.fast_info
+        price = float(info.last_price) if info.last_price else None
+        if price is None:
+            hist = t.history(period="2d")
             if not hist.empty:
-                prices[sym] = round(float(hist['Close'].iloc[-1]), 4)
-            else:
-                logger.warning(f"No price data for {sym}")
-        except Exception as e:
-            logger.error(f"Price fetch error for {sym}: {e}")
-    return prices
-
-
-def get_prices_for_holdings(holdings_df: pd.DataFrame) -> Dict[str, float]:
-    """
-    Convenience wrapper — extracts symbols from a holdings DataFrame
-    (tolerates both 'symbol' and 'Symbol' column names) and fetches prices.
-    """
-    # Normalise column names defensively
-    col_map = {c.lower(): c for c in holdings_df.columns}
-    sym_col = col_map.get('symbol', None)
-    if sym_col is None:
-        logger.error("Holdings DataFrame has no 'symbol' column.")
-        return {}
-
-    symbols = tuple(holdings_df[sym_col].dropna().unique().tolist())
-    return fetch_live_prices(symbols)
-
-
-@_cache
-def fetch_inr_usd_rate() -> float:
-    """Fetch current INR/USD exchange rate."""
-    try:
-        ticker = yf.Ticker('USDINR=X')
-        hist   = ticker.history(period='1d')
-        if not hist.empty:
-            return round(float(hist['Close'].iloc[-1]), 4)
+                price = float(hist["Close"].iloc[-1])
+        prev = float(info.previous_close) if info.previous_close else price
+        change = (price - prev) if (price and prev) else 0.0
+        pct = (change / prev * 100) if prev else 0.0
+        currency = getattr(info, "currency", "INR")
+        return {
+            "symbol": symbol,
+            "ticker": ticker_sym,
+            "price": round(price, 2) if price else 0.0,
+            "change": round(change, 2),
+            "pct_change": round(pct, 2),
+            "currency": currency,
+            "error": None,
+        }
     except Exception as e:
-        logger.error(f"FX rate fetch error: {e}")
-    return 83.5  # fallback
+        return {
+            "symbol": symbol,
+            "ticker": ticker_sym,
+            "price": 0.0,
+            "change": 0.0,
+            "pct_change": 0.0,
+            "currency": "INR",
+            "error": str(e),
+        }
 
 
-def get_ticker_info(symbol: str) -> dict:
-    """Return basic info dict for a single ticker."""
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_prices_bulk(symbols: list) -> dict:
+    """Fetch prices for multiple symbols. Returns {symbol: price_dict}."""
+    result = {}
+    for sym in symbols:
+        result[sym] = fetch_price(sym)
+        time.sleep(0.05)  # gentle rate limit
+    return result
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_history(symbol: str, period: str = "1y") -> pd.DataFrame:
+    """Fetch OHLCV history for a symbol."""
+    ticker_sym = _safe_ticker(symbol)
     try:
-        return yf.Ticker(symbol).info or {}
-    except Exception as e:
-        logger.error(f"Ticker info error for {symbol}: {e}")
-        return {}
+        t = yf.Ticker(ticker_sym)
+        hist = t.history(period=period)
+        if hist.empty:
+            return pd.DataFrame()
+        hist.index = pd.to_datetime(hist.index)
+        return hist[["Open", "High", "Low", "Close", "Volume"]]
+    except Exception:
+        return pd.DataFrame()
 
 
-def fetch_prices(symbols: List[str]) -> Dict[str, float]:
-    """Backward-compatible alias expected by API routes."""
-    if not symbols:
-        return {}
-    return fetch_live_prices(tuple(symbols))
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_inr_usd_rate() -> float:
+    """Return INR per 1 USD."""
+    try:
+        d = fetch_price("USDINR=X")
+        return d["price"] or 83.5
+    except Exception:
+        return 83.5

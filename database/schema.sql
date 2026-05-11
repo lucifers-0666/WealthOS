@@ -1,262 +1,299 @@
 -- ============================================================
--- WealthOS — Supabase PostgreSQL Schema
--- Run this entire file in Supabase SQL Editor once
--- Dashboard → SQL Editor → New Query → Paste → Run
+-- WealthOS PostgreSQL Schema
+-- Full financial portfolio management database
 -- ============================================================
 
--- Enable UUID extension (already enabled on Supabase by default)
+-- Enable useful extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";  -- for fuzzy ticker search
+CREATE EXTENSION IF NOT EXISTS "btree_gist"; -- for date range constraints
 
 -- ============================================================
--- 1. USERS (extends Supabase auth.users)
+-- USERS
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id               UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  full_name        TEXT,
-  email            TEXT UNIQUE NOT NULL,
-  currency         TEXT NOT NULL DEFAULT 'INR',
-  default_exchange TEXT NOT NULL DEFAULT 'NSE',
-  risk_profile     TEXT CHECK (risk_profile IN ('conservative','moderate','aggressive')) DEFAULT 'moderate',
-  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE TABLE IF NOT EXISTS users (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email           TEXT UNIQUE NOT NULL,
+    display_name    TEXT,
+    currency        CHAR(3) NOT NULL DEFAULT 'INR',  -- ISO 4217
+    timezone        TEXT NOT NULL DEFAULT 'Asia/Kolkata',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ============================================================
--- 2. HOLDINGS — Current portfolio positions
+-- PORTFOLIOS  (one user can have multiple: "Main", "Retirement", etc.)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.holdings (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  ticker          TEXT NOT NULL,                        -- e.g. RELIANCE, TCS, VTI
-  name            TEXT,                                 -- e.g. Reliance Industries Ltd
-  exchange        TEXT NOT NULL DEFAULT 'NSE',          -- NSE | BSE | NYSE | NASDAQ
-  asset_class     TEXT NOT NULL DEFAULT 'equity_IN',   -- equity_IN | equity_US | etf | gold | debt | crypto
-  quantity        NUMERIC(18, 4) NOT NULL DEFAULT 0,
-  avg_buy_price   NUMERIC(18, 4) NOT NULL DEFAULT 0,   -- in DEFAULT_CURRENCY
-  currency        TEXT NOT NULL DEFAULT 'INR',
-  sector          TEXT,                                 -- e.g. Technology, Finance
-  notes           TEXT,
-  source          TEXT DEFAULT 'manual',               -- manual | csv_import | ocr_image
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(user_id, ticker, exchange)
+CREATE TABLE IF NOT EXISTS portfolios (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,
+    description     TEXT,
+    currency        CHAR(3) NOT NULL DEFAULT 'INR',
+    is_default      BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, name)
 );
 
 -- ============================================================
--- 3. TRANSACTIONS — Full buy/sell history
+-- ASSET UNIVERSE  (master list of all tradable instruments)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.transactions (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  ticker          TEXT NOT NULL,
-  exchange        TEXT NOT NULL DEFAULT 'NSE',
-  action          TEXT NOT NULL CHECK (action IN ('BUY', 'SELL', 'DIVIDEND', 'SPLIT', 'BONUS')),
-  quantity        NUMERIC(18, 4) NOT NULL,
-  price           NUMERIC(18, 4) NOT NULL,             -- per unit price
-  total_amount    NUMERIC(18, 4) GENERATED ALWAYS AS (quantity * price) STORED,
-  brokerage       NUMERIC(18, 4) DEFAULT 0,
-  tax             NUMERIC(18, 4) DEFAULT 0,
-  currency        TEXT NOT NULL DEFAULT 'INR',
-  trade_date      DATE NOT NULL,
-  broker          TEXT,                                -- Zerodha | Groww | Upstox | etc
-  notes           TEXT,
-  source          TEXT DEFAULT 'manual',              -- manual | csv_import | ocr_image
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE TABLE IF NOT EXISTS assets (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    ticker          TEXT NOT NULL,          -- e.g. RELIANCE, VTI, INDA
+    exchange        TEXT NOT NULL,          -- NSE, BSE, NYSE, NASDAQ, etc.
+    yf_ticker       TEXT,                   -- Yahoo Finance symbol (RELIANCE.NS)
+    name            TEXT NOT NULL,
+    asset_class     TEXT NOT NULL           -- EQUITY, ETF, MUTUAL_FUND, BOND, GOLD, CRYPTO, CASH
+        CHECK (asset_class IN ('EQUITY','ETF','MUTUAL_FUND','BOND','GOLD','CRYPTO','CASH')),
+    sector          TEXT,                   -- Technology, Financial, etc.
+    country         CHAR(2),                -- ISO 3166-1 alpha-2 (IN, US, etc.)
+    currency        CHAR(3) NOT NULL DEFAULT 'INR',
+    isin            TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (ticker, exchange)
 );
 
+CREATE INDEX IF NOT EXISTS idx_assets_ticker ON assets USING gin (ticker gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_assets_yf_ticker ON assets (yf_ticker);
+
 -- ============================================================
--- 4. TARGET ALLOCATION — User's desired portfolio mix
+-- HOLDINGS  (current snapshot — denormalised for fast reads)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.target_allocations (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  asset_class     TEXT NOT NULL,                       -- matches holdings.asset_class
-  target_pct      NUMERIC(5, 2) NOT NULL,             -- 0.00 to 100.00
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(user_id, asset_class),
-  CONSTRAINT valid_percentage CHECK (target_pct >= 0 AND target_pct <= 100)
+CREATE TABLE IF NOT EXISTS holdings (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    portfolio_id        UUID NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
+    asset_id            UUID NOT NULL REFERENCES assets(id),
+    quantity            NUMERIC(18, 6) NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+    avg_cost_price      NUMERIC(18, 4) NOT NULL DEFAULT 0,  -- in portfolio currency
+    invested_amount     NUMERIC(18, 2) NOT NULL DEFAULT 0,
+    -- live fields updated by price_fetcher
+    current_price       NUMERIC(18, 4),
+    current_value       NUMERIC(18, 2),
+    unrealised_pnl      NUMERIC(18, 2),
+    unrealised_pnl_pct  NUMERIC(8, 4),
+    last_price_at       TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (portfolio_id, asset_id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_holdings_portfolio ON holdings (portfolio_id);
+
 -- ============================================================
--- 5. PRICE CACHE — Live price snapshots (TTL managed in app)
+-- TRANSACTIONS  (immutable ledger — never update, only insert)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.price_cache (
-  ticker          TEXT NOT NULL,
-  exchange        TEXT NOT NULL DEFAULT 'NSE',
-  price           NUMERIC(18, 4) NOT NULL,
-  currency        TEXT NOT NULL DEFAULT 'INR',
-  change_pct      NUMERIC(8, 4),                      -- % change today
-  volume          BIGINT,
-  market_cap      NUMERIC(24, 2),
-  fetched_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (ticker, exchange)
+CREATE TABLE IF NOT EXISTS transactions (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    portfolio_id    UUID NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
+    asset_id        UUID NOT NULL REFERENCES assets(id),
+    txn_type        TEXT NOT NULL
+        CHECK (txn_type IN ('BUY','SELL','DIVIDEND','SPLIT','BONUS','SIP','REDEMPTION')),
+    txn_date        DATE NOT NULL,
+    quantity        NUMERIC(18, 6) NOT NULL,
+    price           NUMERIC(18, 4) NOT NULL,   -- per unit, in portfolio currency
+    amount          NUMERIC(18, 2) NOT NULL,   -- quantity * price (gross)
+    fees            NUMERIC(18, 2) NOT NULL DEFAULT 0,
+    taxes           NUMERIC(18, 2) NOT NULL DEFAULT 0,
+    net_amount      NUMERIC(18, 2) GENERATED ALWAYS AS (amount + fees + taxes) STORED,
+    notes           TEXT,
+    source          TEXT DEFAULT 'MANUAL'      -- MANUAL, CSV_IMPORT, BROKER_API
+        CHECK (source IN ('MANUAL','CSV_IMPORT','BROKER_API')),
+    broker          TEXT,                      -- Zerodha, Groww, HDFC Sec, etc.
+    external_ref    TEXT,                      -- broker order/trade ID
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_txn_portfolio ON transactions (portfolio_id);
+CREATE INDEX IF NOT EXISTS idx_txn_asset ON transactions (asset_id);
+CREATE INDEX IF NOT EXISTS idx_txn_date ON transactions (txn_date DESC);
+CREATE INDEX IF NOT EXISTS idx_txn_type ON transactions (txn_type);
+
 -- ============================================================
--- 6. WATCHLIST — Tickers user is researching
+-- TARGET ALLOCATION  (per portfolio, per asset class or ticker)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.watchlist (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  ticker          TEXT NOT NULL,
-  exchange        TEXT NOT NULL DEFAULT 'NSE',
-  name            TEXT,
-  added_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-  notes           TEXT,
-  UNIQUE(user_id, ticker, exchange)
+CREATE TABLE IF NOT EXISTS target_allocations (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    portfolio_id    UUID NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
+    label           TEXT NOT NULL,   -- "Indian Equity", "US ETF", "Gold", etc.
+    asset_class     TEXT,            -- maps to assets.asset_class
+    country         CHAR(2),         -- optional country filter
+    target_pct      NUMERIC(5, 2) NOT NULL CHECK (target_pct >= 0 AND target_pct <= 100),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (portfolio_id, label)
 );
 
--- ============================================================
--- 7. AI CONVERSATIONS — CFO advisor chat history
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.ai_conversations (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  session_id      TEXT NOT NULL,                      -- group messages by session
-  role            TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
-  content         TEXT NOT NULL,
-  model           TEXT DEFAULT 'gemini-2.0-flash',
-  tokens_used     INTEGER,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- ============================================================
--- 8. UPLOAD SESSIONS — Track CSV/image upload history
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.upload_sessions (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  file_name       TEXT NOT NULL,
-  file_type       TEXT NOT NULL CHECK (file_type IN ('csv_holdings', 'csv_transactions', 'image_screenshot')),
-  file_url        TEXT,                               -- Supabase Storage URL
-  status          TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','failed')),
-  rows_imported   INTEGER DEFAULT 0,
-  error_message   TEXT,
-  ocr_raw_result  JSONB,                              -- raw AI OCR response stored as JSON
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- ============================================================
--- 9. PORTFOLIO SNAPSHOTS — Daily portfolio value history
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.portfolio_snapshots (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  snapshot_date   DATE NOT NULL,
-  total_value     NUMERIC(18, 2) NOT NULL,            -- INR value of entire portfolio
-  total_invested  NUMERIC(18, 2) NOT NULL,
-  total_pnl       NUMERIC(18, 2) GENERATED ALWAYS AS (total_value - total_invested) STORED,
-  pnl_pct         NUMERIC(8, 4),
-  currency        TEXT NOT NULL DEFAULT 'INR',
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(user_id, snapshot_date)
-);
-
--- ============================================================
--- INDEXES — for performance
--- ============================================================
-CREATE INDEX IF NOT EXISTS idx_holdings_user      ON public.holdings(user_id);
-CREATE INDEX IF NOT EXISTS idx_holdings_ticker    ON public.holdings(ticker);
-CREATE INDEX IF NOT EXISTS idx_transactions_user  ON public.transactions(user_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_date  ON public.transactions(trade_date);
-CREATE INDEX IF NOT EXISTS idx_transactions_ticker ON public.transactions(ticker);
-CREATE INDEX IF NOT EXISTS idx_price_cache_ticker ON public.price_cache(ticker);
-CREATE INDEX IF NOT EXISTS idx_ai_conv_session    ON public.ai_conversations(session_id);
-CREATE INDEX IF NOT EXISTS idx_snapshots_user_date ON public.portfolio_snapshots(user_id, snapshot_date);
-
--- ============================================================
--- ROW LEVEL SECURITY (RLS) — users only see their own data
--- ============================================================
-ALTER TABLE public.profiles           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.holdings           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.target_allocations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.watchlist          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ai_conversations   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.upload_sessions    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.portfolio_snapshots ENABLE ROW LEVEL SECURITY;
--- price_cache is public read, no RLS needed
-
--- profiles
-CREATE POLICY "Users manage own profile"
-  ON public.profiles FOR ALL
-  USING (auth.uid() = id);
-
--- holdings
-CREATE POLICY "Users manage own holdings"
-  ON public.holdings FOR ALL
-  USING (auth.uid() = user_id);
-
--- transactions
-CREATE POLICY "Users manage own transactions"
-  ON public.transactions FOR ALL
-  USING (auth.uid() = user_id);
-
--- target_allocations
-CREATE POLICY "Users manage own allocations"
-  ON public.target_allocations FOR ALL
-  USING (auth.uid() = user_id);
-
--- watchlist
-CREATE POLICY "Users manage own watchlist"
-  ON public.watchlist FOR ALL
-  USING (auth.uid() = user_id);
-
--- ai_conversations
-CREATE POLICY "Users manage own AI conversations"
-  ON public.ai_conversations FOR ALL
-  USING (auth.uid() = user_id);
-
--- upload_sessions
-CREATE POLICY "Users manage own uploads"
-  ON public.upload_sessions FOR ALL
-  USING (auth.uid() = user_id);
-
--- portfolio_snapshots
-CREATE POLICY "Users manage own snapshots"
-  ON public.portfolio_snapshots FOR ALL
-  USING (auth.uid() = user_id);
-
--- ============================================================
--- TRIGGERS — auto-update updated_at timestamps
--- ============================================================
-CREATE OR REPLACE FUNCTION public.handle_updated_at()
+-- Ensure all targets per portfolio sum to <= 100
+CREATE OR REPLACE FUNCTION check_target_sum()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
+    IF (SELECT SUM(target_pct) FROM target_allocations WHERE portfolio_id = NEW.portfolio_id) > 100 THEN
+        RAISE EXCEPTION 'Target allocations exceed 100%% for portfolio %', NEW.portfolio_id;
+    END IF;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_profiles_updated_at
-  BEFORE UPDATE ON public.profiles
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER trg_holdings_updated_at
-  BEFORE UPDATE ON public.holdings
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER trg_allocations_updated_at
-  BEFORE UPDATE ON public.target_allocations
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+CREATE TRIGGER trg_target_sum
+    AFTER INSERT OR UPDATE ON target_allocations
+    FOR EACH ROW EXECUTE FUNCTION check_target_sum();
 
 -- ============================================================
--- AUTO-CREATE PROFILE on new Supabase Auth signup
+-- PRICE HISTORY  (daily OHLCV fetched from yfinance)
 -- ============================================================
-CREATE OR REPLACE FUNCTION public.handle_new_user()
+CREATE TABLE IF NOT EXISTS price_history (
+    id          BIGSERIAL PRIMARY KEY,
+    asset_id    UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+    price_date  DATE NOT NULL,
+    open        NUMERIC(18, 4),
+    high        NUMERIC(18, 4),
+    low         NUMERIC(18, 4),
+    close       NUMERIC(18, 4) NOT NULL,
+    volume      BIGINT,
+    currency    CHAR(3) NOT NULL DEFAULT 'INR',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (asset_id, price_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_price_asset_date ON price_history (asset_id, price_date DESC);
+
+-- ============================================================
+-- WATCHLIST
+-- ============================================================
+CREATE TABLE IF NOT EXISTS watchlist (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    asset_id        UUID NOT NULL REFERENCES assets(id),
+    alert_above     NUMERIC(18, 4),  -- price alert trigger
+    alert_below     NUMERIC(18, 4),
+    notes           TEXT,
+    added_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, asset_id)
+);
+
+-- ============================================================
+-- AI ADVISOR CONVERSATIONS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ai_conversations (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    portfolio_id    UUID REFERENCES portfolios(id) ON DELETE SET NULL,
+    title           TEXT,            -- auto-generated from first message
+    model_used      TEXT,            -- gemini-1.5-pro, gpt-4o, etc.
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ai_messages (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    conversation_id UUID NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
+    role            TEXT NOT NULL CHECK (role IN ('user','assistant','system')),
+    content         TEXT NOT NULL,
+    tokens_used     INTEGER,
+    latency_ms      INTEGER,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_messages_conv ON ai_messages (conversation_id, created_at);
+
+-- ============================================================
+-- NEWS CACHE  (fetched articles, avoids re-fetching)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS news_cache (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    source          TEXT,
+    title           TEXT NOT NULL,
+    description     TEXT,
+    url             TEXT UNIQUE NOT NULL,
+    published_at    TIMESTAMPTZ,
+    sentiment       TEXT CHECK (sentiment IN ('POSITIVE','NEGATIVE','NEUTRAL')),
+    sentiment_score NUMERIC(4, 3),   -- -1.000 to +1.000
+    related_tickers TEXT[],          -- e.g. {"RELIANCE", "INFY"}
+    fetched_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_published ON news_cache (published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_news_tickers ON news_cache USING GIN (related_tickers);
+
+-- ============================================================
+-- PORTFOLIO SNAPSHOTS  (daily NAV history for performance charts)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS portfolio_snapshots (
+    id              BIGSERIAL PRIMARY KEY,
+    portfolio_id    UUID NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
+    snapshot_date   DATE NOT NULL,
+    total_value     NUMERIC(18, 2) NOT NULL,
+    invested_amount NUMERIC(18, 2) NOT NULL,
+    total_pnl       NUMERIC(18, 2),
+    total_pnl_pct   NUMERIC(8, 4),
+    day_change      NUMERIC(18, 2),
+    day_change_pct  NUMERIC(8, 4),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (portfolio_id, snapshot_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_snapshot_portfolio_date ON portfolio_snapshots (portfolio_id, snapshot_date DESC);
+
+-- ============================================================
+-- IMPORT LOGS  (track every CSV/XLSX upload)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS import_logs (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    portfolio_id    UUID NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
+    filename        TEXT NOT NULL,
+    file_size_bytes INTEGER,
+    rows_total      INTEGER,
+    rows_imported   INTEGER,
+    rows_failed     INTEGER,
+    status          TEXT NOT NULL DEFAULT 'PENDING'
+        CHECK (status IN ('PENDING','PROCESSING','SUCCESS','PARTIAL','FAILED')),
+    error_log       JSONB,           -- array of {row, error} objects
+    imported_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================
+-- UTILITY: auto-update updated_at columns
+-- ============================================================
+CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', '')
-  );
-  RETURN NEW;
+    NEW.updated_at = NOW();
+    RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER trg_on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+DO $$
+DECLARE
+    t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY['users','portfolios','holdings','ai_conversations']
+    LOOP
+        EXECUTE format('
+            CREATE TRIGGER trg_updated_at_%I
+            BEFORE UPDATE ON %I
+            FOR EACH ROW EXECUTE FUNCTION set_updated_at();', t, t);
+    END LOOP;
+END;
+$$;
+
+-- ============================================================
+-- SEED: default asset universe (NSE blue-chips + popular ETFs)
+-- ============================================================
+INSERT INTO assets (ticker, exchange, yf_ticker, name, asset_class, sector, country, currency) VALUES
+  ('RELIANCE',   'NSE', 'RELIANCE.NS',   'Reliance Industries Ltd',   'EQUITY', 'Energy',        'IN', 'INR'),
+  ('INFY',       'NSE', 'INFY.NS',       'Infosys Ltd',               'EQUITY', 'Technology',    'IN', 'INR'),
+  ('HDFCBANK',   'NSE', 'HDFCBANK.NS',   'HDFC Bank Ltd',             'EQUITY', 'Financial',     'IN', 'INR'),
+  ('TCS',        'NSE', 'TCS.NS',        'Tata Consultancy Services', 'EQUITY', 'Technology',    'IN', 'INR'),
+  ('WIPRO',      'NSE', 'WIPRO.NS',      'Wipro Ltd',                 'EQUITY', 'Technology',    'IN', 'INR'),
+  ('ICICIBANK',  'NSE', 'ICICIBANK.NS',  'ICICI Bank Ltd',            'EQUITY', 'Financial',     'IN', 'INR'),
+  ('KOTAKBANK',  'NSE', 'KOTAKBANK.NS',  'Kotak Mahindra Bank',       'EQUITY', 'Financial',     'IN', 'INR'),
+  ('BAJFINANCE', 'NSE', 'BAJFINANCE.NS', 'Bajaj Finance Ltd',         'EQUITY', 'Financial',     'IN', 'INR'),
+  ('ASIANPAINT', 'NSE', 'ASIANPAINT.NS', 'Asian Paints Ltd',          'EQUITY', 'Consumer',      'IN', 'INR'),
+  ('GOLDBEES',   'NSE', 'GOLDBEES.NS',   'Nippon Gold ETF',           'ETF',    'Commodities',   'IN', 'INR'),
+  ('LIQUIDBEES', 'NSE', 'LIQUIDBEES.NS', 'Nippon Liquid ETF',         'ETF',    'Liquid',        'IN', 'INR'),
+  ('VTI',        'NYSE','VTI',           'Vanguard Total Stock ETF',  'ETF',    'Broad Market',  'US', 'USD'),
+  ('QQQ',        'NASDAQ','QQQ',         'Invesco QQQ Trust',         'ETF',    'Technology',    'US', 'USD'),
+  ('INDA',       'NYSE','INDA',          'iShares MSCI India ETF',    'ETF',    'Broad Market',  'US', 'USD'),
+  ('GLD',        'NYSE','GLD',           'SPDR Gold Shares',          'ETF',    'Commodities',   'US', 'USD')
+ON CONFLICT (ticker, exchange) DO NOTHING;

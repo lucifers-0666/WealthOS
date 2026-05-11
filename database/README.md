@@ -1,94 +1,93 @@
-# WealthOS — Database Layer
+# WealthOS — PostgreSQL Database
 
-This folder contains everything related to the Supabase PostgreSQL integration.
+## Quick Setup
 
-## Files
-
-| File | Purpose |
-|------|---------|
-| `schema.sql` | Full database schema — run once in Supabase SQL Editor |
-| `seed.sql` | Demo data for development — optional |
-| `db.py` | Python CRUD layer — import from anywhere in the app |
-| `__init__.py` | Re-exports all public functions |
-
----
-
-## Setup (5 minutes)
-
-### Step 1 — Create a Supabase Project
-1. Go to [supabase.com](https://supabase.com) → Sign up (free)
-2. Click **New Project** → Choose a name `wealthos` → Set a DB password → Select region `ap-south-1` (Mumbai)
-3. Wait ~2 minutes for provisioning
-
-### Step 2 — Run the Schema
-1. In your Supabase project → **SQL Editor** → **New Query**
-2. Paste the entire contents of `database/schema.sql`
-3. Click **Run** — all 9 tables + indexes + RLS policies + triggers are created
-
-### Step 3 — Add env variables to `.env`
-```env
-SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+### 1. Install PostgreSQL (Windows)
+```powershell
+# Using winget
+winget install PostgreSQL.PostgreSQL
+# OR download from https://www.postgresql.org/download/windows/
 ```
-Get both from: **Project Settings → API → Project URL + anon public key**
 
-### Step 4 — Install Python client
+### 2. Create database & user
+```sql
+-- Open psql as postgres superuser
+psql -U postgres
+
+CREATE DATABASE wealthos;
+CREATE USER wealthos WITH PASSWORD 'wealthos';
+GRANT ALL PRIVILEGES ON DATABASE wealthos TO wealthos;
+\c wealthos
+GRANT ALL ON SCHEMA public TO wealthos;
+\q
+```
+
+### 3. Add to your .env
+```
+DATABASE_URL=postgresql://wealthos:wealthos@localhost:5432/wealthos
+```
+
+### 4. Run migration
 ```bash
-pip install supabase
-```
-(Already added to requirements.txt)
+# Apply schema (creates all tables + seed data)
+python -m database.migrate
 
-### Step 5 — (Optional) Load demo data
-1. Go to **Authentication → Users** → copy your user UUID
-2. Open `database/seed.sql` → replace `YOUR-USER-UUID-HERE` with your UUID
-3. Run in SQL Editor
+# Test connection
+python -m database.migrate --check
+
+# Reset everything (DEV only)
+python -m database.migrate --reset
+```
+
+### 5. Install Python drivers
+```bash
+pip install psycopg2-binary asyncpg sqlalchemy
+```
 
 ---
 
-## Usage in Python
+## Schema Overview
+
+| Table | Purpose |
+|---|---|
+| `users` | User accounts |
+| `portfolios` | One user → many portfolios |
+| `assets` | Master ticker registry (NSE, NYSE, etc.) |
+| `holdings` | Live snapshot per ticker per portfolio |
+| `transactions` | Immutable buy/sell/dividend ledger |
+| `target_allocations` | Target % per asset class |
+| `price_history` | Daily OHLCV (populated by price_fetcher) |
+| `watchlist` | Per-user watchlist with price alerts |
+| `ai_conversations` | CFO advisor chat sessions |
+| `ai_messages` | Individual messages within a conversation |
+| `news_cache` | Cached news articles with sentiment |
+| `portfolio_snapshots` | Daily NAV for performance charts |
+| `import_logs` | CSV/XLSX upload audit trail |
+
+---
+
+## Using in Streamlit
 
 ```python
-from database import get_holdings, upsert_holding, bulk_insert_transactions
+from database.crud import holdings_to_df, transactions_to_df
+from database.db import health_check
 
-# Get all holdings for a user
-holdings = get_holdings(user_id="uuid-here")
-
-# Upsert a holding
-upsert_holding(
-    user_id="uuid-here",
-    ticker="RELIANCE",
-    exchange="NSE",
-    payload={
-        "quantity": 10,
-        "avg_buy_price": 2450.00,
-        "asset_class": "equity_IN",
-        "currency": "INR",
-        "sector": "Energy",
-    }
-)
-
-# Bulk import from CSV
-bulk_insert_transactions(user_id="uuid-here", transactions=parsed_rows)
+# Check connection
+if health_check():
+    df = holdings_to_df(portfolio_id)
+    st.dataframe(df)
 ```
 
----
+## Using in FastAPI
 
-## Table Overview
+```python
+from database.db import db_dependency
+from database.models import Holding
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-| Table | What it stores |
-|-------|----------------|
-| `profiles` | User settings, currency preference, risk profile |
-| `holdings` | Current portfolio positions (ticker, qty, avg price) |
-| `transactions` | Full buy/sell/dividend history |
-| `target_allocations` | User's desired portfolio asset mix (%) |
-| `price_cache` | Last fetched live prices (TTL managed in app) |
-| `watchlist` | Tickers being researched |
-| `ai_conversations` | CFO advisor chat history |
-| `upload_sessions` | CSV/image upload tracking + OCR results |
-| `portfolio_snapshots` | Daily total portfolio value for charting |
-
----
-
-## Security
-
-All tables have **Row Level Security (RLS)** enabled — users can only read/write their own data. The `price_cache` table is public read (no auth needed for price lookups).
+@app.get("/holdings")
+async def get_holdings(db: AsyncSession = Depends(db_dependency)):
+    result = await db.execute(select(Holding))
+    return result.scalars().all()
+```

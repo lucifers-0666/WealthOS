@@ -1,50 +1,54 @@
 import pandas as pd
-import numpy as np
-from config import DEFAULT_TARGET_ALLOCATION
 from typing import Dict
 
+DEFAULT_TARGET = {
+    'Equity':    50.0,
+    'ETF':       25.0,
+    'Gold ETF':  10.0,
+    'Liquid ETF': 5.0,
+    'Bonds':     10.0,
+}
 
-def compute_target_deviation(actual_allocation: pd.Series, target_allocation: Dict) -> pd.DataFrame:
+
+def compute_deviation(actual: pd.Series, target: Dict[str, float]) -> pd.DataFrame:
     """
-    Compare actual allocation vs target.
-    Returns DataFrame with actual%, target%, deviation%, and rebalance amount.
+    Compare actual allocation (%) against target allocation (%).
+    Returns DataFrame with columns: asset_type, actual_pct, target_pct, deviation_pct, status.
     """
-    target_series = pd.Series(target_allocation)
+    rows = []
+    all_types = set(actual.index) | set(target.keys())
 
-    # Align indices
-    all_categories = set(actual_allocation.index) | set(target_series.index)
-    actual = actual_allocation.reindex(all_categories, fill_value=0)
-    target = target_series.reindex(all_categories, fill_value=0)
+    for asset_type in sorted(all_types):
+        actual_pct = actual.get(asset_type, 0.0)
+        target_pct = target.get(asset_type, 0.0)
+        deviation  = actual_pct - target_pct
 
-    result = pd.DataFrame({
-        'Actual_%': actual.round(2),
-        'Target_%': target.round(2),
-        'Deviation_%': (actual - target).round(2),
-        'Status': (actual - target).apply(
-            lambda x: '🔴 Overweight' if x > 2 else ('🟡 Underweight' if x < -2 else '🟢 On Target')
-        )
-    })
+        if deviation > 3:
+            status = 'Overweight'
+        elif deviation < -3:
+            status = 'Underweight'
+        else:
+            status = 'On Target'
 
-    return result
-
-
-def compute_rebalance_trades(df: pd.DataFrame, total_portfolio_value: float, target_allocation: Dict) -> pd.DataFrame:
-    """
-    Calculate how much to buy/sell to rebalance to target.
-    Returns DataFrame with recommended trades.
-    """
-    trades = []
-    for category, target_pct in target_allocation.items():
-        target_value = (target_pct / 100) * total_portfolio_value
-        current_row = df[df.index == category]
-        current_value = current_row['Current_Value'].sum() if not current_row.empty else 0
-        diff = target_value - current_value
-        action = 'BUY' if diff > 0 else 'SELL'
-        trades.append({
-            'Category': category,
-            'Current_Value': round(current_value, 2),
-            'Target_Value': round(target_value, 2),
-            'Difference': round(abs(diff), 2),
-            'Action': action
+        rows.append({
+            'asset_type':   asset_type,
+            'actual_pct':   round(actual_pct,  2),
+            'target_pct':   round(target_pct,  2),
+            'deviation_pct': round(deviation,  2),
+            'status':       status,
         })
-    return pd.DataFrame(trades)
+
+    return pd.DataFrame(rows)
+
+
+def rebalance_suggestions(deviation_df: pd.DataFrame, total_value: float) -> pd.DataFrame:
+    """
+    Calculate the rupee/dollar amount to buy or sell per asset type to rebalance.
+    """
+    df = deviation_df.copy()
+    df['action_amount'] = -(df['deviation_pct'] / 100) * total_value
+    df['action'] = df['action_amount'].apply(
+        lambda x: 'BUY' if x > 0 else ('SELL' if x < 0 else 'HOLD')
+    )
+    df['action_amount'] = df['action_amount'].abs().round(2)
+    return df[['asset_type', 'actual_pct', 'target_pct', 'deviation_pct', 'action', 'action_amount']]

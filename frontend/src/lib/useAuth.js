@@ -11,19 +11,32 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let unsubscribe = null;
+
     // Restore session on mount
-    getSession().then((session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    getSession()
+      .then((session) => {
+        setUser(session?.user ?? null);
+      })
+      .catch(() => {
+        setUser(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Listen for auth state changes when Supabase is configured
+    if (supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      });
+      unsubscribe = () => subscription.unsubscribe();
+    }
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   return {

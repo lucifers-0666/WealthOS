@@ -74,3 +74,10 @@ def get_ticker_info(symbol: str) -> dict:
     except Exception as e:
         logger.error(f"Ticker info error for {symbol}: {e}")
         return {}
+
+
+def fetch_prices(symbols: List[str]) -> Dict[str, float]:
+    """Backward-compatible alias expected by API routes."""
+    if not symbols:
+        return {}
+    return fetch_live_prices(tuple(symbols))

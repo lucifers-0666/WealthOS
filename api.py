@@ -35,9 +35,26 @@ from ai.cfo_advisor import get_cfo_response
 
 app = FastAPI(title="WealthOS API", version="2.0.0")
 
+
+def _allowed_origins() -> list[str]:
+    """Allow local dev frontends on the common Vite/Streamlit ports.
+
+    FRONTEND_URL can still override this with a comma-separated list.
+    """
+    env_origins = [origin.strip() for origin in os.getenv("FRONTEND_URL", "").split(",") if origin.strip()]
+    default_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
+    ]
+    return list(dict.fromkeys(env_origins or default_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
+    allow_origins=_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

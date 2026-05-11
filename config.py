@@ -39,11 +39,11 @@ DEFAULT_TARGET_ALLOCATION = {
 }
 
 # Chart Colors
-COLOR_PROFIT = "#00C851"
-COLOR_LOSS = "#FF4444"
-COLOR_NEUTRAL = "#AAAAAA"
-COLOR_PRIMARY = "#7C3AED"
-COLOR_SECONDARY = "#3B82F6"
+COLOR_PROFIT = "#86EFAC"
+COLOR_LOSS = "#FDA4AF"
+COLOR_NEUTRAL = "#64748B"
+COLOR_PRIMARY = "#7DD3FC"
+COLOR_SECONDARY = "#D6C7A1"
 
 # News RAG Settings
 NEWS_LOOKBACK_DAYS = 7
@@ -54,8 +54,8 @@ RAG_TOP_K = 5
 
 # Gemini Model — gemini-2.0-flash is current stable on v1beta
 # gemini-1.5-pro and gemini-1.5-flash were removed from v1beta API
-GEMINI_MODEL = "gemini-2.0-flash"
-GEMINI_VISION_MODEL = "gemini-2.0-flash"  # used for image OCR
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash")  # used for image OCR
 GEMINI_MAX_TOKENS = 2048
 GEMINI_TEMPERATURE = 0.3
 

@@ -38,7 +38,7 @@ def render_news_page():
         if not articles:
             st.markdown("""
             <div class="glass-surface" style="text-align:center;padding:2.5rem">
-              <p style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:#F8FAFC;margin:0 0 .4rem">
+              <p style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:#F3F4F6;margin:0 0 .4rem">
                 No articles found
               </p>
               <p style="color:#94A3B8;font-size:.85rem;margin:0">
@@ -57,7 +57,7 @@ def render_news_page():
 
                 link_btn = ""
                 if article_url:
-                    link_btn = f'<a href="{article_url}" target="_blank" style="font-size:.75rem;color:#3B82F6;text-decoration:none;font-weight:500">Read full article</a>'
+                    link_btn = f'<a href="{article_url}" target="_blank" style="font-size:.75rem;color:#7DD3FC;text-decoration:none;font-weight:500">Read full article</a>'
 
                 st.markdown(f"""
                 <div class="news-card">
@@ -70,7 +70,7 @@ def render_news_page():
     else:
         st.markdown("""
         <div class="glass-surface" style="text-align:center;padding:3rem">
-          <p style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.05rem;color:#F8FAFC;margin:0 0 .5rem">
+          <p style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.05rem;color:#F3F4F6;margin:0 0 .5rem">
             Search for Financial News
           </p>
           <p style="color:#94A3B8;font-size:.88rem;margin:0">
@@ -78,3 +78,4 @@ def render_news_page():
           </p>
         </div>
         """, unsafe_allow_html=True)
+

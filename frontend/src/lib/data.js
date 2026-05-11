@@ -23,12 +23,12 @@ export const PERF = MO.map((m,i) => ({
 }))
 
 export const ALLOC = [
-  { name:'Large Cap', value:38.5, color:'#3B82F6' },
-  { name:'Mid Cap',   value:18.2, color:'#8B5CF6' },
-  { name:'IT / Tech', value:22.3, color:'#22D3EE' },
-  { name:'Intl ETFs', value:9.6,  color:'#34D399' },
-  { name:'Gold',      value:7.2,  color:'#FBBF24' },
-  { name:'Cash',      value:4.2,  color:'#475569' },
+  { name:'Large Cap', value:38.5, color:'#7DD3FC' },
+  { name:'Mid Cap',   value:18.2, color:'#A78BFA' },
+  { name:'IT / Tech', value:22.3, color:'#67E8F9' },
+  { name:'Intl ETFs', value:9.6,  color:'#86EFAC' },
+  { name:'Gold',      value:7.2,  color:'#D6C7A1' },
+  { name:'Cash',      value:4.2,  color:'#64748B' },
 ]
 
 export const TARGET = [

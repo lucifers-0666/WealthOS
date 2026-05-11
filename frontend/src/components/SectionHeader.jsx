@@ -1,11 +1,12 @@
-export default function SectionHeader({ title, sub, right }) {
+export default function SectionHeader({ title, sub, right, eyebrow }) {
   return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
       <div>
-        <div style={{ fontFamily:'Space Grotesk', fontWeight:600, fontSize:15, color:'#F8FAFC' }}>{title}</div>
-        {sub && <div style={{ fontSize:12, color:'#475569', marginTop:2 }}>{sub}</div>}
+        {eyebrow && <div className="section-label" style={{ marginBottom: 6 }}>{eyebrow}</div>}
+        <div className="editorial-title" style={{ fontSize: 16, lineHeight: 1.15 }}>{title}</div>
+        {sub && <div style={{ fontSize: 12, color: '#64748B', marginTop: 5 }}>{sub}</div>}
       </div>
-      {right && <div>{right}</div>}
+      {right && <div style={{ flexShrink: 0 }}>{right}</div>}
     </div>
   )
 }

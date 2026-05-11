@@ -2,7 +2,7 @@ import streamlit as st
 from loguru import logger
 
 st.set_page_config(
-    page_title="WealthOS — Personal Finance Dashboard",
+    page_title="WealthOS - Private Financial Terminal",
   page_icon="W",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -795,7 +795,7 @@ with st.sidebar:
     st.markdown("""
     <div class="sidebar-logo">
       <p class="sidebar-logo-title">WealthOS</p>
-      <p class="sidebar-logo-sub">Personal Finance Dashboard</p>
+      <p class="sidebar-logo-sub">Private Financial Terminal</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -877,7 +877,7 @@ with top_right:
 
 st.markdown("""
 <div style='text-align:center;font-size:.68rem;color:rgba(148,163,184,0.4);letter-spacing:.05em;margin-top:1rem'>
-  WEALTHOS v1.0 &nbsp;&bull;&nbsp; POWERED BY GEMINI
+  WEALTHOS v1.0 &nbsp;|&nbsp; PRIVATE FINANCIAL TERMINAL
 </div>
 """, unsafe_allow_html=True)
 
@@ -896,3 +896,4 @@ elif page == "AI Advisor":
     render_advisor_page()
 elif page == "Market News":
     render_news_page()
+

@@ -9,12 +9,12 @@ from ui.components import page_header, section_title, metric_card
 BG = "rgba(0,0,0,0)"
 GRID = "rgba(148,163,184,0.08)"
 TEXT = "#94A3B8"
-BLUE = "#3B82F6"
-CYAN = "#22D3EE"
-VIOLET = "#8B5CF6"
+BLUE = "#7DD3FC"
+CYAN = "#67E8F9"
+VIOLET = "#A78BFA"
 GREEN = "#34D399"
 RED = "#F87171"
-PALETTE = [BLUE, CYAN, VIOLET, "#F59E0B", GREEN, "#EC4899", "#FB923C", "#A78BFA"]
+PALETTE = [BLUE, CYAN, VIOLET, "#D6C7A1", GREEN, "#D6C7A1", "#D6C7A1", "#A78BFA"]
 
 
 def _base_layout(**kwargs):
@@ -60,7 +60,7 @@ def render_dashboard():
         st.markdown(
             """
             <div class="glass-surface" style="text-align:center;padding:3rem 1.5rem;">
-                <p style="font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:600;color:#F8FAFC;margin:0 0 .45rem">No portfolio loaded</p>
+                <p style="font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:600;color:#F3F4F6;margin:0 0 .45rem">No portfolio loaded</p>
                 <p style="color:#94A3B8;font-size:.9rem;margin:0 0 1.2rem">Upload a holdings file or load demo data to view analytics.</p>
             </div>
             """,
@@ -108,13 +108,13 @@ def render_dashboard():
                 values=df["Current_Value"].tolist(),
                 hole=0.52,
                 marker=dict(colors=PALETTE, line=dict(color="rgba(5,8,22,0.8)", width=2)),
-                textfont=dict(size=11, color="#F8FAFC"),
+                textfont=dict(size=11, color="#F3F4F6"),
                 hovertemplate="<b>%{label}</b><br>Value: ₹%{value:,.0f}<br>Weight: %{percent}<extra></extra>",
             )
         )
         fig_pie.update_layout(
             **_base_layout(
-                title=dict(text="Portfolio Allocation", font=dict(size=14, color="#F8FAFC"), x=0.5),
+                title=dict(text="Portfolio Allocation", font=dict(size=14, color="#F3F4F6"), x=0.5),
                 showlegend=True,
                 legend=dict(orientation="v", x=1.02, y=0.5, bgcolor="rgba(0,0,0,0)"),
                 height=340,
@@ -125,7 +125,7 @@ def render_dashboard():
             x=0.5,
             y=0.5,
             showarrow=False,
-            font=dict(color="#F8FAFC", size=14),
+            font=dict(color="#F3F4F6", size=14),
         )
         st.plotly_chart(fig_pie, use_container_width=True)
 
@@ -146,7 +146,7 @@ def render_dashboard():
         )
         fig_bar.update_layout(
             **_base_layout(
-                title=dict(text="P&L by Holding", font=dict(size=14, color="#F8FAFC"), x=0.5),
+                title=dict(text="P&L by Holding", font=dict(size=14, color="#F3F4F6"), x=0.5),
                 xaxis=dict(
                     gridcolor=GRID,
                     zerolinecolor="rgba(148,163,184,0.3)",
@@ -172,12 +172,12 @@ def render_dashboard():
                     values=sector_df["Current_Value"],
                     hole=0.45,
                     marker=dict(colors=PALETTE, line=dict(color="rgba(5,8,22,0.8)", width=2)),
-                    textfont=dict(size=11, color="#F8FAFC"),
+                    textfont=dict(size=11, color="#F3F4F6"),
                 )
             )
             fig_sec.update_layout(
                 **_base_layout(
-                    title=dict(text="By Sector", font=dict(size=14, color="#F8FAFC"), x=0.5),
+                    title=dict(text="By Sector", font=dict(size=14, color="#F3F4F6"), x=0.5),
                     showlegend=True,
                     height=300,
                 )
@@ -203,7 +203,7 @@ def render_dashboard():
         )
         fig_cost.update_layout(
             **_base_layout(
-                title=dict(text="Value vs Cost Basis", font=dict(size=14, color="#F8FAFC"), x=0.5),
+                title=dict(text="Value vs Cost Basis", font=dict(size=14, color="#F3F4F6"), x=0.5),
                 barmode="group",
                 bargap=0.25,
                 height=300,
@@ -261,3 +261,4 @@ def render_dashboard():
     )
 
     st.dataframe(styled, use_container_width=True, height=300)
+

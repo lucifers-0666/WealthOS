@@ -55,7 +55,7 @@ def render_advisor_page():
             st.markdown(
                 """
                 <div class="glass-surface" style="text-align:center;padding:1.75rem">
-                    <p style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1rem;margin:0 0 .3rem;color:#F8FAFC">Your AI advisor is ready</p>
+                    <p style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1rem;margin:0 0 .3rem;color:#F3F4F6">Your AI advisor is ready</p>
                     <p style="color:#94A3B8;font-size:.85rem;margin:0">Ask about risk, rebalancing, tax, goal planning, or diversification.</p>
                 </div>
                 """,
@@ -142,3 +142,4 @@ def render_advisor_page():
                         st.session_state.get("rag_articles", []),
                     )
                 st.markdown(f'<div class="glass-surface">{answer}</div>', unsafe_allow_html=True)
+

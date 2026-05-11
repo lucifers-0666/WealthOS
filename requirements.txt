@@ -1,11 +1,15 @@
 # Core Framework
 streamlit==1.35.0
 streamlit-extras==0.4.3
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
 
 # Data Processing
 pandas==2.2.2
 numpy==1.26.4
 openpyxl==3.1.2
+pillow==10.4.0
 
 # Finance & Price Data
 yfinance==0.2.40

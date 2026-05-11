@@ -20,11 +20,11 @@ def render_upload_page():
         st.markdown(
             """
             <div class="glass-surface" style="margin-bottom:1rem;padding:1rem 1.15rem">
-                <p style="margin:0 0 .45rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#F8FAFC">Required columns</p>
+                <p style="margin:0 0 .45rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#F3F4F6">Required columns</p>
                 <p style="margin:0;font-size:.84rem;color:#94A3B8">
-                    <code style="color:#22D3EE">Symbol</code>,
-                    <code style="color:#22D3EE">Quantity</code>,
-                    <code style="color:#22D3EE">Avg_Buy_Price</code>
+                    <code style="color:#67E8F9">Symbol</code>,
+                    <code style="color:#67E8F9">Quantity</code>,
+                    <code style="color:#67E8F9">Avg_Buy_Price</code>
                 </p>
                 <p style="margin:.4rem 0 0;font-size:.78rem;color:#94A3B8">Optional: Name, Asset_Type, Exchange, Sector</p>
             </div>
@@ -68,13 +68,13 @@ def render_upload_page():
         st.markdown(
             """
             <div class="glass-surface" style="margin-bottom:1rem;padding:1rem 1.15rem">
-                <p style="margin:0 0 .45rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#F8FAFC">Required columns</p>
+                <p style="margin:0 0 .45rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#F3F4F6">Required columns</p>
                 <p style="margin:0;font-size:.84rem;color:#94A3B8">
-                    <code style="color:#22D3EE">Date</code>,
-                    <code style="color:#22D3EE">Symbol</code>,
-                    <code style="color:#22D3EE">Type</code>,
-                    <code style="color:#22D3EE">Quantity</code>,
-                    <code style="color:#22D3EE">Price</code>
+                    <code style="color:#67E8F9">Date</code>,
+                    <code style="color:#67E8F9">Symbol</code>,
+                    <code style="color:#67E8F9">Type</code>,
+                    <code style="color:#67E8F9">Quantity</code>,
+                    <code style="color:#67E8F9">Price</code>
                 </p>
             </div>
             """,
@@ -111,7 +111,7 @@ def render_upload_page():
         st.markdown(
             """
             <div class="glass-surface" style="margin-bottom:1rem;padding:1rem 1.15rem">
-                <p style="margin:0 0 .4rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#F8FAFC">Vision extraction powered by Gemini</p>
+                <p style="margin:0 0 .4rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#F3F4F6">Vision extraction powered by Gemini</p>
                 <p style="margin:0;font-size:.83rem;color:#94A3B8">Upload a clean broker screenshot and auto-extract holdings.</p>
             </div>
             """,
@@ -144,3 +144,4 @@ def render_upload_page():
                             st.warning("Could not extract holdings. Try a clearer screenshot.")
                     except Exception as e:
                         st.error(f"OCR error: {e}")
+

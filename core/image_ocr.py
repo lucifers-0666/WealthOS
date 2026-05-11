@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 import io
+import json
 import pandas as pd
 from PIL import Image
 from loguru import logger
@@ -39,9 +40,13 @@ def _try_gemini_vision(image: Image.Image) -> str | None:
             return None
 
         VISION_PROMPT = (
-            "Extract all stock/ETF holdings from this portfolio screenshot. "
-            "Return a plain table with columns: Symbol, Name, Quantity, AvgPrice, CurrentPrice, PnL. "
-            "Use numbers only (no \u20b9 or commas). If a value is unknown write NA."
+            "Extract every stock, ETF, mutual fund, or cash holding visible in this portfolio screenshot. "
+            "Return only valid JSON. Do not wrap in markdown. Shape: "
+            "{\"holdings\":[{\"Symbol\":\"RELIANCE\",\"Name\":\"Reliance Industries\","
+            "\"Quantity\":10,\"Avg_Buy_Price\":2400,\"Current_Price\":2780,"
+            "\"Exchange\":\"NSE\",\"Asset_Type\":\"Equity\"}]}. "
+            "Use numbers only for numeric fields. If a value is not visible use null. "
+            "Infer Symbol from company name only when highly confident."
         )
 
         try:
@@ -75,8 +80,66 @@ def _try_gemini_vision(image: Image.Image) -> str | None:
 # Parsers
 # ---------------------------------------------------------------------------
 
+def _parse_json_holdings(text: str) -> pd.DataFrame | None:
+    """Parse Gemini JSON output into the normalized holdings schema."""
+    raw = text.strip()
+    raw = re.sub(r"^```(?:json)?", "", raw, flags=re.IGNORECASE).strip()
+    raw = re.sub(r"```$", "", raw).strip()
+
+    match = re.search(r"\{.*\}", raw, flags=re.DOTALL)
+    if match:
+        raw = match.group(0)
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+
+    rows = payload.get("holdings", payload if isinstance(payload, list) else [])
+    if not isinstance(rows, list) or not rows:
+        return None
+
+    df = pd.DataFrame(rows)
+    rename_map = {
+        "Qty": "Quantity",
+        "quantity": "Quantity",
+        "avg": "Avg_Buy_Price",
+        "AvgPrice": "Avg_Buy_Price",
+        "AveragePrice": "Avg_Buy_Price",
+        "CurrentPrice": "Current_Price",
+        "LTP": "Current_Price",
+        "symbol": "Symbol",
+        "name": "Name",
+        "exchange": "Exchange",
+        "asset_type": "Asset_Type",
+    }
+    df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns}, inplace=True)
+
+    if "Symbol" not in df.columns:
+        return None
+
+    for col in ["Name", "Exchange", "Asset_Type"]:
+        if col not in df.columns:
+            df[col] = ""
+
+    for col in ["Quantity", "Avg_Buy_Price", "Current_Price"]:
+        if col not in df.columns:
+            df[col] = None
+        df[col] = pd.to_numeric(df[col].apply(lambda v: _clean_rupee(str(v)) if v is not None else v), errors="coerce")
+
+    df["Symbol"] = df["Symbol"].astype(str).str.strip().str.upper()
+    df["Name"] = df["Name"].fillna("").astype(str).str.strip()
+    df["Exchange"] = df["Exchange"].fillna("NSE").replace("", "NSE")
+    df["Asset_Type"] = df["Asset_Type"].fillna("Equity").replace("", "Equity")
+    return df.dropna(subset=["Symbol"])
+
+
 def _parse_extracted_text(text: str) -> pd.DataFrame | None:
     """Try to parse a text table into a DataFrame."""
+    json_df = _parse_json_holdings(text)
+    if json_df is not None and not json_df.empty:
+        return json_df
+
     rows = []
     for line in text.splitlines():
         line = line.strip()

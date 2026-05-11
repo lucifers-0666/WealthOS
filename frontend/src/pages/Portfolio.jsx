@@ -1,127 +1,135 @@
-import { useState } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis } from 'recharts'
+import { useEffect, useMemo, useState } from 'react'
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { motion } from 'framer-motion'
-import { ArrowUp, ArrowDown, Target } from 'lucide-react'
+import { ArrowDown, ArrowUp, Crosshair, Target } from 'lucide-react'
 import SectionHeader from '../components/SectionHeader'
-import { HOLDINGS, TARGET, ALLOC } from '../lib/data'
+import { TARGET } from '../lib/data'
+import { getPortfolioHoldings } from '../lib/portfolioStore'
 
-const PL_DATA = HOLDINGS.map(h => ({ name:h.symbol, pl:h.pl, plp:h.plp, color: h.plp>=0 ? '#34D399' : '#F87171' }))
 
 const METRICS = [
-  { label:'CAGR (2Y)',    value:'18.4%', up:true  },
-  { label:'Sharpe',      value:'1.42',  up:true  },
-  { label:'Beta',        value:'0.87',  up:true  },
-  { label:'Volatility',  value:'14.2%', up:false },
-  { label:'Alpha',       value:'+3.8%', up:true  },
+  { label: 'CAGR 2Y', value: '18.4%', up: true },
+  { label: 'Sharpe', value: '1.42', up: true },
+  { label: 'Beta', value: '0.87', up: true },
+  { label: 'Volatility', value: '14.2%', up: false },
+  { label: 'Alpha', value: '+3.8%', up: true },
 ]
 
 export default function Portfolio() {
   const [sort, setSort] = useState('plp')
-  const sorted = [...HOLDINGS].sort((a,b) => sort==='plp' ? b.plp-a.plp : b.wt-a.wt)
+  const [holdings, setHoldings] = useState(() => getPortfolioHoldings())
+  const sorted = useMemo(() => [...holdings].sort((a, b) => sort === 'plp' ? b.plp - a.plp : b.wt - a.wt), [holdings, sort])
+  const plData = useMemo(() => holdings.map((h) => ({ name: h.symbol, pl: h.pl, plp: h.plp, fill: h.plp >= 0 ? '#86EFAC' : '#FDA4AF' })), [holdings])
+
+  useEffect(() => {
+    const onUpdate = (event) => setHoldings(event.detail || getPortfolioHoldings())
+    window.addEventListener('wealthos:portfolio-updated', onUpdate)
+    window.addEventListener('storage', onUpdate)
+    return () => {
+      window.removeEventListener('wealthos:portfolio-updated', onUpdate)
+      window.removeEventListener('storage', onUpdate)
+    }
+  }, [])
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
-      {/* Metrics strip */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:10 }}>
-        {METRICS.map((m,i) => (
-          <motion.div key={m.label} className="card" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.05 }}
-            style={{ padding:'14px 16px', textAlign:'center' }}>
-            <div className="section-label" style={{ marginBottom:8 }}>{m.label}</div>
-            <div style={{ fontFamily:'Space Grotesk', fontWeight:700, fontSize:20, color: m.up ? '#34D399' : '#F87171' }}>{m.value}</div>
-          </motion.div>
-        ))}
-      </div>
+    <div style={{ maxWidth: 1360, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <section className="lux-card" style={{ padding: 24, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 420px', gap: 22 }}>
+        <div>
+          <span className="badge badge-gold">Risk Matrix</span>
+          <h2 className="editorial-title" style={{ fontSize: 38, lineHeight: 1.05, marginTop: 16, maxWidth: 760 }}>Portfolio architecture with allocation drift, risk texture, and tax-aware position control.</h2>
+          <p style={{ color: '#94A3B8', marginTop: 13, maxWidth: 640 }}>A quieter Bloomberg-inspired matrix for monitoring concentration, winners, laggards, and target deviations.</p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {METRICS.map((m, i) => (
+            <motion.div key={m.label} className="lux-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} style={{ padding: 15 }}>
+              <div className="section-label">{m.label}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
+                {m.up ? <ArrowUp size={14} color="#86EFAC" /> : <ArrowDown size={14} color="#FDA4AF" />}
+                <div className="editorial-title" style={{ color: m.up ? '#86EFAC' : '#FDA4AF', fontSize: 23 }}>{m.value}</div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-        {/* P&L Chart */}
-        <motion.div className="card" initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }} style={{ padding:'22px' }}>
-          <SectionHeader title="Unrealised P&L by Position" sub="Green = profit, Red = loss" />
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={PL_DATA} layout="vertical" margin={{ left:10, right:10 }}>
-              <CartesianGrid stroke="rgba(148,163,184,0.07)" horizontal={false} />
-              <XAxis type="number" tickFormatter={v => `${v>=0?'+':''}${(v/1000).toFixed(0)}k`} tick={{ fontSize:10, fill:'#475569' }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:'#60A5FA', fontFamily:'JetBrains Mono' }} axisLine={false} tickLine={false} />
-              <Tooltip formatter={(v) => [`₹${v.toLocaleString()}`, 'P&L']} contentStyle={{ background:'rgba(11,17,32,0.95)', border:'1px solid rgba(148,163,184,0.2)', borderRadius:8, fontSize:12 }} />
-              <Bar dataKey="pl" radius={[0,4,4,0]}>
-                {PL_DATA.map((e,i) => <rect key={i} fill={e.color} />)}
+      <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(360px, 0.8fr)', gap: 14 }}>
+        <motion.div className="lux-card" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} style={{ padding: 22 }}>
+          <SectionHeader eyebrow="P&L" title="Unrealised profit map" sub="Position-level contribution, positive and negative" />
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={plData} layout="vertical" margin={{ left: 10, right: 16, top: 4, bottom: 0 }}>
+              <CartesianGrid stroke="rgba(148,163,184,0.075)" horizontal={false} />
+              <XAxis type="number" tickFormatter={(v) => `${v >= 0 ? '+' : ''}${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: '#64748B' }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#7DD3FC', fontFamily: 'IBM Plex Mono' }} axisLine={false} tickLine={false} />
+              <Tooltip formatter={(v) => [`INR ${v.toLocaleString()}`, 'P&L']} contentStyle={{ background: '#07111F', border: '1px solid rgba(148,163,184,0.18)', borderRadius: 12, color: '#F3F4F6' }} />
+              <Bar dataKey="pl" radius={[0, 6, 6, 0]}>
+                {plData.map((entry) => <Cell key={entry.name} fill={entry.fill} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </motion.div>
 
-        {/* Target vs Actual */}
-        <motion.div className="card" initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.25 }} style={{ padding:'22px' }}>
-          <SectionHeader title="Target vs Actual Allocation" right={<Target size={14} color="#3B82F6" />} />
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            {TARGET.map(t => {
-              const dev = (t.actual - t.target).toFixed(1)
-              const over = parseFloat(dev) > 1
-              const under = parseFloat(dev) < -1
+        <motion.div className="lux-card" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} style={{ padding: 22 }}>
+          <SectionHeader eyebrow="Targets" title="Target vs actual" sub="Allocation drift thresholds" right={<Target size={16} color="#D6C7A1" />} />
+          <div style={{ display: 'grid', gap: 14 }}>
+            {TARGET.map((t) => {
+              const dev = +(t.actual - t.target).toFixed(1)
+              const over = dev > 1
+              const under = dev < -1
               return (
                 <div key={t.name}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-                    <span style={{ fontSize:12, color:'#94A3B8' }}>{t.name}</span>
-                    <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                      <span style={{ fontSize:11, color:'#475569', fontFamily:'JetBrains Mono' }}>Target {t.target}%</span>
-                      <span style={{ fontSize:11, fontFamily:'JetBrains Mono', fontWeight:600,
-                        color: over ? '#FBBF24' : under ? '#22D3EE' : '#34D399' }}>
-                        {dev > 0 ? '+' : ''}{dev}%
-                      </span>
-                    </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 7 }}>
+                    <span style={{ color: '#F3F4F6', fontWeight: 700, fontSize: 13 }}>{t.name}</span>
+                    <span className="mono" style={{ color: over ? '#D6C7A1' : under ? '#67E8F9' : '#86EFAC', fontSize: 12 }}>{dev > 0 ? '+' : ''}{dev}% drift</span>
                   </div>
-                  <div style={{ position:'relative', height:8, background:'rgba(148,163,184,0.1)', borderRadius:99 }}>
-                    <div style={{ position:'absolute', left:0, top:0, height:'100%', borderRadius:99, background:'rgba(148,163,184,0.2)', width:`${t.target}%`, transition:'width 600ms' }} />
-                    <div style={{ position:'absolute', left:0, top:0, height:'100%', borderRadius:99,
-                      background: over ? 'linear-gradient(90deg,#3B82F6,#FBBF24)' : under ? 'linear-gradient(90deg,#3B82F6,#22D3EE)' : '#3B82F6',
-                      width:`${t.actual}%`, transition:'width 600ms' }} />
+                  <div style={{ position: 'relative', height: 8, borderRadius: 99, background: 'rgba(148,163,184,0.1)', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', inset: 0, width: `${t.target}%`, background: 'rgba(148,163,184,0.18)' }} />
+                    <div style={{ position: 'absolute', inset: 0, width: `${t.actual}%`, background: `linear-gradient(90deg, ${over ? '#D6C7A1' : '#7DD3FC'}, ${under ? '#67E8F9' : '#A78BFA'})` }} />
                   </div>
+                  <div className="mono" style={{ color: '#64748B', fontSize: 11, marginTop: 5 }}>target {t.target}% · actual {t.actual}%</div>
                 </div>
               )
             })}
           </div>
         </motion.div>
-      </div>
+      </section>
 
-      {/* Full Holdings Table */}
-      <motion.div className="card" initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }} style={{ padding:'22px' }}>
-        <SectionHeader title="All Positions" sub="Live prices via yfinance" right={
-          <div style={{ display:'flex', gap:6 }}>
-            <button onClick={() => setSort('plp')} className={`btn ${sort==='plp'?'btn-primary':'btn-ghost'}`} style={{ fontSize:11, padding:'5px 12px' }}>Sort by P&L%</button>
-            <button onClick={() => setSort('wt')} className={`btn ${sort==='wt'?'btn-primary':'btn-ghost'}`} style={{ fontSize:11, padding:'5px 12px' }}>Sort by Weight</button>
-          </div>} />
-        <div style={{ overflowX:'auto' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead><tr style={{ borderBottom:'1px solid rgba(148,163,184,0.12)' }}>
-              {['Symbol','Exchange','Qty','Avg Cost','LTP','Invested','Curr. Val','P&L (₹)','P&L %','Weight'].map(h => (
-                <th key={h} style={{ padding:'8px 12px', fontSize:10, fontWeight:600, color:'#475569', textTransform:'uppercase', letterSpacing:'0.05em', whiteSpace:'nowrap', textAlign:'left' }}>{h}</th>
-              ))}
-            </tr></thead>
+      <section className="lux-card" style={{ padding: 22 }}>
+        <SectionHeader
+          eyebrow="Holdings"
+          title="All positions"
+          sub="Sortable operating table with live exposure"
+          right={<div className="tab-strip"><button onClick={() => setSort('plp')} className={`tab ${sort === 'plp' ? 'active' : ''}`}>P&L</button><button onClick={() => setSort('wt')} className={`tab ${sort === 'wt' ? 'active' : ''}`}>Weight</button></div>}
+        />
+        <div style={{ overflowX: 'auto' }}>
+          <table className="data-table">
+            <thead>
+              <tr>{['Symbol', 'Exchange', 'Qty', 'Avg Cost', 'LTP', 'Invested', 'Current', 'P&L', 'P&L %', 'Weight', 'Action'].map((h) => <th key={h}>{h}</th>)}</tr>
+            </thead>
             <tbody>
-              {sorted.map(h => (
-                <tr key={h.symbol} style={{ borderBottom:'1px solid rgba(148,163,184,0.07)', transition:'background 150ms' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='rgba(59,130,246,0.04)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <td style={{ padding:'10px 12px', fontFamily:'JetBrains Mono', fontSize:12, fontWeight:700, color:'#60A5FA' }}>{h.symbol}</td>
-                  <td style={{ padding:'10px 12px' }}><span className="badge badge-blue">{h.exch}</span></td>
-                  <td style={{ padding:'10px 12px', fontFamily:'JetBrains Mono', fontSize:12, color:'#94A3B8' }}>{h.qty}</td>
-                  <td style={{ padding:'10px 12px', fontFamily:'JetBrains Mono', fontSize:12, color:'#94A3B8' }}>₹{h.avg.toLocaleString()}</td>
-                  <td style={{ padding:'10px 12px', fontFamily:'JetBrains Mono', fontSize:12, color:'#F8FAFC', fontWeight:600 }}>₹{h.ltp.toLocaleString()}</td>
-                  <td style={{ padding:'10px 12px', fontFamily:'JetBrains Mono', fontSize:12, color:'#94A3B8' }}>₹{(h.qty*h.avg).toLocaleString()}</td>
-                  <td style={{ padding:'10px 12px', fontFamily:'JetBrains Mono', fontSize:12, color:'#F8FAFC' }}>₹{(h.qty*h.ltp).toLocaleString()}</td>
-                  <td style={{ padding:'10px 12px', fontFamily:'JetBrains Mono', fontSize:12, color: h.pl>=0?'#34D399':'#F87171', fontWeight:600 }}>{h.pl>=0?'+':''}₹{Math.abs(h.pl).toLocaleString()}</td>
-                  <td style={{ padding:'10px 12px', fontFamily:'JetBrains Mono', fontSize:12, color: h.plp>=0?'#34D399':'#F87171', fontWeight:600 }}>{h.plp>=0?'+':''}{h.plp}%</td>
-                  <td style={{ padding:'10px 12px' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-                      <div className="progress-track" style={{ width:64 }}><div className="progress-fill" style={{ width:`${h.wt*2.4}%`, background:'linear-gradient(90deg,#3B82F6,#22D3EE)' }} /></div>
-                      <span style={{ fontSize:11, color:'#475569', fontFamily:'JetBrains Mono' }}>{h.wt}%</span>
+              {sorted.map((h) => (
+                <tr key={h.symbol}>
+                  <td className="mono" style={{ color: '#7DD3FC', fontWeight: 800 }}>{h.symbol}</td>
+                  <td><span className="badge badge-blue">{h.exch}</span></td>
+                  <td className="mono">{h.qty}</td>
+                  <td className="mono">INR {h.avg.toLocaleString()}</td>
+                  <td className="mono" style={{ color: '#F3F4F6' }}>INR {h.ltp.toLocaleString()}</td>
+                  <td className="mono">INR {(h.qty * h.avg).toLocaleString()}</td>
+                  <td className="mono" style={{ color: '#F3F4F6' }}>INR {(h.qty * h.ltp).toLocaleString()}</td>
+                  <td className={`mono ${h.pl >= 0 ? 'pos' : 'neg'}`}>{h.pl >= 0 ? '+' : '-'}INR {Math.abs(h.pl).toLocaleString()}</td>
+                  <td className={`mono ${h.plp >= 0 ? 'pos' : 'neg'}`}>{h.plp >= 0 ? '+' : ''}{h.plp}%</td>
+                  <td style={{ minWidth: 150 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="progress-track" style={{ width: 78 }}><div className="progress-fill" style={{ width: `${h.wt * 2.4}%`, background: 'linear-gradient(90deg, #D6C7A1, #7DD3FC)' }} /></div>
+                      <span className="mono" style={{ fontSize: 11, color: '#64748B' }}>{h.wt}%</span>
                     </div>
                   </td>
+                  <td><span className={`badge ${h.plp >= 18 ? 'badge-green' : h.plp < 0 ? 'badge-red' : 'badge-gold'}`}><Crosshair size={11} /> {h.plp >= 18 ? 'Harvest' : h.plp < 0 ? 'Review' : 'Hold'}</span></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </motion.div>
+      </section>
     </div>
   )
 }

@@ -46,3 +46,4 @@ def badge(text: str, color: str = "blue"):
 
 def info_panel(content: str):
     st.markdown(f'<div class="panel-card glass-surface">{content}</div>', unsafe_allow_html=True)
+

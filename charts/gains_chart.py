@@ -1,45 +1,51 @@
+"""WealthOS \u2014 Gains / P&L bar chart with cinematic dark theme."""
+
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
 
+CHART_LAYOUT = dict(
+    template="plotly_dark",
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="Inter, sans-serif", color="#94A3B8", size=12),
+    title_font=dict(family="Space Grotesk, sans-serif", color="#F3F4F6", size=14),
+    margin=dict(l=0, r=0, t=36, b=0),
+    xaxis=dict(gridcolor="rgba(148,163,184,0.08)", zerolinecolor="rgba(148,163,184,0.06)"),
+    yaxis=dict(gridcolor="rgba(148,163,184,0.08)", zerolinecolor="rgba(148,163,184,0.06)"),
+    legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=11)),
+)
 
-def render_gains_chart(portfolio_df: pd.DataFrame):
-    df = portfolio_df.sort_values('PnL_Pct', ascending=True)
 
-    colors = ['#00C851' if v >= 0 else '#FF4444' for v in df['PnL_Pct']]
+def render_gains_chart(holdings_df: pd.DataFrame):
+    if holdings_df is None or holdings_df.empty:
+        st.info("No holdings data available.")
+        return
 
-    # Unrealized PnL by symbol
+    pnl_col = next((c for c in ["PnL", "pnl", "Gain", "gain"] if c in holdings_df.columns), None)
+    ticker_col = next((c for c in ["Ticker", "ticker", "Symbol", "symbol"] if c in holdings_df.columns), None)
+
+    if not pnl_col or not ticker_col:
+        st.warning("Holdings data missing PnL or Ticker columns.")
+        return
+
+    df = holdings_df.sort_values(pnl_col)
+    colours = ["#8EE7B8" if v >= 0 else "#FCA5A5" for v in df[pnl_col]]
+
     fig = go.Figure(go.Bar(
-        x=df['PnL_Pct'],
-        y=df['Symbol'],
-        orientation='h',
-        marker_color=colors,
-        text=[f"{v:+.1f}%" for v in df['PnL_Pct']],
-        textposition='outside',
+        x=df[ticker_col].astype(str).str.replace(".NS", "", regex=False),
+        y=df[pnl_col],
+        marker=dict(color=colours, line=dict(width=0)),
+        hovertemplate="<b>%{x}</b><br>\u20b9%{y:,.0f}<extra></extra>",
+        text=[f"\u20b9{v:+,.0f}" for v in df[pnl_col]],
+        textposition="outside",
+        textfont=dict(size=10, color="#94A3B8"),
     ))
-    fig.update_layout(
-        title_text="Unrealized P&L % by Holding",
-        xaxis_title="P&L %",
-        yaxis_title="Symbol",
-        height=max(400, len(df) * 35),
-    )
-    fig.add_vline(x=0, line_dash='dash', line_color='gray')
-    st.plotly_chart(fig, use_container_width=True)
-
-    # Absolute PnL bar chart
-    df2 = portfolio_df.sort_values('Unrealized_PnL', ascending=False)
-    colors2 = ['#00C851' if v >= 0 else '#FF4444' for v in df2['Unrealized_PnL']]
-    fig2 = go.Figure(go.Bar(
-        x=df2['Symbol'],
-        y=df2['Unrealized_PnL'],
-        marker_color=colors2,
-        text=[f"₹{v:+,.0f}" for v in df2['Unrealized_PnL']],
-        textposition='outside',
-    ))
-    fig2.update_layout(
-        title_text="Absolute Unrealized P&L by Holding (₹)",
-        xaxis_title="Symbol",
-        yaxis_title="Unrealized P&L (₹)",
-    )
-    fig2.add_hline(y=0, line_dash='dash', line_color='gray')
-    st.plotly_chart(fig2, use_container_width=True)
+    layout = {**CHART_LAYOUT}
+    layout["title"] = dict(text="Unrealised P&L per Holding",
+                           font=dict(family="Space Grotesk, sans-serif", color="#F3F4F6", size=14), x=0)
+    layout["yaxis"] = dict(tickprefix="\u20b9", tickformat=",.0f",
+                           gridcolor="rgba(148,163,184,0.08)", zerolinecolor="rgba(148,163,184,0.3)")
+    fig.update_layout(**layout)
+    fig.add_hline(y=0, line_width=1, line_color="rgba(148,163,184,0.3)")
+    st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))

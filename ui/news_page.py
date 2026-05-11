@@ -1,8 +1,8 @@
-"""WealthOS Market News — luxury financial intelligence feed."""
+"""WealthOS Market News \u2014 luxury financial intelligence feed."""
 
 from __future__ import annotations
 import streamlit as st
-from frontend.design_system import render_topbar
+from frontend.design_system import render_topbar, render_hero, panel_start, panel_end
 import datetime
 
 try:
@@ -22,7 +22,7 @@ DEMO_ARTICLES = [
         "tags": ["Nifty", "FII", "Macro"],
     },
     {
-        "title": "RBI holds repo rate at 6.25% — MPC unanimous",
+        "title": "RBI holds repo rate at 6.25% \u2014 MPC unanimous",
         "source": "Mint",
         "publishedAt": "2026-05-10T10:30:00Z",
         "description": "The Reserve Bank of India kept the benchmark repo rate unchanged at 6.25% with a unanimous vote, citing stable inflation and resilient growth.",
@@ -52,7 +52,7 @@ DEMO_ARTICLES = [
         "title": "Gold ETFs surge 3.2% on safe-haven demand",
         "source": "NDTV Profit",
         "publishedAt": "2026-05-08T14:45:00Z",
-        "description": "GOLDBEES and SGB investors saw strong gains as gold prices rose to ₹72,400 per 10g, driven by geopolitical tensions and USD weakness.",
+        "description": "GOLDBEES and SGB investors saw strong gains as gold prices rose to \u20b972,400 per 10g, driven by geopolitical tensions and USD weakness.",
         "url": "https://profit.ndtv.com",
         "sentiment": "Bullish",
         "tags": ["Gold", "ETF", "Safe Haven"],
@@ -61,7 +61,7 @@ DEMO_ARTICLES = [
         "title": "HDFC Bank Q4 net profit misses estimates by 4%",
         "source": "Moneycontrol",
         "publishedAt": "2026-05-07T16:20:00Z",
-        "description": "HDFC Bank reported Q4 FY26 net profit of ₹15,200 crore, slightly below analyst estimates of ₹15,800 crore, as loan growth moderated.",
+        "description": "HDFC Bank reported Q4 FY26 net profit of \u20b915,200 crore, slightly below analyst estimates of \u20b915,800 crore, as loan growth moderated.",
         "url": "https://moneycontrol.com",
         "sentiment": "Bearish",
         "tags": ["HDFC Bank", "Banking", "Earnings"],
@@ -84,58 +84,53 @@ def _fmt_date(iso: str) -> str:
 
 
 def render_news_page() -> None:
-    render_topbar("Market Intelligence", "Financial News Feed")
+    render_topbar("Market Intelligence", "Live News Feed")
+    render_hero(
+        "Market <span style='color:#67E8F9;'>Intelligence</span>.",
+        "Curated financial news linked to your holdings. Ask semantic questions "
+        "across articles using the RAG search panel. Powered by NewsAPI + ChromaDB.",
+    )
 
-    # ── Hero ──────────────────────────────────────────────────────────────
-    st.markdown("""
-    <section class='wo-hero' style='margin-bottom:1rem;'>
-        <div style='position:relative;z-index:2;'>
-            <div class='wo-kicker'>Live Intelligence Feed</div>
-            <h1 style='font-family:Space Grotesk,sans-serif;font-size:clamp(1.6rem,2.2vw,2.4rem);
-                       letter-spacing:-0.04em;color:#F3F4F6;margin:0.2rem 0 0.7rem;'>
-                Market <span style='color:#67E8F9;'>Intelligence</span>
-            </h1>
-            <p style='color:#94A3B8;font-size:0.95rem;max-width:58ch;'>
-                Curated financial news linked to your holdings. Ask semantic questions
-                across articles using the RAG search panel.
-            </p>
-        </div>
-    </section>
-    """, unsafe_allow_html=True)
-
-    # ── Ticker band ────────────────────────────────────────────────────────
+    # ── Live ticker band ──────────────────────────────────────────────────
     st.markdown("""
     <div style='border:1px solid rgba(148,163,184,0.12);border-radius:14px;
-                padding:0.65rem 1rem;background:rgba(255,255,255,0.015);
-                margin-bottom:1rem;overflow:hidden;white-space:nowrap;'>
-        <span class='wo-mono' style='color:#67E8F9;'>NIFTY 50</span>
-        <strong style='color:#8EE7B8;margin-left:0.5rem;'>23,852 +1.2%</strong>
-        &nbsp;&nbsp;
-        <span class='wo-mono' style='color:#67E8F9;'>SENSEX</span>
-        <strong style='color:#8EE7B8;margin-left:0.5rem;'>78,421 +1.1%</strong>
-        &nbsp;&nbsp;
-        <span class='wo-mono' style='color:#67E8F9;'>NIFTY IT</span>
-        <strong style='color:#8EE7B8;margin-left:0.5rem;'>34,110 +1.8%</strong>
-        &nbsp;&nbsp;
-        <span class='wo-mono' style='color:#67E8F9;'>GOLD</span>
-        <strong style='color:#D6C7A1;margin-left:0.5rem;'>₹72,400 +3.2%</strong>
-        &nbsp;&nbsp;
-        <span class='wo-mono' style='color:#67E8F9;'>USD/INR</span>
-        <strong style='color:#94A3B8;margin-left:0.5rem;'>84.12</strong>
+                padding:0.65rem 1.1rem;background:rgba(255,255,255,0.015);
+                margin-bottom:1.25rem;overflow-x:auto;white-space:nowrap;
+                display:flex;align-items:center;gap:1.5rem;'>
+        <span class='wo-pill' style='background:rgba(103,232,249,0.08);border-color:rgba(103,232,249,0.2);'>
+            <span style='color:#67E8F9;'>NIFTY 50</span>
+            <strong style='color:#8EE7B8;margin-left:0.4rem;'>23,852</strong>
+            <span style='color:#8EE7B8;font-size:0.72rem;margin-left:0.2rem;'>+1.2%</span>
+        </span>
+        <span class='wo-pill' style='background:rgba(103,232,249,0.08);border-color:rgba(103,232,249,0.2);'>
+            <span style='color:#67E8F9;'>SENSEX</span>
+            <strong style='color:#8EE7B8;margin-left:0.4rem;'>78,421</strong>
+            <span style='color:#8EE7B8;font-size:0.72rem;margin-left:0.2rem;'>+1.1%</span>
+        </span>
+        <span class='wo-pill' style='background:rgba(103,232,249,0.08);border-color:rgba(103,232,249,0.2);'>
+            <span style='color:#67E8F9;'>NIFTY IT</span>
+            <strong style='color:#8EE7B8;margin-left:0.4rem;'>34,110</strong>
+            <span style='color:#8EE7B8;font-size:0.72rem;margin-left:0.2rem;'>+1.8%</span>
+        </span>
+        <span class='wo-pill' style='background:rgba(214,199,161,0.06);border-color:rgba(214,199,161,0.2);'>
+            <span style='color:#D6C7A1;'>GOLD</span>
+            <strong style='color:#D6C7A1;margin-left:0.4rem;'>\u20b972,400</strong>
+            <span style='color:#8EE7B8;font-size:0.72rem;margin-left:0.2rem;'>+3.2%</span>
+        </span>
+        <span class='wo-pill'>
+            <span style='color:#94A3B8;'>USD/INR</span>
+            <strong style='color:#F3F4F6;margin-left:0.4rem;'>84.12</strong>
+        </span>
+        <span class='wo-pill' style='background:rgba(252,165,165,0.06);border-color:rgba(252,165,165,0.15);'>
+            <span style='color:#94A3B8;'>US 10Y</span>
+            <strong style='color:#FCA5A5;margin-left:0.4rem;'>4.38%</strong>
+            <span style='color:#FCA5A5;font-size:0.72rem;margin-left:0.2rem;'>+0.06</span>
+        </span>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── RAG search ────────────────────────────────────────────────────────
-    st.markdown("""
-    <div class='wo-panel' style='margin-bottom:1rem;'>
-        <div class='wo-panel-header'>
-            <div>
-                <div class='wo-kicker'>Semantic Search</div>
-                <div class='wo-panel-title'>RAG News Query</div>
-                <div class='wo-panel-subtitle'>Ask natural-language questions across today's articles</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    # ── RAG search panel ──────────────────────────────────────────────────
+    panel_start("RAG News Query", "Ask natural-language questions across today\u2019s articles", meta="Semantic Search")
 
     q = st.text_input(
         "Search news",
@@ -149,9 +144,11 @@ def render_news_page() -> None:
             try:
                 results = search_news(q)
                 if results:
-                    st.markdown(f"<div class='wo-mono' style='margin:0.5rem 0;'>RAG found {len(results)} relevant passages</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='wo-mono' style='margin:0.5rem 0;color:#67E8F9;'>"
+                                f"RAG found {len(results)} relevant passages</div>", unsafe_allow_html=True)
                     for r in results[:3]:
-                        st.markdown(f"> {r}", unsafe_allow_html=False)
+                        st.markdown(f"<div class='wo-terminal-box' style='margin-bottom:0.5rem;'>{r}</div>",
+                                    unsafe_allow_html=True)
                 else:
                     st.info("No relevant articles found. Enable NEWSAPI_KEY for live data.")
             except Exception as e:
@@ -159,18 +156,21 @@ def render_news_page() -> None:
         else:
             st.markdown("""
             <div class='wo-terminal-box' style='margin-top:0.5rem;'>
-                <div style='color:#D6C7A1;font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:0.45rem;'>RAG Demo Response</div>
-                <div style='color:#c7d2fe;line-height:1.8;'>
-                    Indian IT sector outlook remains robust for FY27. Infosys raised guidance to 8-10%.
-                    TCS and Wipro benefit from rising cloud migration demand. Key risk: USD/INR volatility
-                    and potential US visa restrictions. Enable NEWSAPI_KEY + Chroma for live RAG.
+                <div style='color:#D6C7A1;font-size:0.7rem;letter-spacing:0.14em;
+                            text-transform:uppercase;margin-bottom:0.45rem;'>RAG Demo Response</div>
+                <div style='color:#c7d2fe;line-height:1.8;font-size:0.88rem;'>
+                    Indian IT sector outlook remains robust for FY27. Infosys raised guidance to 8-10%.<br>
+                    TCS and Wipro benefit from rising cloud migration demand.<br>
+                    Key risk: USD/INR volatility and potential US visa restrictions.<br>
+                    <span style='color:#64748B;'>Enable NEWSAPI_KEY + ChromaDB for live semantic RAG.</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    panel_end()
 
-    # ── News grid ─────────────────────────────────────────────────────────
+    # ── Filter bar ────────────────────────────────────────────────────────
+    st.markdown("<div style='margin:0.75rem 0'></div>", unsafe_allow_html=True)
     st.markdown("""
     <div class='wo-panel-header'>
         <div>
@@ -179,6 +179,15 @@ def render_news_page() -> None:
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    filter_col, _ = st.columns([2, 3])
+    with filter_col:
+        sentiment_filter = st.selectbox(
+            "Filter by sentiment",
+            ["All", "Bullish", "Bearish", "Neutral"],
+            label_visibility="collapsed",
+            key="news_filter",
+        )
 
     articles = DEMO_ARTICLES
     if get_top_articles is not None:
@@ -189,26 +198,18 @@ def render_news_page() -> None:
         except Exception:
             pass
 
-    # Filter
-    filter_col, _ = st.columns([2, 3])
-    with filter_col:
-        sentiment_filter = st.selectbox(
-            "Filter by sentiment",
-            ["All", "Bullish", "Bearish", "Neutral"],
-            label_visibility="collapsed",
-            key="news_filter",
-        )
-
     if sentiment_filter != "All":
         articles = [a for a in articles if a.get("sentiment") == sentiment_filter]
 
-    # Grid
+    # ── News grid ─────────────────────────────────────────────────────────
     for i in range(0, len(articles), 3):
         row_articles = articles[i:i+3]
         cols = st.columns(len(row_articles), gap="small")
         for col, article in zip(cols, row_articles):
             with col:
-                s_colour, s_bg = SENTIMENT_COLOUR.get(article.get("sentiment", "Neutral"), ("#94A3B8", "rgba(148,163,184,0.06)"))
+                s_colour, s_bg = SENTIMENT_COLOUR.get(
+                    article.get("sentiment", "Neutral"), ("#94A3B8", "rgba(148,163,184,0.06)")
+                )
                 tags_html = " ".join(
                     f"<span style='border:1px solid rgba(148,163,184,0.16);border-radius:999px;"
                     f"padding:0.18rem 0.52rem;font-size:0.7rem;color:#64748B;'>{t}</span>"
@@ -217,28 +218,39 @@ def render_news_page() -> None:
                 article_url = article.get("url", "")
                 link_html = ""
                 if article_url:
-                    link_html = f'<a href="{article_url}" target="_blank" rel="noopener noreferrer" style="color:#7DD3FC;font-size:0.8rem;">Read Full Article &rarr;</a>'
-
+                    link_html = (
+                        f'<a href="{article_url}" target="_blank" rel="noopener noreferrer" '
+                        f'style="color:#7DD3FC;font-size:0.8rem;">Read Full Article &rarr;</a>'
+                    )
+                title_text = article.get("title", "")
+                desc_text = article.get("description", "")
+                source_text = article.get("source", "")
+                sent_text = article.get("sentiment", "")
+                pub_text = _fmt_date(article.get("publishedAt", ""))
                 st.markdown(f"""
                 <div class='wo-news-card'>
-                    <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem;'>
-                        <span class='wo-mono' style='color:#64748B;font-size:0.7rem;'>{article.get('source','')}</span>
+                    <div style='display:flex;justify-content:space-between;
+                                align-items:center;margin-bottom:0.35rem;'>
+                        <span class='wo-mono' style='color:#64748B;font-size:0.7rem;'>{source_text}</span>
                         <span style='display:inline-flex;align-items:center;gap:0.35rem;
                                      padding:0.22rem 0.55rem;border-radius:999px;font-size:0.7rem;
-                                     background:{s_bg};border:1px solid {s_colour}22;color:{s_colour};'>
-                            {article.get('sentiment','')}
+                                     background:{s_bg};border:1px solid {s_colour}33;color:{s_colour};'>
+                            {sent_text}
                         </span>
                     </div>
-                    <h4 style='font-family:Space Grotesk,sans-serif;font-size:0.98rem;font-weight:600;
-                               color:#F3F4F6;margin:0.3rem 0 0.55rem;line-height:1.35;'>
-                        {article.get('title','')}
+                    <h4 style='font-family:Space Grotesk,sans-serif;font-size:0.98rem;
+                               font-weight:600;color:#F3F4F6;margin:0.3rem 0 0.55rem;
+                               line-height:1.35;'>
+                        {title_text}
                     </h4>
-                    <p style='color:#64748B;font-size:0.82rem;line-height:1.65;margin-bottom:0.7rem;'>
-                        {article.get('description','')}
+                    <p style='color:#64748B;font-size:0.82rem;line-height:1.65;
+                              margin-bottom:0.7rem;'>
+                        {desc_text}
                     </p>
-                    <div style='display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.6rem;'>{tags_html}</div>
+                    <div style='display:flex;flex-wrap:wrap;gap:0.35rem;
+                                margin-bottom:0.6rem;'>{tags_html}</div>
                     <div style='display:flex;justify-content:space-between;align-items:center;'>
-                        <span class='wo-mono' style='font-size:0.7rem;color:#64748B;'>{_fmt_date(article.get('publishedAt',''))}</span>
+                        <span class='wo-mono' style='font-size:0.7rem;color:#64748B;'>{pub_text}</span>
                         {link_html}
                     </div>
                 </div>

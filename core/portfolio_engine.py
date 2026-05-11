@@ -1,54 +1,58 @@
 import pandas as pd
 import numpy as np
-from typing import Dict, Tuple
+from typing import Dict
 from loguru import logger
 
 
 def compute_portfolio_metrics(holdings_df: pd.DataFrame, live_prices: dict) -> pd.DataFrame:
     """
     Compute current value, P&L, P&L%, and weight for each holding.
-    Returns enriched DataFrame.
+    All column references use lowercase (matching data_loader normalisation).
     """
     df = holdings_df.copy()
 
-    # Map live prices
-    df['Current_Price'] = df['Symbol'].map(live_prices)
-    df['Current_Price'] = pd.to_numeric(df['Current_Price'], errors='coerce')
+    # Ensure columns are lowercase (defensive — in case caller skipped normalisation)
+    df.columns = [c.lower() for c in df.columns]
 
-    # Fallback to avg buy price if live price unavailable
-    df['Current_Price'] = df['Current_Price'].fillna(df['Avg_Buy_Price'])
+    # Map live prices using lowercase 'symbol'
+    df['current_price'] = df['symbol'].map(live_prices)
+    df['current_price'] = pd.to_numeric(df['current_price'], errors='coerce')
+    df['current_price'] = df['current_price'].fillna(df['avg_buy_price'])
 
-    # Core metrics
-    df['Current_Value'] = df['Quantity'] * df['Current_Price']
-    df['Invested_Amount'] = df['Quantity'] * df['Avg_Buy_Price']
-    df['Unrealized_PnL'] = df['Current_Value'] - df['Invested_Amount']
-    df['PnL_Pct'] = (df['Unrealized_PnL'] / df['Invested_Amount'] * 100).round(2)
+    df['current_value']   = df['quantity'] * df['current_price']
+    df['invested_amount'] = df['quantity'] * df['avg_buy_price']
+    df['unrealized_pnl']  = df['current_value'] - df['invested_amount']
+    df['pnl_pct']         = (df['unrealized_pnl'] / df['invested_amount'] * 100).round(2)
 
-    total_value = df['Current_Value'].sum()
-    df['Weight_Pct'] = (df['Current_Value'] / total_value * 100).round(2)
+    total_value = df['current_value'].sum()
+    df['weight_pct'] = (df['current_value'] / total_value * 100).round(2)
 
     logger.info(f"Portfolio total value: {total_value:.2f}")
     return df
 
 
 def compute_allocation_by_type(df: pd.DataFrame) -> pd.Series:
-    """Compute allocation % grouped by Asset_Type."""
-    grouped = df.groupby('Asset_Type')['Current_Value'].sum()
+    """Compute allocation % grouped by asset_type."""
+    df = df.copy()
+    df.columns = [c.lower() for c in df.columns]
+    grouped = df.groupby('asset_type')['current_value'].sum()
     return (grouped / grouped.sum() * 100).round(2)
 
 
 def compute_allocation_by_sector(df: pd.DataFrame) -> pd.Series:
-    """Compute allocation % grouped by Sector."""
-    if 'Sector' not in df.columns:
+    """Compute allocation % grouped by sector."""
+    df = df.copy()
+    df.columns = [c.lower() for c in df.columns]
+    if 'sector' not in df.columns:
         return pd.Series()
-    grouped = df.groupby('Sector')['Current_Value'].sum()
+    grouped = df.groupby('sector')['current_value'].sum()
     return (grouped / grouped.sum() * 100).round(2)
 
 
 def compute_drawdown(price_series: pd.Series) -> pd.Series:
     """
     Compute drawdown series from a price time series.
-    Drawdown = (price - running_max) / running_max
+    Drawdown = (price - running_max) / running_max * 100
     """
     running_max = price_series.cummax()
     drawdown = (price_series - running_max) / running_max * 100
@@ -62,56 +66,58 @@ def compute_portfolio_value_over_time(
 ) -> pd.DataFrame:
     """
     Reconstruct approximate portfolio value over time from transactions.
-    Returns DataFrame with Date and Portfolio_Value columns.
+    Returns DataFrame with date and portfolio_value columns.
     """
     if transactions_df is None or transactions_df.empty:
         return pd.DataFrame()
 
-    # Build holdings state over time
-    transactions_df = transactions_df.sort_values('Date')
-    dates = pd.date_range(transactions_df['Date'].min(), pd.Timestamp.today(), freq='W')
-    portfolio_values = []
+    df = transactions_df.copy()
+    df.columns = [c.lower() for c in df.columns]
+    df = df.sort_values('date')
 
-    current_holdings = {}
+    dates = pd.date_range(df['date'].min(), pd.Timestamp.today(), freq='W')
+    portfolio_values = []
+    current_holdings: Dict[str, float] = {}
     txn_idx = 0
-    txns = transactions_df.to_dict('records')
+    txns = df.to_dict('records')
 
     for date in dates:
-        # Apply all transactions up to this date
-        while txn_idx < len(txns) and txns[txn_idx]['Date'] <= date:
+        while txn_idx < len(txns) and txns[txn_idx]['date'] <= date:
             t = txns[txn_idx]
-            sym = t['Symbol']
-            qty = t['Quantity'] if t['Type'].upper() == 'BUY' else -t['Quantity']
+            sym = t['symbol']
+            qty = t['quantity'] if str(t['type']).upper() == 'BUY' else -t['quantity']
             current_holdings[sym] = current_holdings.get(sym, 0) + qty
             txn_idx += 1
 
-        # Estimate value using current live prices (approximation)
         value = sum(
             qty * live_prices.get(sym, 0)
             for sym, qty in current_holdings.items()
             if qty > 0
         )
-        portfolio_values.append({'Date': date, 'Portfolio_Value': value})
+        portfolio_values.append({'date': date, 'portfolio_value': value})
 
     return pd.DataFrame(portfolio_values)
 
 
 def get_summary_stats(df: pd.DataFrame) -> Dict:
     """Return key summary statistics for the portfolio."""
-    total_invested = df['Invested_Amount'].sum()
-    total_current = df['Current_Value'].sum()
-    total_pnl = df['Unrealized_PnL'].sum()
-    total_pnl_pct = (total_pnl / total_invested * 100) if total_invested > 0 else 0
+    df = df.copy()
+    df.columns = [c.lower() for c in df.columns]
 
-    best = df.loc[df['PnL_Pct'].idxmax()]
-    worst = df.loc[df['PnL_Pct'].idxmin()]
+    total_invested = df['invested_amount'].sum()
+    total_current  = df['current_value'].sum()
+    total_pnl      = df['unrealized_pnl'].sum()
+    total_pnl_pct  = (total_pnl / total_invested * 100) if total_invested > 0 else 0
+
+    best  = df.loc[df['pnl_pct'].idxmax()]
+    worst = df.loc[df['pnl_pct'].idxmin()]
 
     return {
-        'total_invested': round(total_invested, 2),
+        'total_invested':      round(total_invested, 2),
         'total_current_value': round(total_current, 2),
-        'total_pnl': round(total_pnl, 2),
-        'total_pnl_pct': round(total_pnl_pct, 2),
-        'num_holdings': len(df),
-        'best_performer': f"{best['Symbol']} ({best['PnL_Pct']:+.1f}%)",
-        'worst_performer': f"{worst['Symbol']} ({worst['PnL_Pct']:+.1f}%)",
+        'total_pnl':           round(total_pnl, 2),
+        'total_pnl_pct':       round(total_pnl_pct, 2),
+        'num_holdings':        len(df),
+        'best_performer':      f"{best['symbol']} ({best['pnl_pct']:+.1f}%)",
+        'worst_performer':     f"{worst['symbol']} ({worst['pnl_pct']:+.1f}%)",
     }

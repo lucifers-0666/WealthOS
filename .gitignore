@@ -8,19 +8,29 @@ build/
 dist/
 *.egg-info/
 .eggs/
+.mypy_cache/
+.ruff_cache/
 
 # Virtual Environments
 venv/
 env/
 .env
-.venv
+.venv/
 
 # Streamlit
 .streamlit/
 
 # Data & Secrets
 *.env
+.env.local
+.env.development
+.env.production
+.env.test
 secrets.toml
+*.key
+*.pem
+*.crt
+*.cert
 
 # Chroma DB
 chroma_db/
@@ -38,8 +48,16 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+coverage/
 frontend/node_modules/.vite/
 
 # Logs
 *.log
 logs/
+
+# Generated / temp assets
+uploads/
+screenshots/
+tmp/
+temp/
+cache/

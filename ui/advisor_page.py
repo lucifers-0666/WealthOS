@@ -103,7 +103,7 @@ def render_advisor_page() -> None:
         btn_cols = st.columns(3, gap="small")
         for i, prompt in enumerate(SUGGESTED):
             with btn_cols[i % 3]:
-                if st.button(prompt, key=f"sug_{i}", use_container_width=True):
+                if st.button(prompt, key=f"sug_{i}", width='stretch'):
                     st.session_state["pending_prompt"] = prompt
 
         st.markdown("<div style='margin:0.5rem 0'></div>", unsafe_allow_html=True)
@@ -143,9 +143,9 @@ def render_advisor_page() -> None:
 
         send_col, clear_col = st.columns([5, 1], gap="small")
         with send_col:
-            send = st.button("\u2192 Send to AI CFO", use_container_width=True)
+            send = st.button("\u2192 Send to AI CFO", width='stretch')
         with clear_col:
-            if st.button("Clear", use_container_width=True):
+            if st.button("Clear", width='stretch'):
                 st.session_state["advisor_history"] = []
                 st.rerun()
 

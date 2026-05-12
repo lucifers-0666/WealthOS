@@ -39,7 +39,7 @@ def render_allocation_charts(allocation_by_type: pd.Series, target_allocation: d
         layout["showlegend"] = True
         layout["legend"] = dict(orientation="v", x=1.02, bgcolor="rgba(0,0,0,0)", font=dict(size=10))
         fig.update_layout(**layout)
-        st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
+        st.plotly_chart(fig, width='stretch', config=dict(displayModeBar=False))
 
     with col2:
         target_series = pd.Series(target_allocation)
@@ -59,7 +59,7 @@ def render_allocation_charts(allocation_by_type: pd.Series, target_allocation: d
         layout2["showlegend"] = True
         layout2["legend"] = dict(orientation="v", x=1.02, bgcolor="rgba(0,0,0,0)", font=dict(size=10))
         fig2.update_layout(**layout2)
-        st.plotly_chart(fig2, use_container_width=True, config=dict(displayModeBar=False))
+        st.plotly_chart(fig2, width='stretch', config=dict(displayModeBar=False))
 
     all_categories = list(set(list(allocation_by_type.index) + list(target_allocation.keys())))
     actual_vals = [allocation_by_type.get(c, 0) for c in all_categories]
@@ -78,4 +78,4 @@ def render_allocation_charts(allocation_by_type: pd.Series, target_allocation: d
                             zerolinecolor="rgba(148,163,184,0.06)")
     layout3["legend"] = dict(orientation="h", y=1.08, x=0, bgcolor="rgba(0,0,0,0)", font=dict(size=11))
     fig3.update_layout(**layout3)
-    st.plotly_chart(fig3, use_container_width=True, config=dict(displayModeBar=False))
+    st.plotly_chart(fig3, width='stretch', config=dict(displayModeBar=False))

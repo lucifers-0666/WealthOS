@@ -39,4 +39,4 @@ def render_performance_chart(portfolio_value_ts: pd.DataFrame):
     layout["title"] = dict(text="Portfolio Value Over Time",
                            font=dict(family="Space Grotesk, sans-serif", color="#F3F4F6", size=14), x=0)
     fig.update_layout(**layout)
-    st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
+    st.plotly_chart(fig, width='stretch', config=dict(displayModeBar=False))

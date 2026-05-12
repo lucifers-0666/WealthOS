@@ -55,4 +55,4 @@ def render_drawdown_chart(drawdown_df: pd.DataFrame):
                            font=dict(family="Space Grotesk, sans-serif", color="#F3F4F6", size=14), x=0)
     fig.update_layout(**layout)
     fig.add_hline(y=0, line_width=1, line_color="rgba(148,163,184,0.2)")
-    st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
+    st.plotly_chart(fig, width='stretch', config=dict(displayModeBar=False))

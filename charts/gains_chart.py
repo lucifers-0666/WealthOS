@@ -48,4 +48,4 @@ def render_gains_chart(holdings_df: pd.DataFrame):
                            gridcolor="rgba(148,163,184,0.08)", zerolinecolor="rgba(148,163,184,0.3)")
     fig.update_layout(**layout)
     fig.add_hline(y=0, line_width=1, line_color="rgba(148,163,184,0.3)")
-    st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
+    st.plotly_chart(fig, width='stretch', config=dict(displayModeBar=False))

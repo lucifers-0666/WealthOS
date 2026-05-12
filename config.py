@@ -8,11 +8,37 @@ APP_NAME = "WealthOS"
 APP_VERSION = "1.0.0"
 APP_ICON = "W"
 
+# ── Supabase Configuration ──────────────────────────────────
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+
+# Warn if Supabase not configured
+if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    import warnings
+    warnings.warn(
+        "⚠️  SUPABASE_URL and SUPABASE_ANON_KEY not configured. "
+        "Database features will not work. "
+        "Add them to your .env file from https://supabase.com/dashboard"
+    )
+
 # API Keys
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 NEWSAPI_KEY = os.getenv("NEWSAPI_KEY", "")
 ALPHA_VANTAGE_KEY = os.getenv("ALPHA_VANTAGE_KEY", "")
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN", "")
+
+# ── AI Configuration ────────────────────────────────────────
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "2000"))
+GEMINI_TEMPERATURE = float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
+GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-1.5-flash")
+
+# ── RAG Configuration ──────────────────────────────────────
+RAG_CHUNK_SIZE = int(os.getenv("RAG_CHUNK_SIZE", "500"))
+RAG_CHUNK_OVERLAP = int(os.getenv("RAG_CHUNK_OVERLAP", "100"))
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "3"))
+NEWS_CACHE_TTL = int(os.getenv("NEWS_CACHE_TTL", "3600"))
 
 # Finance Settings
 DEFAULT_CURRENCY = os.getenv("DEFAULT_CURRENCY", "INR")
@@ -46,8 +72,8 @@ COLOR_PRIMARY = "#7DD3FC"
 COLOR_SECONDARY = "#D6C7A1"
 
 # News RAG Settings
-NEWS_LOOKBACK_DAYS = 7
-NEWS_MAX_ARTICLES = 20
+NEWS_LOOKBACK_DAYS = int(os.getenv("NEWS_LOOKBACK_DAYS", "7"))
+NEWS_MAX_ARTICLES = int(os.getenv("NEWS_MAX_ARTICLES", "20"))
 RAG_CHUNK_SIZE = 500
 RAG_CHUNK_OVERLAP = 50
 RAG_TOP_K = 5

@@ -200,12 +200,12 @@ def render_dashboard_page() -> None:
     col_chart, col_donut = st.columns([3, 2], gap="small")
     with col_chart:
         panel_start("Portfolio Value", "180-day NAV trajectory")
-        st.plotly_chart(_sparkline_portfolio(), use_container_width=True,
+        st.plotly_chart(_sparkline_portfolio(), width='stretch',
                         config=dict(displayModeBar=False))
         panel_end()
     with col_donut:
         panel_start("Sector Allocation", "Asset distribution by sector")
-        st.plotly_chart(_allocation_donut(), use_container_width=True,
+        st.plotly_chart(_allocation_donut(), width='stretch',
                         config=dict(displayModeBar=False))
         panel_end()
 
@@ -215,12 +215,12 @@ def render_dashboard_page() -> None:
     col_pnl, col_tgt = st.columns([3, 2], gap="small")
     with col_pnl:
         panel_start("Unrealised P&L", "Per-holding gain / loss breakdown")
-        st.plotly_chart(_pnl_bar(), use_container_width=True,
+        st.plotly_chart(_pnl_bar(), width='stretch',
                         config=dict(displayModeBar=False))
         panel_end()
     with col_tgt:
         panel_start("Allocation vs Target", "Actual vs strategic allocation")
-        st.plotly_chart(_target_vs_actual(), use_container_width=True,
+        st.plotly_chart(_target_vs_actual(), width='stretch',
                         config=dict(displayModeBar=False))
         panel_end()
 
@@ -237,7 +237,7 @@ def render_dashboard_page() -> None:
     ]].copy()
     st.dataframe(
         display_df.style.map(colour_pnl, subset=["PnL","PnL%"]),
-        use_container_width=True,
+        width='stretch',
         height=310,
         column_config={
             "Invested": st.column_config.NumberColumn("Invested",  format="\u20b9%.0f"),

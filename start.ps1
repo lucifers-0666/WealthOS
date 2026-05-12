@@ -2,54 +2,83 @@
 # Usage: Right-click start.ps1 → Run with PowerShell
 #        OR: from D:\wealthOS\WealthOS run: .\start.ps1
 
-$repoRoot   = $PSScriptRoot
-$venvPython = "$repoRoot\..\venv\Scripts\python.exe"
-$venvAlt    = "D:\wealthOS\.venv\Scripts\python.exe"
-$frontendDir = "$repoRoot\frontend"
+$ErrorActionPreference = 'Stop'
 
-# Resolve which python to use
-$pythonExe = if (Test-Path $venvPython) { $venvPython }
-             elseif (Test-Path $venvAlt) { $venvAlt }
-             else { "python" }
+$repoRoot     = $PSScriptRoot
+$frontendDir  = Join-Path $repoRoot 'frontend'
+$pythonCandidates = @(
+    (Join-Path $repoRoot '..\venv\Scripts\python.exe'),
+    'D:\wealthOS\.venv\Scripts\python.exe',
+    (Join-Path $repoRoot '.venv\Scripts\python.exe'),
+    'python'
+)
+
+function Resolve-Executable {
+    param([string[]]$Candidates)
+    foreach ($candidate in $Candidates) {
+        if ($candidate -eq 'python') { return $candidate }
+        if (Test-Path $candidate) { return (Resolve-Path $candidate).Path }
+    }
+    return 'python'
+}
+
+$pythonExe = Resolve-Executable -Candidates $pythonCandidates
+$npmExe = if (Get-Command npm.cmd -ErrorAction SilentlyContinue) { 'npm.cmd' } else { 'npm' }
 
 Write-Host ""
 Write-Host "  WealthOS Launcher" -ForegroundColor Cyan
 Write-Host "  ────────────────────────────────────" -ForegroundColor DarkGray
 Write-Host "  Python  : $pythonExe" -ForegroundColor DarkGray
+Write-Host "  NPM     : $npmExe" -ForegroundColor DarkGray
 Write-Host "  Repo    : $repoRoot" -ForegroundColor DarkGray
 Write-Host ""
 
-# ── 1. Start Streamlit in background ──────────────────────────────────────
-Write-Host "[1/2] Starting Streamlit (http://localhost:8501) ..." -ForegroundColor Yellow
+if (-not (Test-Path (Join-Path $frontendDir 'node_modules'))) {
+    Write-Host "[setup] Installing frontend dependencies..." -ForegroundColor Yellow
+    Push-Location $frontendDir
+    try {
+        & $npmExe install
+    } finally {
+        Pop-Location
+    }
+}
+
+Write-Host "[1/3] Starting FastAPI backend (http://localhost:8000) ..." -ForegroundColor Yellow
+$backend = Start-Process -FilePath $pythonExe `
+    -ArgumentList "-m uvicorn api:app --host 127.0.0.1 --port 8000 --reload" `
+    -WorkingDirectory $repoRoot `
+    -PassThru -WindowStyle Minimized
+
+Write-Host "[2/3] Starting Streamlit app (http://localhost:8501) ..." -ForegroundColor Yellow
 $streamlit = Start-Process -FilePath $pythonExe `
     -ArgumentList "-m streamlit run app.py --server.port 8501 --server.address 127.0.0.1" `
     -WorkingDirectory $repoRoot `
     -PassThru -WindowStyle Minimized
 
-# Give Streamlit a moment to bind the port
-Start-Sleep -Seconds 3
-
-# ── 2. Start Vite frontend in background ──────────────────────────────────
-Write-Host "[2/2] Starting Vite frontend (http://localhost:3000) ..." -ForegroundColor Yellow
-$vite = Start-Process -FilePath "cmd.exe" `
-    -ArgumentList "/c npm run dev" `
+Write-Host "[3/3] Starting Vite frontend (http://localhost:3000) ..." -ForegroundColor Yellow
+$vite = Start-Process -FilePath $npmExe `
+    -ArgumentList "run dev -- --host 127.0.0.1" `
     -WorkingDirectory $frontendDir `
     -PassThru -WindowStyle Minimized
 
-Start-Sleep -Seconds 4
-
-# ── 3. Open browser ───────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "  Both servers running. Opening browser..." -ForegroundColor Green
+Write-Host "  Waiting for services to warm up..." -ForegroundColor DarkGray
+Start-Sleep -Seconds 6
+
+Write-Host ""
+Write-Host "  Opening browser tabs..." -ForegroundColor Green
+Start-Process "http://localhost:8000/docs"
 Start-Process "http://localhost:8501"
 Start-Process "http://localhost:3000"
 
 Write-Host ""
-Write-Host "  Press ENTER to stop both servers and exit." -ForegroundColor DarkGray
+Write-Host "  WealthOS is running. Press ENTER to stop everything and exit." -ForegroundColor DarkGray
 Read-Host | Out-Null
 
-# ── 4. Cleanup ────────────────────────────────────────────────────────────
 Write-Host "  Stopping servers..." -ForegroundColor Yellow
-if ($streamlit -and !$streamlit.HasExited) { Stop-Process -Id $streamlit.Id -Force }
-if ($vite     -and !$vite.HasExited)      { Stop-Process -Id $vite.Id     -Force }
+foreach ($proc in @($backend, $streamlit, $vite)) {
+    if ($proc -and -not $proc.HasExited) {
+        try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
+    }
+}
 Write-Host "  Done." -ForegroundColor Green

@@ -8,10 +8,11 @@ import { setAuthToken, clearAuthToken } from './api.js';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+export const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
 
-export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY) && !isDemoMode;
 
-if (!isSupabaseConfigured) {
+if (!isSupabaseConfigured && !isDemoMode) {
   console.warn('[WealthOS] Supabase env vars missing. Auth features are disabled until VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in frontend/.env');
 }
 
@@ -31,12 +32,24 @@ if (supabase) {
 }
 
 function ensureSupabaseConfigured() {
-  if (!supabase) {
+  if (!supabase && !isDemoMode) {
     throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in frontend/.env');
   }
 }
 
+function getDemoSession() {
+  return {
+    access_token: 'demo-session-token',
+    user: {
+      id: 'demo-user',
+      email: 'demo@wealthos.local',
+      user_metadata: { full_name: 'Demo User' },
+    },
+  };
+}
+
 export async function signUp(email, password, fullName) {
+  if (isDemoMode) return { user: getDemoSession().user, session: getDemoSession() };
   ensureSupabaseConfigured();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -48,6 +61,11 @@ export async function signUp(email, password, fullName) {
 }
 
 export async function signIn(email, password) {
+  if (isDemoMode) {
+    const session = getDemoSession();
+    setAuthToken(session.access_token);
+    return { session, user: session.user };
+  }
   ensureSupabaseConfigured();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
@@ -56,6 +74,10 @@ export async function signIn(email, password) {
 }
 
 export async function signOut() {
+  if (isDemoMode) {
+    clearAuthToken();
+    return;
+  }
   clearAuthToken();
   if (!supabase) return;
   const { error } = await supabase.auth.signOut();
@@ -63,6 +85,11 @@ export async function signOut() {
 }
 
 export async function getSession() {
+  if (isDemoMode) {
+    const session = getDemoSession();
+    setAuthToken(session.access_token);
+    return session;
+  }
   if (!supabase) return null;
   const { data } = await supabase.auth.getSession();
   if (data.session?.access_token) setAuthToken(data.session.access_token);
@@ -70,6 +97,9 @@ export async function getSession() {
 }
 
 export async function getUser() {
+  if (isDemoMode) {
+    return getDemoSession().user;
+  }
   if (!supabase) return null;
   const { data: { user } } = await supabase.auth.getUser();
   return user;

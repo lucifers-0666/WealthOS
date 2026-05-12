@@ -9,13 +9,17 @@ import uuid
 from typing import Optional, List
 from datetime import date
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Header
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()
+
+# ── Logging ──────────────────────────────────────────────────
+logger = logging.getLogger("wealthos-api")
 
 from database import (
     get_holdings, get_portfolio_summary, upsert_holding,
@@ -61,6 +65,35 @@ app.add_middleware(
 )
 
 
+# ── Global Error Handler ─────────────────────────────────────
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch all unhandled exceptions and return proper error responses."""
+    error_message = str(exc)
+    logger.error(f"Unhandled exception: {error_message}", exc_info=exc)
+    
+    # Check if it's a Supabase/database error
+    if "SUPABASE" in error_message or "Database" in error_message or "connection" in error_message.lower():
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "Service Unavailable",
+                "message": "Database connection failed. Check your .env file for SUPABASE_URL and SUPABASE_ANON_KEY.",
+                "details": error_message
+            }
+        )
+    
+    # Generic internal server error
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred",
+            "details": error_message
+        }
+    )
+
+
 # ── Auth helper ──────────────────────────────────────────────
 def get_user_id(authorization: str = Header(None)) -> str:
     """
@@ -68,7 +101,10 @@ def get_user_id(authorization: str = Header(None)) -> str:
     In production, verify JWT signature with supabase-py.
     For dev, accepts x-user-id header as fallback.
     """
+    dev_id = os.getenv("DEV_USER_ID")
     if not authorization:
+        if dev_id:
+            return dev_id
         raise HTTPException(status_code=401, detail="Missing Authorization header")
     try:
         from database.supabase_client import get_supabase
@@ -77,7 +113,6 @@ def get_user_id(authorization: str = Header(None)) -> str:
         return user.user.id
     except Exception:
         # Dev fallback — remove in production
-        dev_id = os.getenv("DEV_USER_ID")
         if dev_id:
             return dev_id
         raise HTTPException(status_code=401, detail="Invalid token")

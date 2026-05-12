@@ -65,7 +65,7 @@ with st.sidebar:
             color="#F3F4F6" if is_active else "#94A3B8",
         )
         if st.button(f"{icons[label]}  {label}", key=f"nav_{key}",
-                     use_container_width=True,
+                     width='stretch',
                      help=label):
             st.session_state["current_page"] = label
             st.rerun()

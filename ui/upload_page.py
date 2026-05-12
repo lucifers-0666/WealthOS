@@ -105,10 +105,10 @@ def render_upload_page() -> None:
                     </div>""", unsafe_allow_html=True)
 
                     st.markdown("<div class='wo-table-wrap'>", unsafe_allow_html=True)
-                    st.dataframe(df.head(10), use_container_width=True)
+                    st.dataframe(df.head(10), width='stretch')
                     st.markdown("</div>", unsafe_allow_html=True)
 
-                    if st.button("\u2713 Confirm and Load into WealthOS", use_container_width=True):
+                    if st.button("\u2713 Confirm and Load into WealthOS", width='stretch'):
                         st.session_state["holdings"] = df
                         st.markdown("""
                         <div style='border:1px solid rgba(125,211,252,0.25);border-radius:14px;
@@ -140,7 +140,7 @@ def render_upload_page() -> None:
             </div>
         """, unsafe_allow_html=True)
 
-        if st.button("Load Demo Data", use_container_width=True):
+        if st.button("Load Demo Data", width='stretch'):
             demo = pd.DataFrame({
                 "Ticker":   ["RELIANCE.NS","INFY.NS","HDFCBANK.NS","TCS.NS","WIPRO.NS","VTI","QQQ","INDA","GOLDBEES.NS"],
                 "Name":     ["Reliance","Infosys","HDFC Bank","TCS","Wipro","Vanguard Total","Invesco QQQ","iShares MSCI India","GoldBees"],
@@ -170,6 +170,6 @@ def render_upload_page() -> None:
         st.markdown("<div style='margin:0.75rem 0'></div>", unsafe_allow_html=True)
         panel_start("Active Session", "Currently loaded portfolio snapshot", meta="Session")
         st.markdown("<div class='wo-table-wrap'>", unsafe_allow_html=True)
-        st.dataframe(st.session_state["holdings"].head(5), use_container_width=True, height=200)
+        st.dataframe(st.session_state["holdings"].head(5), width='stretch', height=200)
         st.markdown("</div>", unsafe_allow_html=True)
         panel_end()

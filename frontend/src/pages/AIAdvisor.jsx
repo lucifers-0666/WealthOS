@@ -1,6 +1,7 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useChat } from '../lib/useChat.js';
-import SectionHeader from '../components/SectionHeader.jsx';
+import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
+import { Send, Sparkles, MessageCircle, ShieldCheck } from 'lucide-react';
 
 const SUGGESTIONS = [
   'Analyse my current portfolio and give me a health score',
@@ -15,35 +16,32 @@ function Message({ msg }) {
   const isUser = msg.role === 'user';
   const isTyping = msg._typing;
   return (
-    <div className={`chat-msg ${isUser ? 'user' : 'assistant'}`}>
-      {!isUser && (
-        <div className="chat-avatar">
-          <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
-            <rect x="2" y="2" width="28" height="28" rx="6" stroke="#7DD3FC" strokeWidth="1.5"/>
-            <path d="M8 22L13 12L18 18L22 10" stroke="#7DD3FC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+    <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 12 }}>
+      <div style={{ maxWidth: '82%', display: 'flex', gap: 10, alignItems: 'flex-start', flexDirection: isUser ? 'row-reverse' : 'row' }}>
+        <div style={{ width: 34, height: 34, borderRadius: 11, display: 'grid', placeItems: 'center', background: isUser ? 'rgba(200,179,142,0.12)' : 'rgba(134,159,196,0.12)', color: isUser ? theme.colors.gold : theme.colors.accent, flexShrink: 0 }}>
+          <MessageCircle size={15} />
         </div>
-      )}
-      <div className={`chat-bubble ${isTyping ? 'typing' : ''}`}>
-        {isTyping ? (
-          <span className="typing-dots"><span/><span/><span/></span>
-        ) : (
-          <div className="chat-text" dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br/>') }} />
-        )}
-        {msg.ts && !isTyping && (
-          <span className="chat-ts">
-            {new Date(msg.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-          </span>
-        )}
+        <div style={{ ...panelStyle({ padding: 16, maxWidth: '100%' }), borderColor: isUser ? 'rgba(200,179,142,0.22)' : theme.colors.border }}>
+          {isTyping ? (
+            <div style={{ color: theme.colors.textMuted }}>Thinking…</div>
+          ) : (
+            <div style={{ color: theme.colors.text, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+          )}
+          {msg.ts && !isTyping && <div style={{ color: theme.colors.textMuted, fontSize: 11, marginTop: 10 }}>{new Date(msg.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>}
+        </div>
       </div>
     </div>
   );
 }
 
 export default function AIAdvisor() {
-  const { messages, loading, error, sendMessage, clearChat } = useChat();
-  const [input, setInput] = React.useState('');
+  const { messages, loading, error, sendMessage, clearChat, restoreHistory } = useChat();
+  const [input, setInput] = useState('');
   const bottomRef = useRef();
+
+  useEffect(() => {
+    restoreHistory();
+  }, [restoreHistory]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -57,94 +55,97 @@ export default function AIAdvisor() {
   }
 
   return (
-    <div className="page advisor-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">AI CFO Advisor</h1>
-          <p className="page-subtitle">Powered by Gemini 1.5 Pro — your personal financial intelligence</p>
+    <div style={{ display: 'grid', gap: 18 }}>
+      <section style={{ ...panelStyle({ padding: 24 }) }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start' }}>
+          <div style={{ maxWidth: 720 }}>
+            <div className="section-label">AI advisory desk</div>
+            <h2 className="editorial-title" style={{ margin: '8px 0 0', fontSize: 'clamp(2rem, 3vw, 3rem)' }}>An institutional AI analyst for rebalancing, tax, and risk decisions.</h2>
+            <p style={{ margin: '10px 0 0', color: theme.colors.textSoft, lineHeight: 1.65 }}>Ask the advisor about exposure, portfolio health, tax planning, and strategy — with your holdings as context.</p>
+          </div>
+          <button onClick={clearChat} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px', background: 'transparent', color: theme.colors.text, cursor: 'pointer' }}>
+            Clear session
+          </button>
         </div>
-        <button className="btn-ghost" onClick={clearChat}>Clear Session</button>
-      </div>
+      </section>
 
-      <div className="advisor-layout">
-        {/* Chat panel */}
-        <div className="chat-panel">
-          <div className="chat-messages">
+      <section style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 18, alignItems: 'start' }}>
+        <div style={{ ...panelStyle({ padding: 18, minHeight: 700, display: 'flex', flexDirection: 'column' }) }}>
+          <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
             {messages.length === 0 ? (
-              <div className="chat-empty">
-                <div className="chat-empty-icon">
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <rect x="2" y="2" width="28" height="28" rx="6" stroke="#7DD3FC" strokeWidth="1.5"/>
-                    <path d="M8 22L13 12L18 18L22 10" stroke="#7DD3FC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="22" cy="10" r="2" fill="#A78BFA"/>
-                  </svg>
-                </div>
-                <h3>Your AI CFO is ready</h3>
-                <p>Ask anything about your portfolio, tax planning, rebalancing, or market strategy.</p>
-                <div className="suggestions">
-                  {SUGGESTIONS.map((s) => (
-                    <button key={s} className="suggestion-chip" onClick={() => handleSend(s)}>{s}</button>
-                  ))}
+              <div style={{ minHeight: 560, display: 'grid', placeItems: 'center', textAlign: 'center', padding: 30 }}>
+                <div style={{ maxWidth: 520 }}>
+                  <div style={{ width: 54, height: 54, borderRadius: 18, display: 'grid', placeItems: 'center', margin: '0 auto 16px', background: 'rgba(200,179,142,0.12)', color: theme.colors.gold }}>
+                    <Sparkles size={22} />
+                  </div>
+                  <h3 style={{ margin: 0, fontFamily: 'Space Grotesk, Inter, sans-serif', fontSize: 28 }}>Your AI CFO is ready.</h3>
+                  <p style={{ margin: '10px 0 0', color: theme.colors.textSoft, lineHeight: 1.7 }}>Use the suggested prompts below or ask a custom question about your portfolio. Responses stay contextual and calm.</p>
                 </div>
               </div>
             ) : (
               messages.map((m, i) => <Message key={i} msg={m} />)
             )}
-            {error && <div className="chat-error">{error}</div>}
+            {error && <div style={{ color: theme.colors.error, marginTop: 12 }}>{error}</div>}
             <div ref={bottomRef} />
           </div>
 
-          {/* Input bar */}
-          <div className="chat-input-bar">
+          <div style={{ marginTop: 14, display: 'flex', gap: 10, alignItems: 'flex-end' }}>
             <textarea
-              className="chat-input"
-              placeholder="Ask your CFO anything..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              rows={2}
+              placeholder="Ask your CFO anything…"
+              style={{ ...fieldStyle({ minHeight: 62, resize: 'vertical', flex: 1, lineHeight: 1.6 }) }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   handleSend();
                 }
               }}
-              rows={1}
             />
-            <button
-              className={`chat-send ${loading ? 'disabled' : ''}`}
-              onClick={() => handleSend()}
-              disabled={loading}
-              aria-label="Send message"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="22" y1="2" x2="11" y2="13"/>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-              </svg>
+            <button onClick={() => handleSend()} disabled={loading} style={{ border: '0', borderRadius: 12, minHeight: 62, width: 62, background: theme.colors.text, color: '#0A201F', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
+              <Send size={16} />
             </button>
           </div>
         </div>
 
-        {/* Suggestion sidebar */}
-        <aside className="advisor-sidebar">
-          <SectionHeader title="Quick Prompts" subtitle="Common advisory questions" />
-          <div className="advisor-chips">
-            {SUGGESTIONS.map((s) => (
-              <button key={s} className="advisor-chip" onClick={() => handleSend(s)}>{s}</button>
-            ))}
+        <aside style={{ display: 'grid', gap: 18 }}>
+          <div style={{ ...panelStyle({ padding: 20 }) }}>
+            <div className="section-label">Quick prompts</div>
+            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Common advisory requests</h3>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {SUGGESTIONS.map((s) => (
+                <button key={s} onClick={() => handleSend(s)} style={{ textAlign: 'left', border: `1px solid ${theme.colors.border}`, background: 'rgba(255,255,255,0.01)', color: theme.colors.textSoft, borderRadius: 12, padding: '12px 14px', cursor: 'pointer', lineHeight: 1.5 }}>
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="advisor-info">
-            <SectionHeader title="CFO Context" subtitle="What the AI knows" />
-            <ul className="advisor-context-list">
-              <li>Live portfolio positions</li>
-              <li>Transaction history</li>
-              <li>Target allocation</li>
-              <li>Indian tax rules (LTCG / STCG)</li>
-              <li>NSE / BSE market data</li>
-              <li>Latest financial news via RAG</li>
-            </ul>
+          <div style={{ ...panelStyle({ padding: 20 }) }}>
+            <div className="section-label">Context pack</div>
+            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>What the AI sees</h3>
+            <div style={{ display: 'grid', gap: 10, color: theme.colors.textSoft, lineHeight: 1.7, fontSize: 14 }}>
+              <div>Live portfolio positions</div>
+              <div>Transaction history</div>
+              <div>Target allocation</div>
+              <div>Indian tax rules (LTCG / STCG)</div>
+              <div>NSE / BSE market data</div>
+              <div>Latest financial news via retrieval</div>
+            </div>
+          </div>
+
+          <div style={{ ...panelStyle({ padding: 20 }) }}>
+            <div className="section-label">Session status</div>
+            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Conversation state</h3>
+            <div style={{ display: 'grid', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: theme.colors.textSoft }}><span>Responses</span><span>{messages.filter((m) => m.role === 'assistant').length}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: theme.colors.textSoft }}><span>Typing</span><span>{loading ? 'Live' : 'Idle'}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: theme.colors.textSoft }}><span>Security</span><span style={{ color: theme.colors.success }}><ShieldCheck size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Protected</span></div>
+            </div>
           </div>
         </aside>
-      </div>
+      </section>
     </div>
   );
 }

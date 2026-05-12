@@ -1,9 +1,24 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { usePortfolio } from '../lib/usePortfolio.js';
-import SectionHeader from '../components/SectionHeader.jsx';
+import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
+import { Plus, Trash2, RefreshCw } from 'lucide-react';
 
 const EXCHANGES = ['NSE', 'BSE', 'NYSE', 'NASDAQ', 'LSE'];
 const ASSET_CLASSES = ['equity', 'etf', 'gold', 'debt', 'crypto', 'reit'];
+
+const labelStyle = {
+  display: 'block',
+  fontSize: 11,
+  letterSpacing: '0.16em',
+  textTransform: 'uppercase',
+  color: theme.colors.textMuted,
+  marginBottom: 8,
+};
+
+function fmt(n) {
+  if (n == null) return '—';
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+}
 
 export default function Portfolio() {
   const { holdings, loading, error, addHolding, removeHolding, refresh } = usePortfolio();
@@ -12,7 +27,15 @@ export default function Portfolio() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
 
-  function setField(k, v) { setForm((p) => ({ ...p, [k]: v })); }
+  const stats = useMemo(() => {
+    const invested = holdings.reduce((sum, h) => sum + (h.invested_value || 0), 0);
+    const value = holdings.reduce((sum, h) => sum + (h.current_value || 0), 0);
+    return { invested, value, pnl: value - invested };
+  }, [holdings]);
+
+  function setField(k, v) {
+    setForm((p) => ({ ...p, [k]: v }));
+  }
 
   async function handleAdd(e) {
     e.preventDefault();
@@ -29,110 +52,79 @@ export default function Portfolio() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Remove this holding?')) return;
-    await removeHolding(id);
-  }
-
-  function fmt(n) {
-    if (n == null) return '—';
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
-  }
-
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Holdings</h1>
-          <p className="page-subtitle">{holdings.length} active positions</p>
+    <div style={{ display: 'grid', gap: 18 }}>
+      <section style={{ ...panelStyle({ padding: 24 }) }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
+          <div>
+            <div className="section-label">Portfolio registry</div>
+            <h2 className="editorial-title" style={{ margin: '8px 0 0', fontSize: 'clamp(2rem, 3vw, 3rem)' }}>Holdings with institutional clarity.</h2>
+            <p style={{ margin: '10px 0 0', color: theme.colors.textSoft, maxWidth: 680 }}>Maintain positions manually, review live valuations, and keep your allocation table clean.</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={refresh} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px', background: 'transparent', color: theme.colors.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}><RefreshCw size={15} /> Refresh</button>
+            <button onClick={() => setShowForm((v) => !v)} style={{ border: '0', borderRadius: 12, padding: '10px 14px', background: theme.colors.text, color: '#0A201F', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>{showForm ? 'Close' : <><Plus size={15} /> Add holding</>}</button>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn-ghost" onClick={refresh}>Refresh</button>
-          <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
-            {showForm ? 'Cancel' : '+ Add Holding'}
-          </button>
-        </div>
-      </div>
 
-      {/* Add holding form */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginTop: 18 }}>
+          <div style={panelStyle({ padding: 16 })}><div className="section-label">Positions</div><div style={{ fontSize: 30, fontFamily: 'Space Grotesk, Inter, sans-serif', marginTop: 8 }}>{holdings.length}</div></div>
+          <div style={panelStyle({ padding: 16 })}><div className="section-label">Invested</div><div style={{ fontSize: 30, fontFamily: 'Space Grotesk, Inter, sans-serif', marginTop: 8 }}>{fmt(stats.invested)}</div></div>
+          <div style={panelStyle({ padding: 16 })}><div className="section-label">Unrealised P&L</div><div style={{ fontSize: 30, fontFamily: 'Space Grotesk, Inter, sans-serif', marginTop: 8, color: stats.pnl >= 0 ? theme.colors.success : theme.colors.error }}>{fmt(stats.pnl)}</div></div>
+        </div>
+      </section>
+
       {showForm && (
-        <form className="add-holding-form" onSubmit={handleAdd}>
-          <SectionHeader title="Add Holding" subtitle="Manually add a position" />
-          <div className="form-row">
-            <div className="form-field">
-              <label>Ticker *</label>
-              <input value={form.ticker} onChange={(e) => setField('ticker', e.target.value.toUpperCase())} placeholder="RELIANCE.NS" required />
+        <form onSubmit={handleAdd} style={{ ...panelStyle({ padding: 22 }), display: 'grid', gap: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16 }}>
+            <div>
+              <div className="section-label">Add holding</div>
+              <h3 className="editorial-title" style={{ margin: '6px 0 0', fontSize: 18 }}>Manual position entry</h3>
             </div>
-            <div className="form-field">
-              <label>Company Name</label>
-              <input value={form.company_name} onChange={(e) => setField('company_name', e.target.value)} placeholder="Reliance Industries" />
-            </div>
+            <div style={{ color: theme.colors.textMuted, fontSize: 12 }}>Required fields: ticker, quantity, average price</div>
           </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label>Quantity *</label>
-              <input type="number" min={0.0001} step="any" value={form.quantity} onChange={(e) => setField('quantity', e.target.value)} required />
-            </div>
-            <div className="form-field">
-              <label>Avg Buy Price (INR) *</label>
-              <input type="number" min={0} step="any" value={form.avg_buy_price} onChange={(e) => setField('avg_buy_price', e.target.value)} required />
-            </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+            <div><label style={labelStyle}>Ticker</label><input value={form.ticker} onChange={(e) => setField('ticker', e.target.value.toUpperCase())} placeholder="RELIANCE.NS" required style={fieldStyle()} /></div>
+            <div><label style={labelStyle}>Company name</label><input value={form.company_name} onChange={(e) => setField('company_name', e.target.value)} placeholder="Reliance Industries" style={fieldStyle()} /></div>
+            <div><label style={labelStyle}>Quantity</label><input type="number" min={0.0001} step="any" value={form.quantity} onChange={(e) => setField('quantity', e.target.value)} required style={fieldStyle()} /></div>
+            <div><label style={labelStyle}>Average buy price</label><input type="number" min={0} step="any" value={form.avg_buy_price} onChange={(e) => setField('avg_buy_price', e.target.value)} required style={fieldStyle()} /></div>
+            <div><label style={labelStyle}>Exchange</label><select value={form.exchange} onChange={(e) => setField('exchange', e.target.value)} style={fieldStyle()}>{EXCHANGES.map((x) => <option key={x}>{x}</option>)}</select></div>
+            <div><label style={labelStyle}>Asset class</label><select value={form.asset_class} onChange={(e) => setField('asset_class', e.target.value)} style={fieldStyle()}>{ASSET_CLASSES.map((a) => <option key={a}>{a}</option>)}</select></div>
           </div>
-          <div className="form-row">
-            <div className="form-field">
-              <label>Exchange</label>
-              <select value={form.exchange} onChange={(e) => setField('exchange', e.target.value)}>
-                {EXCHANGES.map((x) => <option key={x}>{x}</option>)}
-              </select>
-            </div>
-            <div className="form-field">
-              <label>Asset Class</label>
-              <select value={form.asset_class} onChange={(e) => setField('asset_class', e.target.value)}>
-                {ASSET_CLASSES.map((a) => <option key={a}>{a}</option>)}
-              </select>
-            </div>
-          </div>
-          {formError && <div className="form-error">{formError}</div>}
-          <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? 'Saving...' : 'Add Holding'}
-          </button>
+
+          {formError && <div style={{ color: theme.colors.error, fontSize: 13 }}>{formError}</div>}
+          <button type="submit" disabled={saving} style={{ border: '0', borderRadius: 12, padding: '12px 16px', background: theme.colors.text, color: '#0A201F', fontWeight: 700, cursor: 'pointer' }}>{saving ? 'Saving…' : 'Save holding'}</button>
         </form>
       )}
 
-      {loading && <div className="shimmer-block" style={{ height: 300 }} />}
-      {error && <div className="page-error">{error}</div>}
+      {loading && <div style={{ ...panelStyle({ padding: 24 }) }}>Loading holdings…</div>}
+      {error && <div style={{ ...panelStyle({ padding: 24, color: theme.colors.error }) }}>{error}</div>}
 
       {!loading && holdings.length > 0 && (
-        <div className="table-card">
-          <div className="table-wrapper">
+        <div style={{ ...panelStyle({ padding: 20 }) }}>
+          <div style={{ overflowX: 'auto' }}>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Ticker</th><th>Company</th><th>Exchange</th>
-                  <th>Qty</th><th>Avg Price</th><th>LTP</th>
-                  <th>Value</th><th>P&amp;L</th><th>P&amp;L%</th><th></th>
+                  <th>Ticker</th><th>Company</th><th>Exchange</th><th>Qty</th><th>Avg Price</th><th>LTP</th><th>Value</th><th>P&L</th><th>P&L%</th><th></th>
                 </tr>
               </thead>
               <tbody>
                 {holdings.map((h) => (
                   <tr key={h.id}>
-                    <td><span className="ticker-badge">{h.ticker}</span></td>
-                    <td className="text-muted">{h.company_name || '—'}</td>
-                    <td className="text-muted">{h.exchange}</td>
+                    <td><span className="badge badge-gold">{h.ticker}</span></td>
+                    <td>{h.company_name || '—'}</td>
+                    <td>{h.exchange || '—'}</td>
                     <td>{h.quantity}</td>
                     <td>{fmt(h.avg_buy_price)}</td>
                     <td>{fmt(h.current_price)}</td>
                     <td>{fmt(h.current_value)}</td>
-                    <td className={h.unrealised_pnl >= 0 ? 'text-positive' : 'text-negative'}>{fmt(h.unrealised_pnl)}</td>
-                    <td className={h.unrealised_pnl_pct >= 0 ? 'text-positive' : 'text-negative'}>
-                      {h.unrealised_pnl_pct != null ? `${h.unrealised_pnl_pct >= 0 ? '+' : ''}${h.unrealised_pnl_pct.toFixed(2)}%` : '—'}
-                    </td>
+                    <td style={{ color: h.unrealised_pnl >= 0 ? theme.colors.success : theme.colors.error }}>{fmt(h.unrealised_pnl)}</td>
+                    <td style={{ color: h.unrealised_pnl_pct >= 0 ? theme.colors.success : theme.colors.error }}>{h.unrealised_pnl_pct != null ? `${h.unrealised_pnl_pct >= 0 ? '+' : ''}${h.unrealised_pnl_pct.toFixed(2)}%` : '—'}</td>
                     <td>
-                      <button className="btn-icon-danger" onClick={() => handleDelete(h.id)} aria-label={`Remove ${h.ticker}`}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6"/>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                        </svg>
+                      <button onClick={() => removeHolding(h.id)} aria-label={`Remove ${h.ticker}`} style={{ border: '0', background: 'transparent', color: theme.colors.textMuted, cursor: 'pointer' }}>
+                        <Trash2 size={15} />
                       </button>
                     </td>
                   </tr>
@@ -144,9 +136,8 @@ export default function Portfolio() {
       )}
 
       {!loading && holdings.length === 0 && (
-        <div className="empty-state">
-          <p>No holdings yet. Upload a CSV or add positions manually.</p>
-          <a href="/upload" className="btn-primary" style={{ display: 'inline-block', marginTop: 12 }}>Upload Portfolio</a>
+        <div style={{ ...panelStyle({ padding: 24, color: theme.colors.textSoft }) }}>
+          No holdings yet. Upload a CSV or add positions manually.
         </div>
       )}
     </div>

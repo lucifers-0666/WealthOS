@@ -6,10 +6,15 @@
 import { useState, useRef, useCallback } from 'react';
 import { sendChatMessage, getChatHistory } from './api.js';
 
+const SESSION_KEY = 'wealthos:advisor-session';
+
 export function useChat() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [sessionId, setSessionId] = useState(null);
+  const [sessionId, setSessionId] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    return window.localStorage.getItem(SESSION_KEY);
+  });
   const [error, setError] = useState(null);
   const abortRef = useRef(null);
 
@@ -42,7 +47,12 @@ export function useChat() {
     try {
       const res = await sendChatMessage(text, sessionId);
       const sid = res.session_id;
-      if (!sessionId) setSessionId(sid);
+      if (!sessionId) {
+        setSessionId(sid);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(SESSION_KEY, sid);
+        }
+      }
 
       setMessages((prev) =>
         prev
@@ -60,8 +70,16 @@ export function useChat() {
   const clearChat = useCallback(() => {
     setMessages([]);
     setSessionId(null);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(SESSION_KEY);
+    }
     setError(null);
   }, []);
 
-  return { messages, loading, error, sessionId, sendMessage, clearChat, loadHistory };
+  const restoreHistory = useCallback(async () => {
+    if (!sessionId) return;
+    await loadHistory(sessionId);
+  }, [loadHistory, sessionId]);
+
+  return { messages, loading, error, sessionId, sendMessage, clearChat, loadHistory, restoreHistory };
 }

@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Layout.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import Portfolio from './pages/Portfolio.jsx';
-import Upload from './pages/Upload.jsx';
-import AIAdvisor from './pages/AIAdvisor.jsx';
-import News from './pages/News.jsx';
-import Settings from './pages/Settings.jsx';
-import Login from './pages/Login.jsx';
 import { useAuth } from './lib/useAuth.js';
+
+// Route-level lazy loading to reduce initial bundle size
+const Layout = lazy(() => import('./components/Layout.jsx'));
+const Landing = lazy(() => import('./pages/Landing.jsx'));
+const Onboarding = lazy(() => import('./pages/Onboarding.jsx'));
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
+const Portfolio = lazy(() => import('./pages/Portfolio.jsx'));
+const Upload = lazy(() => import('./pages/Upload.jsx'));
+const AIAdvisor = lazy(() => import('./pages/AIAdvisor.jsx'));
+const News = lazy(() => import('./pages/News.jsx'));
+const Settings = lazy(() => import('./pages/Settings.jsx'));
+const Login = lazy(() => import('./pages/Login.jsx'));
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -31,17 +35,27 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
-    <Routes>
+    <Suspense fallback={<div style={{padding:24}}>Loading…</div>}>
+      <Routes>
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route
-        path="/"
+        path="/onboarding"
+        element={
+          <ProtectedRoute>
+            <Onboarding />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/app"
         element={
           <ProtectedRoute>
             <Layout />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route index element={<Navigate to="/app/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="portfolio" element={<Portfolio />} />
         <Route path="upload" element={<Upload />} />
@@ -49,7 +63,14 @@ export default function App() {
         <Route path="news" element={<News />} />
         <Route path="settings" element={<Settings />} />
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+      <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+      <Route path="/portfolio" element={<Navigate to="/app/portfolio" replace />} />
+      <Route path="/upload" element={<Navigate to="/app/upload" replace />} />
+      <Route path="/advisor" element={<Navigate to="/app/advisor" replace />} />
+      <Route path="/news" element={<Navigate to="/app/news" replace />} />
+      <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

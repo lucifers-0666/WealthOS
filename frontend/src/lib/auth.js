@@ -84,6 +84,18 @@ export async function signOut() {
   if (error) throw error;
 }
 
+export async function resetPassword(email) {
+  if (isDemoMode) {
+    return { ok: true };
+  }
+  ensureSupabaseConfigured();
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/login?mode=reset`,
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function getSession() {
   if (isDemoMode) {
     const session = getDemoSession();

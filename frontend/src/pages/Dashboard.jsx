@@ -1,165 +1,147 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, Suspense, lazy } from 'react';
 import { usePortfolio } from '../lib/usePortfolio.js';
-import KpiCard from '../components/KpiCard.jsx';
-import SectionHeader from '../components/SectionHeader.jsx';
-import { AreaChart, Area, PieChart, Pie, Cell, Tooltip, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { theme, panelStyle } from '../lib/theme.js';
+import { RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
+const DashboardCharts = lazy(() => import('../components/DashboardCharts.jsx'));
 
-const COLORS = ['#7DD3FC', '#A78BFA', '#67E8F9', '#D6C7A1', '#6EE7B7', '#FCA5A5'];
-
-function fmt(n, currency = 'INR') {
+function fmt(n) {
   if (n == null) return '—';
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency', currency, maximumFractionDigits: 0,
-  }).format(n);
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 }
 
-function fmtPct(n) {
+function pct(n) {
   if (n == null) return '—';
-  return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
+  return `${n >= 0 ? '+' : ''}${Number(n).toFixed(2)}%`;
+}
+
+function StatCard({ label, value, sub, tone = 'neutral' }) {
+  const color = tone === 'positive' ? theme.colors.success : tone === 'negative' ? theme.colors.error : theme.colors.text;
+  return (
+    <div style={{ ...panelStyle({ padding: 18, minHeight: 118 }) }}>
+      <div style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.colors.textMuted, marginBottom: 12 }}>{label}</div>
+      <div style={{ fontFamily: 'Space Grotesk, Inter, sans-serif', fontSize: 30, lineHeight: 1, color, marginBottom: 8 }}>{value}</div>
+      <div style={{ fontSize: 13, color: theme.colors.textSoft }}>{sub}</div>
+    </div>
+  );
 }
 
 export default function Dashboard() {
-  const { portfolio, holdings, loading, error, refresh } = usePortfolio();
+  const { portfolio, holdings, transactions, watchlist, loading, error, refresh } = usePortfolio();
 
-  const kpis = useMemo(() => {
-    if (!portfolio) return [];
-    const s = portfolio.summary || {};
-    return [
-      { label: 'Portfolio Value', value: fmt(s.current_value), sub: 'Live valuation', trend: s.total_pnl_pct >= 0 ? 'up' : 'down' },
-      { label: 'Total Invested', value: fmt(s.invested_value), sub: 'Cost basis', trend: 'neutral' },
-      { label: 'Unrealised P&L', value: fmt(s.total_pnl), sub: fmtPct(s.total_pnl_pct), trend: s.total_pnl >= 0 ? 'up' : 'down' },
-      { label: 'Day Change', value: fmtPct(s.day_change_pct), sub: fmt(s.day_change), trend: s.day_change >= 0 ? 'up' : 'down' },
-      { label: 'Holdings', value: holdings.length, sub: 'Positions', trend: 'neutral' },
-      { label: 'XIRR', value: s.xirr ? `${s.xirr.toFixed(1)}%` : '—', sub: 'Annualised return', trend: s.xirr >= 0 ? 'up' : 'down' },
-    ];
-  }, [portfolio, holdings]);
+  const summary = portfolio?.summary || {};
 
   const allocationData = useMemo(() => {
-    if (!holdings.length) return [];
     const groups = {};
     holdings.forEach((h) => {
-      const cls = h.asset_class || 'Other';
-      groups[cls] = (groups[cls] || 0) + (h.current_value || 0);
+      const key = h.asset_class || 'Other';
+      groups[key] = (groups[key] || 0) + (h.current_value || 0);
     });
     return Object.entries(groups).map(([name, value]) => ({ name, value }));
   }, [holdings]);
 
-  const chartData = useMemo(() => {
-    if (!portfolio?.history) return [];
-    return portfolio.history.map((p) => ({ date: p.date, value: p.value }));
-  }, [portfolio]);
+  const topPositions = useMemo(
+    () => holdings.slice().sort((a, b) => (b.current_value || 0) - (a.current_value || 0)).slice(0, 6),
+    [holdings],
+  );
 
-  if (loading) return <div className="page-loading"><div className="shimmer-block" style={{height: 400}} /></div>;
-  if (error) return <div className="page-error">Failed to load portfolio: {error}</div>;
+  const activity = useMemo(() => transactions.slice(0, 5), [transactions]);
+
+  const kpis = [
+    { label: 'Portfolio value', value: fmt(summary.current_value), sub: 'Live portfolio valuation', tone: 'neutral' },
+    { label: 'Total invested', value: fmt(summary.total_invested), sub: 'Cost basis across active positions', tone: 'neutral' },
+    { label: 'Unrealised P&L', value: fmt(summary.total_pnl), sub: pct(summary.total_pnl_pct), tone: (summary.total_pnl || 0) >= 0 ? 'positive' : 'negative' },
+    { label: 'Day change', value: fmt(summary.day_change), sub: pct(summary.day_change_pct), tone: (summary.day_change || 0) >= 0 ? 'positive' : 'negative' },
+  ];
+
+  if (loading) {
+    return <div style={{ ...panelStyle({ padding: 24, minHeight: 420 }) }}>Loading command center…</div>;
+  }
+
+  if (error) {
+    return <div style={{ ...panelStyle({ padding: 24, minHeight: 220, color: theme.colors.error }) }}>Failed to load portfolio: {error}</div>;
+  }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Portfolio Overview</h1>
-          <p className="page-subtitle">Live snapshot of your wealth position</p>
-        </div>
-        <button className="btn-ghost" onClick={refresh}>Refresh Prices</button>
-      </div>
-
-      {/* KPI Row */}
-      <div className="kpi-grid">
-        {kpis.map((k) => <KpiCard key={k.label} {...k} />)}
-      </div>
-
-      {/* Charts Row */}
-      <div className="charts-row">
-        {/* Portfolio value history */}
-        <div className="chart-card">
-          <SectionHeader title="Portfolio Value" subtitle="Reconstructed from transactions" />
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#7DD3FC" stopOpacity={0.15}/>
-                    <stop offset="95%" stopColor="#7DD3FC" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="date" tick={{ fill: '#64748B', fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fill: '#64748B', fontSize: 11 }} tickLine={false} axisLine={false}
-                  tickFormatter={(v) => `₹${(v/100000).toFixed(0)}L`} />
-                <Tooltip
-                  contentStyle={{ background: '#0B1728', border: '1px solid rgba(148,163,184,0.14)', borderRadius: 8, color: '#F3F4F6', fontSize: 12 }}
-                  formatter={(v) => [fmt(v), 'Value']}
-                />
-                <Area type="monotone" dataKey="value" stroke="#7DD3FC" strokeWidth={1.5} fill="url(#grad)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="empty-state-sm">Upload transactions to see history</div>
-          )}
-        </div>
-
-        {/* Allocation donut */}
-        <div className="chart-card">
-          <SectionHeader title="Asset Allocation" subtitle="By asset class" />
-          {allocationData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={allocationData} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
-                  paddingAngle={3} dataKey="value">
-                  {allocationData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ background: '#0B1728', border: '1px solid rgba(148,163,184,0.14)', borderRadius: 8, color: '#F3F4F6', fontSize: 12 }}
-                  formatter={(v) => [fmt(v), 'Value']}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="empty-state-sm">No holdings yet</div>
-          )}
-        </div>
-      </div>
-
-      {/* Holdings Table */}
-      <div className="table-card">
-        <SectionHeader title="Holdings" subtitle={`${holdings.length} positions`} />
-        {holdings.length > 0 ? (
-          <div className="table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Ticker</th><th>Company</th><th>Qty</th>
-                  <th>Avg Price</th><th>LTP</th>
-                  <th>Current Value</th><th>P&amp;L</th><th>P&amp;L %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {holdings.map((h) => (
-                  <tr key={h.id}>
-                    <td><span className="ticker-badge">{h.ticker}</span></td>
-                    <td className="text-muted">{h.company_name || '—'}</td>
-                    <td>{h.quantity}</td>
-                    <td>{fmt(h.avg_buy_price)}</td>
-                    <td>{fmt(h.current_price)}</td>
-                    <td>{fmt(h.current_value)}</td>
-                    <td className={h.unrealised_pnl >= 0 ? 'text-positive' : 'text-negative'}>
-                      {fmt(h.unrealised_pnl)}
-                    </td>
-                    <td className={h.unrealised_pnl_pct >= 0 ? 'text-positive' : 'text-negative'}>
-                      {fmtPct(h.unrealised_pnl_pct)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+    <div style={{ display: 'grid', gap: 18 }}>
+      <section style={{ ...panelStyle({ padding: 24, overflow: 'hidden' }) }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', marginBottom: 22 }}>
+          <div style={{ maxWidth: 760 }}>
+            <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.colors.textMuted, marginBottom: 10 }}>Portfolio command center</div>
+            <h2 style={{ margin: 0, fontFamily: 'Space Grotesk, Inter, sans-serif', fontSize: 'clamp(2rem, 3vw, 3.2rem)', letterSpacing: '-0.05em', lineHeight: 1.02 }}>Institutional view of your capital, risk, and signal flow.</h2>
+            <p style={{ margin: '14px 0 0', color: theme.colors.textSoft, fontSize: 15, lineHeight: 1.65 }}>WealthOS consolidates holdings, market context, and AI insights into one calm operating layer.</p>
           </div>
-        ) : (
-          <div className="empty-state">
-            <p>No holdings found.</p>
-            <a href="/upload" className="btn-primary" style={{display:'inline-block', marginTop: 12}}>Upload Portfolio</a>
+          <button onClick={refresh} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '11px 14px', background: 'rgba(255,255,255,0.01)', color: theme.colors.text, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <RefreshCw size={15} /> Refresh
+          </button>
+        </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
+          {kpis.map((item) => <StatCard key={item.label} {...item} />)}
+        </div>
+      </section>
+      <section style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 18, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gap: 18 }}>
+          <div style={{ ...panelStyle({ padding: 20 }) }}>
+            <Suspense fallback={<div style={{ minHeight: 320, display: 'grid', placeItems: 'center' }}>Loading charts…</div>}>
+              <DashboardCharts allocationData={allocationData} topPositions={topPositions} chartData={portfolio?.history || []} />
+            </Suspense>
           </div>
-        )}
-      </div>
+        </div>
+
+        <aside style={{ display: 'grid', gap: 18 }}>
+          <div style={{ ...panelStyle({ padding: 20 }) }}>
+            <div className="section-label">AI brief</div>
+            <h3 className="editorial-title" style={{ margin: '6px 0 12px', fontSize: 18 }}>Portfolio intelligence summary</h3>
+            <div style={{ display: 'grid', gap: 12, color: theme.colors.textSoft, lineHeight: 1.65, fontSize: 14 }}>
+              <p style={{ margin: 0 }}>You hold <strong style={{ color: theme.colors.text }}>{holdings.length}</strong> active positions with <strong style={{ color: theme.colors.text }}>{pct(summary.total_pnl_pct)}</strong> unrealised return.</p>
+              <p style={{ margin: 0 }}>Largest exposure: <strong style={{ color: theme.colors.text }}>{topPositions[0]?.ticker || '—'}</strong>. Watchlist coverage: <strong style={{ color: theme.colors.text }}>{watchlist.length}</strong> names.</p>
+              <p style={{ margin: 0 }}>Signals are calm. Use the Advisor for rebalancing, tax, and concentration planning.</p>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <div style={{ padding: '8px 10px', borderRadius: 999, border: `1px solid ${theme.colors.border}`, color: theme.colors.textSoft, fontSize: 12 }}>Risk: Balanced</div>
+              <div style={{ padding: '8px 10px', borderRadius: 999, border: `1px solid ${theme.colors.border}`, color: theme.colors.textSoft, fontSize: 12 }}>Sync: Live</div>
+            </div>
+          </div>
+
+          <div style={{ ...panelStyle({ padding: 20 }) }}>
+            <div className="section-label">Activity feed</div>
+            <h3 className="editorial-title" style={{ margin: '6px 0 12px', fontSize: 18 }}>Recent transactions</h3>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {activity.length ? activity.map((tx) => (
+                <div key={tx.id || `${tx.ticker}-${tx.transaction_date}`} style={{ padding: 14, borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(255,255,255,0.01)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>{tx.ticker}</div>
+                      <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 4 }}>{tx.action} · {tx.quantity} units</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: tx.action === 'BUY' ? theme.colors.success : theme.colors.error }}>
+                      {tx.action === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{fmt(tx.price)}</span>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div style={{ color: theme.colors.textMuted, padding: '14px 0' }}>No transaction history yet.</div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ ...panelStyle({ padding: 20 }) }}>
+            <div className="section-label">Watchlist</div>
+            <h3 className="editorial-title" style={{ margin: '6px 0 12px', fontSize: 18 }}>Market attention set</h3>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {watchlist.length ? watchlist.map((item) => (
+                <div key={item.id || item.ticker} style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 12px', borderRadius: 12, border: `1px solid ${theme.colors.border}` }}>
+                  <span style={{ fontWeight: 700 }}>{item.ticker}</span>
+                  <span style={{ color: theme.colors.textMuted, fontSize: 12 }}>{item.target_price ? fmt(item.target_price) : 'No target'}</span>
+                </div>
+              )) : (
+                <div style={{ color: theme.colors.textMuted }}>No watchlist yet.</div>
+              )}
+            </div>
+          </div>
+        </aside>
+      </section>
     </div>
   );
 }

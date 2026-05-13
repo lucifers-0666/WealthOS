@@ -1,84 +1,42 @@
-# WealthOS — Single-command launcher
-# Usage: Right-click start.ps1 → Run with PowerShell
-#        OR: from D:\wealthOS\WealthOS run: .\start.ps1
+# Set execution policy for the current session to allow script execution
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
-$ErrorActionPreference = 'Stop'
+# Force the working directory to the repository root
+$RepoRoot = "D:\wealthOS\WealthOS"
+Set-Location -Path $RepoRoot
 
-$repoRoot     = $PSScriptRoot
-$frontendDir  = Join-Path $repoRoot 'frontend'
-$pythonCandidates = @(
-    (Join-Path $repoRoot '..\venv\Scripts\python.exe'),
-    'D:\wealthOS\.venv\Scripts\python.exe',
-    (Join-Path $repoRoot '.venv\Scripts\python.exe'),
-    'python'
-)
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host " Starting WealthOS Environment... " -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
 
-function Resolve-Executable {
-    param([string[]]$Candidates)
-    foreach ($candidate in $Candidates) {
-        if ($candidate -eq 'python') { return $candidate }
-        if (Test-Path $candidate) { return (Resolve-Path $candidate).Path }
-    }
-    return 'python'
+# Define the virtual environment path
+$VenvActivate = "D:\wealthOS\.venv\Scripts\Activate.ps1"
+
+# Verify virtual environment exists
+if (-Not (Test-Path $VenvActivate)) {
+    Write-Host "[ERROR] Virtual environment not found at D:\wealthOS\.venv" -ForegroundColor Red
+    Write-Host "Please ensure the .venv is created in the parent directory." -ForegroundColor Yellow
+    exit 1
 }
 
-$pythonExe = Resolve-Executable -Candidates $pythonCandidates
-$npmExe = if (Get-Command npm.cmd -ErrorAction SilentlyContinue) { 'npm.cmd' } else { 'npm' }
+# Install dependencies (temporarily dot source venv just for pip)
+Write-Host "[1/4] Checking and installing Python dependencies..." -ForegroundColor Yellow
+. $VenvActivate
+pip install -r requirements.txt --quiet
+Write-Host "[1/4] Dependencies installed successfully." -ForegroundColor Green
 
-Write-Host ""
-Write-Host "  WealthOS Launcher" -ForegroundColor Cyan
-Write-Host "  ────────────────────────────────────" -ForegroundColor DarkGray
-Write-Host "  Python  : $pythonExe" -ForegroundColor DarkGray
-Write-Host "  NPM     : $npmExe" -ForegroundColor DarkGray
-Write-Host "  Repo    : $repoRoot" -ForegroundColor DarkGray
-Write-Host ""
+# Open a new terminal for FastAPI Backend
+Write-Host "[2/4] Launching FastAPI Backend (api.py) on Port 8000..." -ForegroundColor Yellow
+Start-Process powershell.exe -ArgumentList "-NoExit -Command `"Set-Location -Path '$RepoRoot'; . '$VenvActivate'; uvicorn api:app --host 0.0.0.0 --port 8000 --reload`""
 
-if (-not (Test-Path (Join-Path $frontendDir 'node_modules'))) {
-    Write-Host "[setup] Installing frontend dependencies..." -ForegroundColor Yellow
-    Push-Location $frontendDir
-    try {
-        & $npmExe install
-    } finally {
-        Pop-Location
-    }
-}
+# Open a new terminal for Streamlit
+Write-Host "[3/4] Launching Streamlit App (app.py) on Port 8501..." -ForegroundColor Yellow
+Start-Process powershell.exe -ArgumentList "-NoExit -Command `"Set-Location -Path '$RepoRoot'; . '$VenvActivate'; streamlit run app.py`""
 
-Write-Host "[1/3] Starting FastAPI backend (http://localhost:8000) ..." -ForegroundColor Yellow
-$backend = Start-Process -FilePath $pythonExe `
-    -ArgumentList "-m uvicorn api:app --host 127.0.0.1 --port 8000 --reload" `
-    -WorkingDirectory $repoRoot `
-    -PassThru -WindowStyle Minimized
+# Open a new terminal for Vite/React frontend
+Write-Host "[4/4] Launching Vite Frontend (Node.js) on Port 3000..." -ForegroundColor Yellow
+Start-Process powershell.exe -ArgumentList "-NoExit -Command `"Set-Location -Path '$RepoRoot\frontend'; npm run dev`""
 
-Write-Host "[2/3] Starting Streamlit app (http://localhost:8501) ..." -ForegroundColor Yellow
-$streamlit = Start-Process -FilePath $pythonExe `
-    -ArgumentList "-m streamlit run app.py --server.port 8501 --server.address 127.0.0.1" `
-    -WorkingDirectory $repoRoot `
-    -PassThru -WindowStyle Minimized
-
-Write-Host "[3/3] Starting Vite frontend (http://localhost:3000) ..." -ForegroundColor Yellow
-$vite = Start-Process -FilePath $npmExe `
-    -ArgumentList "run dev -- --host 127.0.0.1" `
-    -WorkingDirectory $frontendDir `
-    -PassThru -WindowStyle Minimized
-
-Write-Host ""
-Write-Host "  Waiting for services to warm up..." -ForegroundColor DarkGray
-Start-Sleep -Seconds 6
-
-Write-Host ""
-Write-Host "  Opening browser tabs..." -ForegroundColor Green
-Start-Process "http://localhost:8000/docs"
-Start-Process "http://localhost:8501"
-Start-Process "http://localhost:3000"
-
-Write-Host ""
-Write-Host "  WealthOS is running. Press ENTER to stop everything and exit." -ForegroundColor DarkGray
-Read-Host | Out-Null
-
-Write-Host "  Stopping servers..." -ForegroundColor Yellow
-foreach ($proc in @($backend, $streamlit, $vite)) {
-    if ($proc -and -not $proc.HasExited) {
-        try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
-    }
-}
-Write-Host "  Done." -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host " WealthOS services have been launched!  " -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Cyan

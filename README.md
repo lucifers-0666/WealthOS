@@ -1,5 +1,9 @@
 # WealthOS
 
+> ⚠️ **IMPORTANT: WORKING DIRECTORY**
+> Always run commands (git, pip, streamlit, etc.) from the repository root: `D:\wealthOS\WealthOS\`
+> NEVER run them from the parent folder (`D:\wealthOS\`). The `.venv` folder is located in the parent directory by design.
+
 WealthOS is a premium personal finance and portfolio intelligence workspace for Indian and global investors. The platform lets you upload holdings and transaction exports, refresh live market prices, visualize allocation and drawdowns, and consult an AI-powered financial advisor inside one cinematic dashboard experience.
 
 ## Experience Upgrade

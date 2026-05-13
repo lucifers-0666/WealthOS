@@ -1,7 +1,7 @@
 # WealthOS — pinned for compatibility (Streamlit 1.35 + Starlette 0.36)
 streamlit>=1.32.0,<1.36.0
 pandas>=2.0.0,<3.0.0
-numpy==1.26.4
+numpy>=2.0.0,<3.0.0
 yfinance>=0.2.36
 plotly>=5.18.0
 requests>=2.31.0

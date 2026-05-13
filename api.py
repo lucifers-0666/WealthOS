@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import logging
+from PIL import Image
 
 load_dotenv()
 
@@ -283,10 +284,24 @@ async def upload_screenshot(
     session = create_upload_session(user_id, file.filename, "image_screenshot")
     try:
         contents = await file.read()
-        holdings = extract_holdings_from_image(contents)
-        if holdings:
+        image = Image.open(io.BytesIO(contents))
+        df = extract_holdings_from_image(image)
+        
+        if df is not None and not df.empty:
+            # Map OCR columns to database schema
+            holdings = []
+            for _, row in df.iterrows():
+                holdings.append({
+                    "ticker": row["Symbol"],
+                    "company_name": row.get("Name"),
+                    "quantity": float(row["Quantity"]) if row["Quantity"] else 0,
+                    "avg_buy_price": float(row["Avg_Buy_Price"]) if row["Avg_Buy_Price"] else 0,
+                    "exchange": row.get("Exchange", "NSE"),
+                    "asset_class": row.get("Asset_Type", "equity").lower(),
+                })
+            
             saved = bulk_upsert_holdings(user_id, holdings)
-            update_upload_session(session["id"], "completed", recognized_data={"count": len(saved), "holdings": holdings})
+            update_upload_session(session["id"], "completed", recognized_data={"count": len(saved)})
             return {"recognized": len(saved), "holdings": saved, "session_id": session["id"]}
         else:
             update_upload_session(session["id"], "failed", error="No holdings detected in image")
@@ -328,3 +343,8 @@ async def ai_chat(body: ChatMessageIn, user_id: str = Depends(get_user_id)):
 @app.get("/ai/history")
 def ai_history(session_id: str, user_id: str = Depends(get_user_id)):
     return get_conversation_history(user_id, session_id)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

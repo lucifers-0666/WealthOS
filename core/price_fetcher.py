@@ -1,8 +1,8 @@
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
-import streamlit as st
 import time
+from functools import lru_cache
 
 # ---------- helpers ----------
 
@@ -22,7 +22,7 @@ def _safe_ticker(symbol: str) -> str:
     return s + ".NS"
 
 
-@st.cache_data(ttl=300, show_spinner=False)
+@lru_cache(maxsize=128)
 def fetch_price(symbol: str) -> dict:
     """Fetch latest price data for one symbol. Returns dict with price, change, pct."""
     ticker_sym = _safe_ticker(symbol)
@@ -59,8 +59,7 @@ def fetch_price(symbol: str) -> dict:
         }
 
 
-@st.cache_data(ttl=300, show_spinner=False)
-def fetch_prices_bulk(symbols: list) -> dict:
+def fetch_prices(symbols: list) -> dict:
     """Fetch prices for multiple symbols. Returns {symbol: price_dict}."""
     result = {}
     for sym in symbols:
@@ -69,7 +68,7 @@ def fetch_prices_bulk(symbols: list) -> dict:
     return result
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@lru_cache(maxsize=32)
 def fetch_history(symbol: str, period: str = "1y") -> pd.DataFrame:
     """Fetch OHLCV history for a symbol."""
     ticker_sym = _safe_ticker(symbol)
@@ -84,7 +83,7 @@ def fetch_history(symbol: str, period: str = "1y") -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@lru_cache(maxsize=1)
 def get_inr_usd_rate() -> float:
     """Return INR per 1 USD."""
     try:

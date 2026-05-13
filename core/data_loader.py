@@ -1,11 +1,14 @@
+import io
 import pandas as pd
 import numpy as np
-import streamlit as st
 from pathlib import Path
 from datetime import datetime
+from typing import List, Dict, Any
 
 REQUIRED_COLS = {"symbol", "quantity", "avg_price"}
 OPTIONAL_COLS = {"name", "sector", "asset_class", "exchange", "notes"}
+
+REQUIRED_TXN_COLS = {"ticker", "action", "quantity", "price", "transaction_date"}
 
 
 def _normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -72,19 +75,135 @@ def load_from_file(uploaded_file) -> pd.DataFrame:
         raise ValueError(f"Could not parse file: {e}")
 
 
+def parse_holdings_csv(file_obj: io.BytesIO) -> List[Dict[str, Any]]:
+    """
+    Parse a holdings CSV file (BytesIO) into a list of dicts
+    compatible with the FastAPI /upload/holdings-csv endpoint.
+
+    Expected columns (flexible aliases supported):
+        symbol/ticker, quantity/qty, avg_price/avg_cost/buy_price
+    Optional: name, sector, asset_class, exchange, currency
+    """
+    try:
+        df = pd.read_csv(file_obj)
+    except Exception as e:
+        raise ValueError(f"Could not read CSV: {e}")
+
+    df = _normalise_columns(df)
+    missing = REQUIRED_COLS - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}. Found: {list(df.columns)}")
+
+    df["quantity"] = pd.to_numeric(df["quantity"], errors="coerce")
+    df["avg_price"] = pd.to_numeric(df["avg_price"], errors="coerce")
+    df.dropna(subset=["symbol", "quantity", "avg_price"], inplace=True)
+    df = df[df["quantity"] > 0].copy()
+    df["symbol"] = df["symbol"].str.strip().str.upper()
+
+    for col in OPTIONAL_COLS:
+        if col not in df.columns:
+            df[col] = ""
+    if "exchange" not in df.columns or df["exchange"].eq("").all():
+        df["exchange"] = "NSE"
+    if "asset_class" not in df.columns or df["asset_class"].eq("").all():
+        df["asset_class"] = "equity"
+    if "currency" not in df.columns:
+        df["currency"] = "INR"
+
+    holdings = []
+    for _, row in df.iterrows():
+        holdings.append({
+            "ticker": row["symbol"],
+            "company_name": row.get("name", "") or "",
+            "quantity": float(row["quantity"]),
+            "avg_buy_price": float(row["avg_price"]),
+            "exchange": str(row.get("exchange", "NSE") or "NSE"),
+            "asset_class": str(row.get("asset_class", "equity") or "equity"),
+            "currency": str(row.get("currency", "INR") or "INR"),
+            "sector": str(row.get("sector", "") or ""),
+        })
+    return holdings
+
+
+def parse_transactions_csv(file_obj: io.BytesIO) -> List[Dict[str, Any]]:
+    """
+    Parse a transactions CSV file (BytesIO) into a list of dicts
+    compatible with the FastAPI /upload/transactions-csv endpoint.
+
+    Expected columns:
+        ticker, action (BUY/SELL), quantity, price, transaction_date
+    Optional: exchange, broker, notes
+    """
+    try:
+        df = pd.read_csv(file_obj)
+    except Exception as e:
+        raise ValueError(f"Could not read CSV: {e}")
+
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+
+    # Alias mapping for transactions
+    txn_aliases = {
+        "symbol": "ticker",
+        "stock": "ticker",
+        "scrip": "ticker",
+        "type": "action",
+        "trade_type": "action",
+        "side": "action",
+        "qty": "quantity",
+        "shares": "quantity",
+        "trade_price": "price",
+        "execution_price": "price",
+        "date": "transaction_date",
+        "trade_date": "transaction_date",
+    }
+    df.rename(columns=txn_aliases, inplace=True)
+
+    missing = REQUIRED_TXN_COLS - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing required transaction columns: {missing}. Found: {list(df.columns)}")
+
+    df["quantity"] = pd.to_numeric(df["quantity"], errors="coerce")
+    df["price"] = pd.to_numeric(df["price"], errors="coerce")
+    df.dropna(subset=["ticker", "quantity", "price", "transaction_date"], inplace=True)
+    df = df[df["quantity"] > 0].copy()
+    df["ticker"] = df["ticker"].str.strip().str.upper()
+    df["action"] = df["action"].str.strip().str.upper()
+
+    if "exchange" not in df.columns:
+        df["exchange"] = "NSE"
+    if "broker" not in df.columns:
+        df["broker"] = ""
+    if "notes" not in df.columns:
+        df["notes"] = ""
+
+    transactions = []
+    for _, row in df.iterrows():
+        transactions.append({
+            "ticker": row["ticker"],
+            "action": row["action"],
+            "quantity": float(row["quantity"]),
+            "price": float(row["price"]),
+            "transaction_date": str(row["transaction_date"]),
+            "exchange": str(row.get("exchange", "NSE") or "NSE"),
+            "broker": str(row.get("broker", "") or ""),
+            "notes": str(row.get("notes", "") or ""),
+        })
+    return transactions
+
+
 def get_demo_portfolio() -> pd.DataFrame:
     """Return a realistic demo portfolio for Indian + international holdings."""
     data = [
-        {"symbol": "RELIANCE",  "name": "Reliance Industries",    "quantity": 25,   "avg_price": 2450.00, "sector": "Energy",          "asset_class": "Equity",    "exchange": "NSE"},
-        {"symbol": "INFY",      "name": "Infosys Ltd",           "quantity": 40,   "avg_price": 1380.00, "sector": "IT",             "asset_class": "Equity",    "exchange": "NSE"},
-        {"symbol": "HDFCBANK",  "name": "HDFC Bank",             "quantity": 30,   "avg_price": 1620.00, "sector": "Banking",        "asset_class": "Equity",    "exchange": "NSE"},
-        {"symbol": "TCS",       "name": "Tata Consultancy Svcs", "quantity": 15,   "avg_price": 3480.00, "sector": "IT",             "asset_class": "Equity",    "exchange": "NSE"},
-        {"symbol": "WIPRO",     "name": "Wipro Ltd",             "quantity": 60,   "avg_price": 420.00,  "sector": "IT",             "asset_class": "Equity",    "exchange": "NSE"},
-        {"symbol": "TATAMOTORS","name": "Tata Motors",          "quantity": 50,   "avg_price": 580.00,  "sector": "Auto",           "asset_class": "Equity",    "exchange": "NSE"},
-        {"symbol": "BAJFINANCE","name": "Bajaj Finance",        "quantity": 8,    "avg_price": 6800.00, "sector": "NBFC",           "asset_class": "Equity",    "exchange": "NSE"},
-        {"symbol": "VTI",       "name": "Vanguard Total Mkt ETF","quantity": 10,   "avg_price": 220.00,  "sector": "Diversified",    "asset_class": "ETF",       "exchange": "NYSE"},
-        {"symbol": "QQQ",       "name": "Invesco QQQ Trust",    "quantity": 5,    "avg_price": 380.00,  "sector": "Technology",     "asset_class": "ETF",       "exchange": "NASDAQ"},
-        {"symbol": "GOLDBEES",  "name": "Nippon Gold ETF",       "quantity": 100,  "avg_price": 52.00,   "sector": "Gold",           "asset_class": "Gold ETF",  "exchange": "NSE"},
+        {"symbol": "RELIANCE",   "name": "Reliance Industries",     "quantity": 25,  "avg_price": 2450.00, "sector": "Energy",       "asset_class": "Equity",   "exchange": "NSE"},
+        {"symbol": "INFY",       "name": "Infosys Ltd",            "quantity": 40,  "avg_price": 1380.00, "sector": "IT",          "asset_class": "Equity",   "exchange": "NSE"},
+        {"symbol": "HDFCBANK",   "name": "HDFC Bank",              "quantity": 30,  "avg_price": 1620.00, "sector": "Banking",     "asset_class": "Equity",   "exchange": "NSE"},
+        {"symbol": "TCS",        "name": "Tata Consultancy Svcs",  "quantity": 15,  "avg_price": 3480.00, "sector": "IT",          "asset_class": "Equity",   "exchange": "NSE"},
+        {"symbol": "WIPRO",      "name": "Wipro Ltd",              "quantity": 60,  "avg_price": 420.00,  "sector": "IT",          "asset_class": "Equity",   "exchange": "NSE"},
+        {"symbol": "TATAMOTORS", "name": "Tata Motors",            "quantity": 50,  "avg_price": 580.00,  "sector": "Auto",        "asset_class": "Equity",   "exchange": "NSE"},
+        {"symbol": "BAJFINANCE", "name": "Bajaj Finance",          "quantity": 8,   "avg_price": 6800.00, "sector": "NBFC",        "asset_class": "Equity",   "exchange": "NSE"},
+        {"symbol": "VTI",        "name": "Vanguard Total Mkt ETF", "quantity": 10,  "avg_price": 220.00,  "sector": "Diversified", "asset_class": "ETF",      "exchange": "NYSE"},
+        {"symbol": "QQQ",        "name": "Invesco QQQ Trust",      "quantity": 5,   "avg_price": 380.00,  "sector": "Technology",  "asset_class": "ETF",      "exchange": "NASDAQ"},
+        {"symbol": "GOLDBEES",   "name": "Nippon Gold ETF",        "quantity": 100, "avg_price": 52.00,   "sector": "Gold",        "asset_class": "Gold ETF", "exchange": "NSE"},
     ]
     df = pd.DataFrame(data)
     df["invested"] = (df["quantity"] * df["avg_price"]).round(2)
@@ -92,10 +211,18 @@ def get_demo_portfolio() -> pd.DataFrame:
 
 
 def save_portfolio_to_session(df: pd.DataFrame) -> None:
-    st.session_state["portfolio_df"] = df
-    st.session_state["portfolio_loaded"] = True
-    st.session_state["portfolio_load_time"] = datetime.now()
+    try:
+        import streamlit as st
+        st.session_state["portfolio_df"] = df
+        st.session_state["portfolio_loaded"] = True
+        st.session_state["portfolio_load_time"] = datetime.now()
+    except ImportError:
+        pass  # Not running in Streamlit context
 
 
 def load_portfolio_from_session() -> pd.DataFrame | None:
-    return st.session_state.get("portfolio_df", None)
+    try:
+        import streamlit as st
+        return st.session_state.get("portfolio_df", None)
+    except ImportError:
+        return None

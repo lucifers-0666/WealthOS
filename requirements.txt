@@ -1,7 +1,7 @@
 # WealthOS — pinned for compatibility (Streamlit 1.35 + Starlette 0.36)
 streamlit>=1.32.0,<1.36.0
 pandas>=2.0.0,<3.0.0
-numpy>=1.24.0,<2.0.0
+numpy==1.26.4
 yfinance>=0.2.36
 plotly>=5.18.0
 requests>=2.31.0
@@ -14,7 +14,11 @@ sentence-transformers>=2.3.0
 chromadb>=0.4.0
 pillow>=10.0.0
 xlrd>=2.0.1
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+supabase>=2.4.0
 # Pin Starlette to a version that still has DEFAULT_EXCLUDED_CONTENT_TYPES
-# (removed in 0.37.0). Streamlit 1.32–1.35 works with 0.27–0.36.
+# (removed in 0.37.0). Streamlit 1.32-1.35 works with 0.27-0.36.
 starlette>=0.27.0,<0.37.0
 anyio>=3.6.0,<5.0.0

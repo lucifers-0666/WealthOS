@@ -19,7 +19,7 @@ from PIL import Image
 
 load_dotenv()
 
-# ── Logging ──────────────────────────────────────────────────
+# ── Logging ──────────────────────────────────────────────────────
 logger = logging.getLogger("wealthos-api")
 
 from database import (
@@ -36,16 +36,14 @@ from database import (
 from core.price_fetcher import fetch_prices
 from core.data_loader import parse_holdings_csv, parse_transactions_csv
 from core.image_ocr import extract_holdings_from_image
+from core.market_status import get_market_status
 from ai.cfo_advisor import get_cfo_response
 
 app = FastAPI(title="WealthOS API", version="2.0.0")
 
 
 def _allowed_origins() -> list[str]:
-    """Allow local dev frontends on the common Vite/Streamlit ports.
-
-    FRONTEND_URL can still override this with a comma-separated list.
-    """
+    """Allow local dev frontends on the common Vite/Streamlit ports."""
     env_origins = [origin.strip() for origin in os.getenv("FRONTEND_URL", "").split(",") if origin.strip()]
     default_origins = [
         "http://localhost:3000",
@@ -66,42 +64,28 @@ app.add_middleware(
 )
 
 
-# ── Global Error Handler ─────────────────────────────────────
+# ── Global Error Handler ───────────────────────────────────────────
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Catch all unhandled exceptions and return proper error responses."""
     error_message = str(exc)
     logger.error(f"Unhandled exception: {error_message}", exc_info=exc)
-    
-    # Check if it's a Supabase/database error
     if "SUPABASE" in error_message or "Database" in error_message or "connection" in error_message.lower():
         return JSONResponse(
             status_code=503,
             content={
                 "error": "Service Unavailable",
-                "message": "Database connection failed. Check your .env file for SUPABASE_URL and SUPABASE_ANON_KEY.",
+                "message": "Database connection failed. Check your .env file.",
                 "details": error_message
             }
         )
-    
-    # Generic internal server error
     return JSONResponse(
         status_code=500,
-        content={
-            "error": "Internal Server Error",
-            "message": "An unexpected error occurred",
-            "details": error_message
-        }
+        content={"error": "Internal Server Error", "details": error_message}
     )
 
 
-# ── Auth helper ──────────────────────────────────────────────
+# ── Auth helper ────────────────────────────────────────────────
 def get_user_id(authorization: str = Header(None)) -> str:
-    """
-    Extract user ID from Supabase JWT.
-    In production, verify JWT signature with supabase-py.
-    For dev, accepts x-user-id header as fallback.
-    """
     dev_id = os.getenv("DEV_USER_ID")
     if not authorization:
         if dev_id:
@@ -113,13 +97,12 @@ def get_user_id(authorization: str = Header(None)) -> str:
         user = sb.auth.get_user(authorization.replace("Bearer ", ""))
         return user.user.id
     except Exception:
-        # Dev fallback — remove in production
         if dev_id:
             return dev_id
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-# ── Pydantic Models ──────────────────────────────────────────
+# ── Pydantic Models ─────────────────────────────────────────────
 class HoldingIn(BaseModel):
     ticker: str
     company_name: Optional[str] = None
@@ -141,7 +124,7 @@ class TransactionIn(BaseModel):
     notes: Optional[str] = None
 
 class TargetAllocationIn(BaseModel):
-    allocations: List[dict]  # [{asset_class: str, target_pct: float}]
+    allocations: List[dict]
 
 class ChatMessageIn(BaseModel):
     message: str
@@ -154,13 +137,29 @@ class WatchlistIn(BaseModel):
     target_price: Optional[float] = None
 
 
-# ── Health ───────────────────────────────────────────────────
+# ── Health ─────────────────────────────────────────────────────────
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "2.0.0"}
 
 
-# ── Profile ──────────────────────────────────────────────────
+# ── Market Status ────────────────────────────────────────────────
+@app.get("/api/market/status", tags=["Market"])
+def market_status():
+    """
+    Returns current NSE/BSE market session status.
+    No authentication required — public endpoint.
+    Timezone: Asia/Kolkata (IST).
+    Sessions: open | pre_open | after_hours | closed
+    """
+    try:
+        return get_market_status()
+    except Exception as e:
+        logger.error(f"Market status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Profile ─────────────────────────────────────────────────────
 @app.get("/profile")
 def read_profile(user_id: str = Depends(get_user_id)):
     return get_or_create_profile(user_id)
@@ -170,14 +169,13 @@ def patch_profile(updates: dict, user_id: str = Depends(get_user_id)):
     return update_profile(user_id, updates)
 
 
-# ── Holdings ─────────────────────────────────────────────────
+# ── Holdings ─────────────────────────────────────────────────────
 @app.get("/holdings")
 def read_holdings(user_id: str = Depends(get_user_id)):
     return get_holdings(user_id)
 
 @app.get("/portfolio")
 def read_portfolio_summary(user_id: str = Depends(get_user_id)):
-    """Holdings joined with live prices — use this for dashboard."""
     return get_portfolio_summary(user_id)
 
 @app.post("/holdings")
@@ -192,7 +190,7 @@ def remove_holding(holding_id: str, user_id: str = Depends(get_user_id)):
     return {"deleted": True}
 
 
-# ── Transactions ─────────────────────────────────────────────
+# ── Transactions ─────────────────────────────────────────────────
 @app.get("/transactions")
 def read_transactions(
     ticker: Optional[str] = None,
@@ -206,15 +204,14 @@ def create_transaction(txn: TransactionIn, user_id: str = Depends(get_user_id)):
     return add_transaction(user_id, txn.model_dump())
 
 
-# ── Prices ───────────────────────────────────────────────────
+# ── Prices ───────────────────────────────────────────────────────
 @app.get("/prices")
 def read_prices(tickers: str, user_id: str = Depends(get_user_id)):
-    """Pass tickers as comma-separated: ?tickers=RELIANCE.NS,INFY.NS,VTI"""
     ticker_list = [t.strip() for t in tickers.split(",") if t.strip()]
     return fetch_prices(ticker_list)
 
 
-# ── Target Allocation ────────────────────────────────────────
+# ── Target Allocation ────────────────────────────────────────────
 @app.get("/target-allocation")
 def read_target(user_id: str = Depends(get_user_id)):
     return get_target_allocation(user_id)
@@ -224,7 +221,7 @@ def write_target(body: TargetAllocationIn, user_id: str = Depends(get_user_id)):
     return set_target_allocation(user_id, body.allocations)
 
 
-# ── Watchlist ────────────────────────────────────────────────
+# ── Watchlist ─────────────────────────────────────────────────────
 @app.get("/watchlist")
 def read_watchlist(user_id: str = Depends(get_user_id)):
     return get_watchlist(user_id)
@@ -241,7 +238,7 @@ def delete_watchlist(ticker: str, user_id: str = Depends(get_user_id)):
     return {"deleted": True}
 
 
-# ── Upload: CSV ───────────────────────────────────────────────
+# ── Upload: CSV ──────────────────────────────────────────────────
 @app.post("/upload/holdings-csv")
 async def upload_holdings_csv(
     file: UploadFile = File(...),
@@ -286,9 +283,7 @@ async def upload_screenshot(
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
         df = extract_holdings_from_image(image)
-        
         if df is not None and not df.empty:
-            # Map OCR columns to database schema
             holdings = []
             for _, row in df.iterrows():
                 holdings.append({
@@ -299,7 +294,6 @@ async def upload_screenshot(
                     "exchange": row.get("Exchange", "NSE"),
                     "asset_class": row.get("Asset_Type", "equity").lower(),
                 })
-            
             saved = bulk_upsert_holdings(user_id, holdings)
             update_upload_session(session["id"], "completed", recognized_data={"count": len(saved)})
             return {"recognized": len(saved), "holdings": saved, "session_id": session["id"]}
@@ -313,30 +307,19 @@ async def upload_screenshot(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── AI CFO Chat ───────────────────────────────────────────────
+# ── AI CFO Chat ──────────────────────────────────────────────────
 @app.post("/ai/chat")
 async def ai_chat(body: ChatMessageIn, user_id: str = Depends(get_user_id)):
     session_id = body.session_id or str(uuid.uuid4())
-
-    # Get live portfolio context
     portfolio = get_portfolio_summary(user_id)
     history = get_conversation_history(user_id, session_id)
-
-    # Save user message
-    save_message(user_id, session_id, "user", body.message,
-                 portfolio_snapshot=portfolio)
-
-    # Get AI response
+    save_message(user_id, session_id, "user", body.message, portfolio_snapshot=portfolio)
     response = get_cfo_response(
         user_message=body.message,
         portfolio=portfolio,
         history=history
     )
-
-    # Save assistant response
-    save_message(user_id, session_id, "assistant", response,
-                 tokens=len(response) // 4)
-
+    save_message(user_id, session_id, "assistant", response, tokens=len(response) // 4)
     return {"reply": response, "session_id": session_id}
 
 

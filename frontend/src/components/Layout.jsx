@@ -6,7 +6,6 @@ import {
   Briefcase,
   ChevronLeft,
   ChevronRight,
-  CircleDot,
   Command,
   LayoutDashboard,
   Newspaper,
@@ -19,6 +18,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { theme, panelStyle } from '../lib/theme.js';
+import MarketStatusBadge from './MarketStatusBadge.jsx';
 
 const NAV = [
   { to: '/dashboard', label: 'Command', icon: LayoutDashboard, group: 'Core' },
@@ -48,7 +48,7 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const [title, sub] = titles[location.pathname.replace('/app', '')] || ['WealthOS', 'Financial operating system'];
-  const meta = useMemo(() => ({ status: 'Markets open', latency: '22ms' }), []);
+  const meta = useMemo(() => ({ latency: '22ms' }), []);
 
   return (
     <div
@@ -60,20 +60,19 @@ export default function Layout() {
         background: 'linear-gradient(180deg, #081817 0%, #0A201F 46%, #081716 100%)',
       }}
     >
+      {/* ── Sidebar ── */}
       <motion.aside
         animate={{ width: collapsed ? 84 : 238 }}
         transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
         style={{ flexShrink: 0, height: '100dvh', padding: 14, position: 'sticky', top: 0, zIndex: 20 }}
       >
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', ...panelStyle() }}>
+          {/* Logo */}
           <div style={{ padding: collapsed ? '16px 12px' : '18px 16px', display: 'flex', alignItems: 'center', gap: 11 }}>
             <div
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 12,
-                display: 'grid',
-                placeItems: 'center',
+                width: 36, height: 36, borderRadius: 12,
+                display: 'grid', placeItems: 'center',
                 color: '#0A201F',
                 background: theme.colors.gold,
                 boxShadow: '0 16px 34px rgba(200,179,142,0.12)',
@@ -94,6 +93,7 @@ export default function Layout() {
 
           <div className="divider" />
 
+          {/* Nav groups */}
           <nav style={{ flex: 1, overflowY: 'auto', padding: collapsed ? '12px 9px' : '14px 10px', display: 'flex', flexDirection: 'column', gap: 16 }}>
             {Object.entries(grouped).map(([group, items]) => (
               <div key={group}>
@@ -122,11 +122,7 @@ export default function Layout() {
                           {isActive && (
                             <span
                               style={{
-                                position: 'absolute',
-                                left: -1,
-                                top: 9,
-                                bottom: 9,
-                                width: 2,
+                                position: 'absolute', left: -1, top: 9, bottom: 9, width: 2,
                                 borderRadius: 99,
                                 background: `linear-gradient(180deg, ${theme.colors.gold}, ${theme.colors.accent})`,
                                 boxShadow: '0 0 16px rgba(200,179,142,0.18)',
@@ -150,6 +146,7 @@ export default function Layout() {
             ))}
           </nav>
 
+          {/* Footer */}
           <div style={{ padding: 10, borderTop: `1px solid ${theme.colors.border}` }}>
             {!collapsed && (
               <div style={{ padding: '12px 10px', marginBottom: 10, borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: `1px solid ${theme.colors.border}` }}>
@@ -166,6 +163,7 @@ export default function Layout() {
         </div>
       </motion.aside>
 
+      {/* ── Main content ── */}
       <div style={{ flex: 1, minWidth: 0, height: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 14px 14px 0' }}>
         <header style={{ height: 62, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '0 16px 0 20px', ...panelStyle({ minHeight: 62 }) }}>
           <div style={{ minWidth: 0 }}>
@@ -177,14 +175,18 @@ export default function Layout() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Search bar */}
             <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 9, width: 280, padding: '8px 10px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(10,32,31,0.42)' }}>
               <Search size={14} color={theme.colors.textMuted} />
               <span style={{ color: theme.colors.textMuted, fontSize: 12, flex: 1 }}>Search assets, filings, notes</span>
               <span className="mono" style={{ color: theme.colors.textMuted, fontSize: 10, border: `1px solid ${theme.colors.border}`, borderRadius: 6, padding: '1px 5px' }}>CTRL K</span>
             </div>
-            <div className="hide-tablet" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', borderRadius: 12, border: '1px solid rgba(111,174,141,0.18)', color: theme.colors.success, background: 'rgba(111,174,141,0.06)', fontSize: 12, fontWeight: 700 }}>
-              <CircleDot size={13} /> Markets Open
+
+            {/* ── Real-time market status badge ── */}
+            <div className="hide-tablet">
+              <MarketStatusBadge showClock={true} showNextOpen={true} />
             </div>
+
             <button className="btn-icon" aria-label="AI actions"><Zap size={15} /></button>
             <button className="btn-icon" aria-label="Command menu"><Command size={15} /></button>
             <button className="btn-icon" aria-label="Notifications" style={{ position: 'relative' }}>
@@ -199,6 +201,14 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Pulse animation keyframe — injected once */}
+      <style>{`
+        @keyframes market-pulse {
+          0%, 100% { transform: scale(1); opacity: 0.25; }
+          50% { transform: scale(2.2); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }

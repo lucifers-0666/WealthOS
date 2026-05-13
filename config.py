@@ -13,32 +13,88 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
-# Warn if Supabase not configured
-if not SUPABASE_URL or not SUPABASE_ANON_KEY:
-    import warnings
-    warnings.warn(
-        "⚠️  SUPABASE_URL and SUPABASE_ANON_KEY not configured. "
-        "Database features will not work. "
-        "Add them to your .env file from https://supabase.com/dashboard"
-    )
-
 # API Keys
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 NEWSAPI_KEY = os.getenv("NEWSAPI_KEY", "")
 ALPHA_VANTAGE_KEY = os.getenv("ALPHA_VANTAGE_KEY", "")
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN", "")
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+SECRET_KEY = os.getenv("SECRET_KEY", "")
+
+def get_missing_keys():
+    missing = []
+    if not SUPABASE_URL: missing.append("SUPABASE_URL")
+    if not SUPABASE_ANON_KEY: missing.append("SUPABASE_ANON_KEY")
+    if not SUPABASE_SERVICE_ROLE_KEY: missing.append("SUPABASE_SERVICE_ROLE_KEY")
+    if not GOOGLE_API_KEY: missing.append("GOOGLE_API_KEY")
+    if not NEWSAPI_KEY: missing.append("NEWSAPI_KEY")
+    if not ALPHA_VANTAGE_KEY: missing.append("ALPHA_VANTAGE_KEY")
+    if not SECRET_KEY: missing.append("SECRET_KEY")
+    return missing
+
+
+def get_setup_status() -> dict:
+    """Return a small dict describing availability of key features for the Setup page."""
+    import sys
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    pytorch_ok = sys.version_info.major == 3 and sys.version_info.minor in (11, 12)
+
+    return {
+        "streamlit": True,
+        "fastapi": "http://127.0.0.1:8000",
+        "supabase": bool(SUPABASE_URL and SUPABASE_ANON_KEY),
+        "google_ai": bool(GOOGLE_API_KEY),
+        "news_api": bool(NEWSAPI_KEY),
+        "pytorch_ok": pytorch_ok,
+        "python_version": python_version,
+    }
+
+def is_feature_available(feature: str) -> bool:
+    if feature == "database":
+        return bool(SUPABASE_URL and SUPABASE_ANON_KEY)
+    if feature == "ai":
+        return bool(GOOGLE_API_KEY)
+    if feature == "news":
+        return bool(NEWSAPI_KEY)
+    return False
+
+
+def render_sidebar_warnings():
+    """If Streamlit is available, render helpful warnings in the sidebar for missing keys.
+
+    This is a best-effort helper that will not raise if Streamlit isn't importable (e.g., in tests).
+    """
+    try:
+        import streamlit as st
+    except Exception:
+        return
+
+    missing = get_missing_keys()
+    if not missing:
+        return
+
+    with st.sidebar:
+        st.markdown("### Setup issues detected")
+        for k in missing:
+            if k.startswith("SUPABASE"):
+                st.warning("Supabase not configured — database features disabled.")
+                break
+        if "GOOGLE_API_KEY" in missing:
+            st.warning("Google AI key missing — AI Advisor disabled.")
+        if "NEWSAPI_KEY" in missing:
+            st.warning("News API key missing — Market News feed disabled.")
 
 # ── AI Configuration ────────────────────────────────────────
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "2000"))
-GEMINI_TEMPERATURE = float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
-GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-1.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "2048"))
+GEMINI_TEMPERATURE = float(os.getenv("GEMINI_TEMPERATURE", "0.3"))
+GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash")
 
 # ── RAG Configuration ──────────────────────────────────────
 RAG_CHUNK_SIZE = int(os.getenv("RAG_CHUNK_SIZE", "500"))
-RAG_CHUNK_OVERLAP = int(os.getenv("RAG_CHUNK_OVERLAP", "100"))
-RAG_TOP_K = int(os.getenv("RAG_TOP_K", "3"))
-NEWS_CACHE_TTL = int(os.getenv("NEWS_CACHE_TTL", "3600"))
+RAG_CHUNK_OVERLAP = int(os.getenv("RAG_CHUNK_OVERLAP", "50"))
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "5"))
+NEWS_CACHE_TTL = int(os.getenv("NEWS_CACHE_TTL", "1800"))
 
 # Finance Settings
 DEFAULT_CURRENCY = os.getenv("DEFAULT_CURRENCY", "INR")
@@ -74,17 +130,4 @@ COLOR_SECONDARY = "#D6C7A1"
 # News RAG Settings
 NEWS_LOOKBACK_DAYS = int(os.getenv("NEWS_LOOKBACK_DAYS", "7"))
 NEWS_MAX_ARTICLES = int(os.getenv("NEWS_MAX_ARTICLES", "20"))
-RAG_CHUNK_SIZE = 500
-RAG_CHUNK_OVERLAP = 50
-RAG_TOP_K = 5
-
-# Gemini Model — gemini-2.0-flash is current stable on v1beta
-# gemini-1.5-pro and gemini-1.5-flash were removed from v1beta API
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash")  # used for image OCR
-GEMINI_MAX_TOKENS = 2048
-GEMINI_TEMPERATURE = 0.3
-
-# Cache TTL (seconds)
 PRICE_CACHE_TTL = 300   # 5 minutes
-NEWS_CACHE_TTL = 1800   # 30 minutes

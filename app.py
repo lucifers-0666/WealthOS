@@ -17,6 +17,57 @@ from ui.upload_page import render_upload_page
 from ui.advisor_page import render_advisor_page
 from ui.news_page import render_news_page
 
+def render_setup_page():
+    st.title("⚙ WealthOS Setup Status")
+    
+    from config import is_feature_available, get_missing_keys
+    import sys
+    
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    pytorch_ok = "11" in python_version or "12" in python_version
+    
+    st.markdown("### System Health")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write(f"✅ **Streamlit:** Running")
+        st.write(f"✅ **FastAPI:** [http://127.0.0.1:8000](http://127.0.0.1:8000)")
+        
+        if is_feature_available('database'):
+            st.write("✅ **Supabase:** Connected")
+        else:
+            st.write("❌ **Supabase:** Not configured")
+            
+        if is_feature_available('ai'):
+            st.write("✅ **Google AI:** Ready")
+        else:
+            st.write("❌ **Google AI:** No API key")
+            
+        if is_feature_available('news'):
+            st.write("✅ **News API:** Ready")
+        else:
+            st.write("❌ **News API:** No API key")
+            
+        if pytorch_ok:
+            st.write(f"✅ **PyTorch:** Python {python_version}")
+        else:
+            st.write(f"⚠️ **PyTorch:** Python {python_version} ❌ (Needs 3.11)")
+            
+    st.markdown("### Missing Keys")
+    missing = get_missing_keys()
+    if missing:
+        for k in missing:
+            st.code(f"{k}=", language="bash")
+    else:
+        st.success("All required keys are configured!")
+        
+    st.markdown("### Key Sources")
+    st.markdown("- **SUPABASE_URL** & **SUPABASE_ANON_KEY** & **SUPABASE_SERVICE_ROLE_KEY**: https://supabase.com/dashboard -> Project -> Settings -> API")
+    st.markdown("- **GOOGLE_API_KEY**: https://aistudio.google.com/app/apikey")
+    st.markdown("- **NEWSAPI_KEY**: https://newsapi.org/register")
+    st.markdown("- **ALPHA_VANTAGE_KEY**: https://www.alphavantage.co/support/#api-key")
+    st.markdown("- **SECRET_KEY**: `python -c 'import secrets; print(secrets.token_hex(32))'`")
+
 # ── Premium sidebar ───────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
@@ -39,6 +90,7 @@ with st.sidebar:
         "Upload": "upload",
         "AI Advisor": "advisor",
         "Market News": "news",
+        "⚙ Setup": "setup",
     }
 
     icons = {
@@ -46,6 +98,7 @@ with st.sidebar:
         "Upload": "⤒",
         "AI Advisor": "◆",
         "Market News": "◉",
+        "⚙ Setup": "⚙",
     }
 
     if "current_page" not in st.session_state:
@@ -65,7 +118,7 @@ with st.sidebar:
             color="#F3F4F6" if is_active else "#94A3B8",
         )
         if st.button(f"{icons[label]}  {label}", key=f"nav_{key}",
-                     width='stretch',
+                     use_container_width=True,
                      help=label):
             st.session_state["current_page"] = label
             st.rerun()
@@ -94,3 +147,5 @@ elif page == "AI Advisor":
     render_advisor_page()
 elif page == "Market News":
     render_news_page()
+elif page == "⚙ Setup":
+    render_setup_page()

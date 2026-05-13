@@ -7,7 +7,11 @@ import datetime
 
 try:
     from ai.rag_engine import search_news, get_top_articles
-except Exception:
+    RAG_AVAILABLE = True
+    RAG_ERROR = ""
+except Exception as e:
+    RAG_AVAILABLE = False
+    RAG_ERROR = str(e)
     search_news = get_top_articles = None
 
 
@@ -90,6 +94,9 @@ def render_news_page() -> None:
         "Curated financial news linked to your holdings. Ask semantic questions "
         "across articles using the RAG search panel. Powered by NewsAPI + ChromaDB.",
     )
+
+    if not RAG_AVAILABLE:
+        st.warning("News intelligence unavailable — install PyTorch for Python 3.11")
 
     # ── Live ticker band ──────────────────────────────────────────────────
     st.markdown("""

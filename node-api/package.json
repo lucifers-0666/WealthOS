@@ -9,6 +9,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
     "@supabase/supabase-js": "^2.45.0",
     "axios": "^1.7.2",
     "cors": "^2.8.5",
@@ -18,7 +19,6 @@
     "helmet": "^7.1.0",
     "morgan": "^1.10.0",
     "multer": "^2.0.0",
-    "openai": "^4.52.0",
     "pdf-parse": "^1.1.1",
     "sharp": "^0.33.4",
     "tesseract.js": "^5.1.0",

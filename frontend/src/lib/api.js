@@ -3,7 +3,7 @@
  * All calls go through this module — never call fetch() directly in components.
  */
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const BASE = import.meta.env.VITE_API_URL || '';
 
 let _token = null;
 

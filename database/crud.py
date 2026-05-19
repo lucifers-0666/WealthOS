@@ -8,9 +8,46 @@ from __future__ import annotations
 from typing import Optional
 from datetime import datetime, date
 from uuid import UUID
+import re
 import pandas as pd
 
 from database.supabase_client import get_supabase, get_supabase_service
+
+MISSING_COLUMN_RE = re.compile(r"Could not find the '([^']+)' column")
+
+
+def _execute_with_missing_column_retry(query_factory, payload: dict):
+    """Retry Supabase writes after dropping columns absent from older schemas."""
+    current = [dict(item) for item in payload] if isinstance(payload, list) else dict(payload)
+    dropped: set[str] = set()
+    while True:
+        try:
+            return query_factory(current).execute()
+        except Exception as exc:
+            match = MISSING_COLUMN_RE.search(str(exc))
+            missing = match.group(1) if match else None
+            has_missing = any(missing in item for item in current) if isinstance(current, list) and missing else missing in current if missing else False
+            if not missing or missing in dropped or not has_missing:
+                raise
+            if isinstance(current, list):
+                for item in current:
+                    item.pop(missing, None)
+            else:
+                current.pop(missing, None)
+            dropped.add(missing)
+
+
+def ensure_profile_exists(user_id: str) -> None:
+    """Create the dev profile row required by older tables with profile FKs."""
+    sb = get_supabase()
+    existing = sb.table("profiles").select("id").eq("id", user_id).limit(1).execute()
+    if existing.data:
+        return
+    payload = {"id": user_id, "full_name": "Development User"}
+    _execute_with_missing_column_retry(
+        lambda clean_payload: sb.table("profiles").insert(clean_payload),
+        payload,
+    )
 
 
 # ============================================================
@@ -63,26 +100,45 @@ def upsert_holding(user_id: str, holding: dict) -> dict:
     Insert or update a holding. Matches on (user_id, ticker, exchange).
     Pass full holding dict including: ticker, quantity, avg_buy_price, exchange, asset_class.
     """
+    ensure_profile_exists(user_id)
     sb = get_supabase()
     payload = {**holding, "user_id": user_id}
-    res = (
-        sb.table("holdings")
-        .upsert(payload, on_conflict="user_id,ticker,exchange")
-        .execute()
-    )
+    try:
+        res = _execute_with_missing_column_retry(
+            lambda clean_payload: sb.table("holdings").upsert(clean_payload, on_conflict="user_id,ticker,exchange"),
+            payload,
+        )
+    except Exception as exc:
+        if "no unique or exclusion constraint" not in str(exc):
+            raise
+        existing = (
+            sb.table("holdings")
+            .select("id")
+            .eq("user_id", user_id)
+            .eq("ticker", holding["ticker"])
+            .eq("exchange", holding.get("exchange", "NSE"))
+            .limit(1)
+            .execute()
+        )
+        if existing.data:
+            res = _execute_with_missing_column_retry(
+                lambda clean_payload: sb.table("holdings").update(clean_payload).eq("id", existing.data[0]["id"]),
+                payload,
+            )
+        else:
+            res = _execute_with_missing_column_retry(
+                lambda clean_payload: sb.table("holdings").insert(clean_payload),
+                payload,
+            )
     return res.data[0] if res.data else {}
 
 
 def bulk_upsert_holdings(user_id: str, holdings: list[dict]) -> list[dict]:
     """Bulk upsert from CSV/OCR uploads. Each dict must have ticker, quantity, avg_buy_price."""
-    sb = get_supabase()
-    payloads = [{**h, "user_id": user_id} for h in holdings]
-    res = (
-        sb.table("holdings")
-        .upsert(payloads, on_conflict="user_id,ticker,exchange")
-        .execute()
-    )
-    return res.data or []
+    saved = []
+    for holding in holdings:
+        saved.append(upsert_holding(user_id, holding))
+    return saved
 
 
 def delete_holding(user_id: str, holding_id: str) -> bool:
@@ -137,16 +193,31 @@ def get_transactions(
 
 
 def add_transaction(user_id: str, txn: dict) -> dict:
+    ensure_profile_exists(user_id)
     sb = get_supabase()
     payload = {**txn, "user_id": user_id}
-    res = sb.table("transactions").insert(payload).execute()
+    if "action" in payload and "transaction_type" not in payload:
+        payload["transaction_type"] = payload.pop("action")
+    res = _execute_with_missing_column_retry(
+        lambda clean_payload: sb.table("transactions").insert(clean_payload),
+        payload,
+    )
     return res.data[0] if res.data else {}
 
 
 def bulk_add_transactions(user_id: str, txns: list[dict]) -> list[dict]:
+    ensure_profile_exists(user_id)
     sb = get_supabase()
-    payloads = [{**t, "user_id": user_id} for t in txns]
-    res = sb.table("transactions").insert(payloads).execute()
+    payloads = []
+    for txn in txns:
+        payload = {**txn, "user_id": user_id}
+        if "action" in payload and "transaction_type" not in payload:
+            payload["transaction_type"] = payload.pop("action")
+        payloads.append(payload)
+    res = _execute_with_missing_column_retry(
+        lambda clean_payload: sb.table("transactions").insert(clean_payload),
+        payloads,
+    )
     return res.data or []
 
 
@@ -216,18 +287,25 @@ def set_target_allocation(user_id: str, allocations: list[dict]) -> list[dict]:
 
 def save_message(user_id: str, session_id: str, role: str, content: str,
                  portfolio_snapshot: dict = None, tokens: int = 0, model: str = "gemini-1.5-pro") -> dict:
-    sb = get_supabase()
-    payload = {
-        "user_id": user_id,
-        "session_id": session_id,
-        "role": role,
-        "content": content,
-        "portfolio_snapshot": portfolio_snapshot,
-        "tokens_used": tokens,
-        "model": model
-    }
-    res = sb.table("ai_conversations").insert(payload).execute()
-    return res.data[0] if res.data else {}
+    try:
+        ensure_profile_exists(user_id)
+        sb = get_supabase()
+        payload = {
+            "user_id": user_id,
+            "session_id": session_id,
+            "role": role,
+            "content": content,
+            "portfolio_snapshot": portfolio_snapshot,
+            "tokens_used": tokens,
+            "model_used": model
+        }
+        res = _execute_with_missing_column_retry(
+            lambda clean_payload: sb.table("ai_conversations").insert(clean_payload),
+            payload,
+        )
+        return res.data[0] if res.data else {}
+    except Exception:
+        return {}
 
 
 def get_conversation_history(user_id: str, session_id: str, limit: int = 50) -> list[dict]:
@@ -279,14 +357,23 @@ def remove_from_watchlist(user_id: str, ticker: str) -> bool:
 # ============================================================
 
 def create_upload_session(user_id: str, file_name: str, file_type: str) -> dict:
-    sb = get_supabase()
-    payload = {"user_id": user_id, "file_name": file_name, "file_type": file_type, "status": "pending"}
-    res = sb.table("upload_sessions").insert(payload).execute()
-    return res.data[0] if res.data else {}
+    try:
+        ensure_profile_exists(user_id)
+        sb = get_supabase()
+        payload = {"user_id": user_id, "filename": file_name, "file_type": file_type, "status": "pending"}
+        res = _execute_with_missing_column_retry(
+            lambda clean_payload: sb.table("upload_sessions").insert(clean_payload),
+            payload,
+        )
+        return res.data[0] if res.data else {}
+    except Exception:
+        return {}
 
 
 def update_upload_session(session_id: str, status: str,
                           recognized_data: dict = None, error: str = None) -> dict:
+    if not session_id:
+        return {}
     sb = get_supabase()
     payload = {"status": status}
     if recognized_data:
@@ -295,5 +382,11 @@ def update_upload_session(session_id: str, status: str,
         payload["error_message"] = error
     if status == "completed":
         payload["completed_at"] = datetime.utcnow().isoformat()
-    res = sb.table("upload_sessions").update(payload).eq("id", session_id).execute()
-    return res.data[0] if res.data else {}
+    try:
+        res = _execute_with_missing_column_retry(
+            lambda clean_payload: sb.table("upload_sessions").update(clean_payload).eq("id", session_id),
+            payload,
+        )
+        return res.data[0] if res.data else {}
+    except Exception:
+        return {}

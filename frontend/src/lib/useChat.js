@@ -5,8 +5,25 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { sendChatMessage, getChatHistory } from './api.js';
+import { getPortfolioHoldings } from './portfolioStore.js';
 
 const SESSION_KEY = 'wealthos:advisor-session';
+
+function withPortfolioContext(text) {
+  const holdings = getPortfolioHoldings();
+  if (!Array.isArray(holdings) || !holdings.length) return text;
+
+  const compact = holdings.slice(0, 30).map((holding) => ({
+    ticker: holding.ticker,
+    quantity: holding.quantity,
+    avg_buy_price: holding.avg_buy_price ?? holding.avg_price,
+    exchange: holding.exchange,
+    sector: holding.sector,
+    asset_class: holding.asset_class,
+  }));
+
+  return `${text}\n\nPortfolio context from the current WealthOS workspace:\n${JSON.stringify(compact)}`;
+}
 
 export function useChat() {
   const [messages, setMessages] = useState([]);
@@ -45,7 +62,7 @@ export function useChat() {
     ]);
 
     try {
-      const res = await sendChatMessage(text, sessionId);
+      const res = await sendChatMessage(withPortfolioContext(text), sessionId);
       const sid = res.session_id;
       if (!sessionId) {
         setSessionId(sid);

@@ -15,8 +15,12 @@ export function clearAuthToken() {
   _token = null;
 }
 
+function apiUrl(path) {
+  return new URL(`${BASE}${path}`, window.location.origin).toString();
+}
+
 async function request(method, path, body = null, params = null) {
-  const url = new URL(`${BASE}${path}`);
+  const url = new URL(apiUrl(path));
   if (params) {
     Object.entries(params).forEach(([k, v]) => v != null && url.searchParams.set(k, v));
   }
@@ -38,7 +42,7 @@ async function request(method, path, body = null, params = null) {
 async function upload(path, formData) {
   const headers = {};
   if (_token) headers['Authorization'] = `Bearer ${_token}`;
-  const res = await fetch(`${BASE}${path}`, { method: 'POST', headers, body: formData });
+  const res = await fetch(apiUrl(path), { method: 'POST', headers, body: formData });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || `HTTP ${res.status}`);

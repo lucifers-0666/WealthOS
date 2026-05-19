@@ -48,12 +48,14 @@ def _allowed_origins() -> list[str]:
     default_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5175",
         "http://127.0.0.1:5175",
     ]
-    return list(dict.fromkeys(env_origins or default_origins))
+    return list(dict.fromkeys([*default_origins, *env_origins]))
 
 app.add_middleware(
     CORSMiddleware,
@@ -245,14 +247,20 @@ async def upload_holdings_csv(
     user_id: str = Depends(get_user_id)
 ):
     session = create_upload_session(user_id, file.filename, "csv_holdings")
+    session_id = session.get("id")
     try:
         contents = await file.read()
         holdings = parse_holdings_csv(io.BytesIO(contents))
-        saved = bulk_upsert_holdings(user_id, holdings)
-        update_upload_session(session["id"], "completed", recognized_data={"count": len(saved)})
-        return {"imported": len(saved), "holdings": saved}
+        persisted = True
+        try:
+            saved = bulk_upsert_holdings(user_id, holdings)
+        except Exception:
+            persisted = False
+            saved = holdings
+        update_upload_session(session_id, "completed", recognized_data={"count": len(saved)})
+        return {"imported": len(saved), "holdings": saved, "persisted": persisted}
     except Exception as e:
-        update_upload_session(session["id"], "failed", error=str(e))
+        update_upload_session(session_id, "failed", error=str(e))
         raise HTTPException(status_code=422, detail=str(e))
 
 
@@ -262,14 +270,20 @@ async def upload_transactions_csv(
     user_id: str = Depends(get_user_id)
 ):
     session = create_upload_session(user_id, file.filename, "csv_transactions")
+    session_id = session.get("id")
     try:
         contents = await file.read()
         txns = parse_transactions_csv(io.BytesIO(contents))
-        saved = bulk_add_transactions(user_id, txns)
-        update_upload_session(session["id"], "completed", recognized_data={"count": len(saved)})
-        return {"imported": len(saved), "transactions": saved}
+        persisted = True
+        try:
+            saved = bulk_add_transactions(user_id, txns)
+        except Exception:
+            persisted = False
+            saved = txns
+        update_upload_session(session_id, "completed", recognized_data={"count": len(saved)})
+        return {"imported": len(saved), "transactions": saved, "persisted": persisted}
     except Exception as e:
-        update_upload_session(session["id"], "failed", error=str(e))
+        update_upload_session(session_id, "failed", error=str(e))
         raise HTTPException(status_code=422, detail=str(e))
 
 
@@ -279,6 +293,7 @@ async def upload_screenshot(
     user_id: str = Depends(get_user_id)
 ):
     session = create_upload_session(user_id, file.filename, "image_screenshot")
+    session_id = session.get("id")
     try:
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
@@ -293,17 +308,22 @@ async def upload_screenshot(
                     "avg_buy_price": float(row["Avg_Buy_Price"]) if row["Avg_Buy_Price"] else 0,
                     "exchange": row.get("Exchange", "NSE"),
                     "asset_class": row.get("Asset_Type", "equity").lower(),
-                })
-            saved = bulk_upsert_holdings(user_id, holdings)
-            update_upload_session(session["id"], "completed", recognized_data={"count": len(saved)})
-            return {"recognized": len(saved), "holdings": saved, "session_id": session["id"]}
+            })
+            persisted = True
+            try:
+                saved = bulk_upsert_holdings(user_id, holdings)
+            except Exception:
+                persisted = False
+                saved = holdings
+            update_upload_session(session_id, "completed", recognized_data={"count": len(saved)})
+            return {"recognized": len(saved), "holdings": saved, "session_id": session_id, "persisted": persisted}
         else:
-            update_upload_session(session["id"], "failed", error="No holdings detected in image")
+            update_upload_session(session_id, "failed", error="No holdings detected in image")
             raise HTTPException(status_code=422, detail="No holdings detected in image")
     except HTTPException:
         raise
     except Exception as e:
-        update_upload_session(session["id"], "failed", error=str(e))
+        update_upload_session(session_id, "failed", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

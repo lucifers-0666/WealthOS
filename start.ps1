@@ -67,18 +67,19 @@ Write-Host "  -> Streamlit started on http://localhost:8501"
 # Vite frontend
 $frontend_cmd = "Set-Location -Path '$RepoRoot\frontend'; npm run dev"
 Start-Process powershell.exe -ArgumentList "-NoExit","-Command","$frontend_cmd"
-Write-Host "  -> Frontend started on http://localhost:3000"
+Write-Host "  -> Frontend started on http://localhost:3001"
 
 Write-Host "[4/6] Waiting briefly before opening browser..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
-Start-Process "http://localhost:3000"
+Start-Process "http://localhost:3001"
 
 Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host " WealthOS is starting up..." -ForegroundColor Green
 Write-Host "  FastAPI  → http://127.0.0.1:8000" -ForegroundColor Green
 Write-Host "  Streamlit → http://localhost:8501" -ForegroundColor Green
-Write-Host "  Frontend  → http://localhost:3000" -ForegroundColor Green
+Write-Host "  Frontend  → http://localhost:3001" -ForegroundColor Green
 Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
 
 Write-Host "[5/6] Startup commands dispatched. Check the new windows for logs." -ForegroundColor Green
 Write-Host "[6/6] Done." -ForegroundColor Green
+

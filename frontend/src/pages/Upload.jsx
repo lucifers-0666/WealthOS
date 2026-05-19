@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { uploadHoldingsCSV, uploadTransactionsCSV, uploadScreenshot } from '../lib/api.js';
+import { savePortfolioHoldings } from '../lib/portfolioStore.js';
 import { theme, panelStyle } from '../lib/theme.js';
 import { FileSpreadsheet, Image as ImageIcon, UploadCloud, CheckCircle2, Clock3 } from 'lucide-react';
 
@@ -79,6 +80,7 @@ export default function Upload() {
     setHoldingsStatus('loading');
     try {
       const res = await uploadHoldingsCSV(file);
+      if (Array.isArray(res.holdings) && res.holdings.length) savePortfolioHoldings(res.holdings);
       setHoldingsResult(res);
       setHoldingsStatus('success');
       record('Holdings CSV', `${res.imported || 0} rows processed`);
@@ -109,6 +111,7 @@ export default function Upload() {
     setPreview(objectUrl);
     try {
       const res = await uploadScreenshot(file);
+      if (Array.isArray(res.holdings) && res.holdings.length) savePortfolioHoldings(res.holdings);
       setImgResult(res);
       setImgStatus('success');
       record('OCR screenshot', `${res.recognized || res.holdings?.length || 0} holdings detected`);

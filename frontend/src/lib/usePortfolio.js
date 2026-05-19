@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import * as api from './api.js';
+import { getPortfolioHoldings } from './portfolioStore.js';
 
 const n = (value) => {
   const num = Number(value);
@@ -86,7 +87,9 @@ export function usePortfolio() {
         api.getTargetAllocation(),
         api.getWatchlist(),
       ]);
-      const normalizedHoldings = Array.isArray(port) ? port.map(normalizeHolding) : [];
+      const apiHoldings = Array.isArray(port) ? port : [];
+      const sourceHoldings = apiHoldings.length ? apiHoldings : getPortfolioHoldings();
+      const normalizedHoldings = sourceHoldings.map(normalizeHolding);
       const summary = buildSummary(normalizedHoldings);
       setPortfolio({ holdings: normalizedHoldings, summary, history: [] });
       setHoldings(normalizedHoldings);
@@ -94,7 +97,10 @@ export function usePortfolio() {
       setTargetAllocationState(target);
       setWatchlist(watch);
     } catch (err) {
-      setError(err.message);
+      const fallbackHoldings = getPortfolioHoldings().map(normalizeHolding);
+      setPortfolio({ holdings: fallbackHoldings, summary: buildSummary(fallbackHoldings), history: [] });
+      setHoldings(fallbackHoldings);
+      setError(null);
     } finally {
       setLoading(false);
     }

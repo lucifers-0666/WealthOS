@@ -47,7 +47,7 @@ cd WealthOS
 .\start.ps1
 ```
 - Streamlit: http://localhost:8501
-- Frontend: http://localhost:3000
+- Frontend: http://localhost:3001
 - Backend: http://localhost:8000
 
 ### Option B: Manual Start
@@ -73,7 +73,7 @@ npm run dev
 
 ## Verify Setup
 - ✅ Open http://localhost:8501 → Streamlit app loads
-- ✅ Open http://localhost:3000 → Vite frontend loads  
+- ✅ Open http://localhost:3001 → Vite frontend loads  
 - ✅ Open http://localhost:8000/docs → API documentation
 - ⚠️ Dashboard loads but AI/News features show warnings (add API keys to fix)
 
@@ -99,7 +99,7 @@ npm install
 ### Frontend Not Loading?
 ```bash
 # Check if Vite is running on port 3000
-netstat -ano | findstr :3000  # Windows
+netstat -ano | findstr :3001  # Windows
 
 # Kill process and restart
 cd WealthOS/frontend
@@ -169,3 +169,4 @@ Full docs: http://localhost:8000/docs
 💬 Discord: [Join community]
 
 **Happy investing! 🚀**
+

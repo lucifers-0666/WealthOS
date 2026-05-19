@@ -37,9 +37,10 @@ from core.price_fetcher import fetch_prices
 from core.data_loader import parse_holdings_csv, parse_transactions_csv
 from core.image_ocr import extract_holdings_from_image
 from core.market_status import get_market_status
+from core.import_engine import process_import_file, apply_confirm
 from ai.cfo_advisor import get_cfo_response
 
-app = FastAPI(title="WealthOS API", version="2.0.0")
+app = FastAPI(title="WealthOS API", version="2.1.0")
 
 
 def _allowed_origins() -> list[str]:
@@ -138,11 +139,16 @@ class WatchlistIn(BaseModel):
     company_name: Optional[str] = None
     target_price: Optional[float] = None
 
+class ImportConfirmIn(BaseModel):
+    holdings: List[dict]
+    merge_strategy: str = "skip"   # skip | update | always_add
+    broker: Optional[str] = None
+
 
 # ── Health ─────────────────────────────────────────────────────────
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "2.0.0"}
+    return {"status": "ok", "version": "2.1.0"}
 
 
 # ── Market Status ────────────────────────────────────────────────
@@ -240,7 +246,7 @@ def delete_watchlist(ticker: str, user_id: str = Depends(get_user_id)):
     return {"deleted": True}
 
 
-# ── Upload: CSV ──────────────────────────────────────────────────
+# ── Upload: CSV (legacy endpoints kept for compatibility) ────────
 @app.post("/upload/holdings-csv")
 async def upload_holdings_csv(
     file: UploadFile = File(...),
@@ -325,6 +331,73 @@ async def upload_screenshot(
     except Exception as e:
         update_upload_session(session_id, "failed", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Import API (new — used by React ImportPortfolio page) ─────────
+@app.post("/api/import/upload", tags=["Import"])
+async def import_upload(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_user_id),
+):
+    """
+    Step 1: Parse an uploaded CSV/XLSX file.
+    Returns a preview payload with detected broker, holdings list, and insights.
+    Does NOT persist to the database — that happens in /api/import/confirm.
+    """
+    allowed_types = (".csv", ".xlsx", ".xls")
+    if not any(file.filename.lower().endswith(ext) for ext in allowed_types):
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported file type. Please upload a CSV or Excel (.xlsx/.xls) file."
+        )
+
+    session = create_upload_session(user_id, file.filename, "import_preview")
+    session_id = session.get("id")
+    try:
+        file_bytes = await file.read()
+        payload = process_import_file(file_bytes, file.filename)
+        payload["session_id"] = session_id
+        update_upload_session(
+            session_id, "preview",
+            recognized_data={"count": payload["count"], "broker": payload["broker"]}
+        )
+        return payload
+    except ValueError as e:
+        update_upload_session(session_id, "failed", error=str(e))
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.error(f"import_upload error: {e}", exc_info=e)
+        update_upload_session(session_id, "failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Import failed: {e}")
+
+
+@app.post("/api/import/confirm", tags=["Import"])
+def import_confirm(
+    body: ImportConfirmIn,
+    user_id: str = Depends(get_user_id),
+):
+    """
+    Step 2: Confirm and persist the (optionally edited) holdings.
+    Applies merge_strategy: skip | update | always_add.
+    Returns summary: {message, total_saved, saved, updated, skipped}.
+    """
+    if not body.holdings:
+        raise HTTPException(status_code=422, detail="No holdings provided.")
+
+    try:
+        result = apply_confirm(
+            user_id=user_id,
+            holdings=body.holdings,
+            merge_strategy=body.merge_strategy,
+            broker=body.broker,
+            bulk_upsert_fn=bulk_upsert_holdings,
+            get_holdings_fn=get_holdings,
+            upsert_holding_fn=upsert_holding,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"import_confirm error: {e}", exc_info=e)
+        raise HTTPException(status_code=500, detail=f"Confirm failed: {e}")
 
 
 # ── AI CFO Chat ──────────────────────────────────────────────────

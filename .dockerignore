@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Node
+frontend/node_modules/
+node_modules/
+
+# Dev/test
+.pytest_cache/
+tests/
+*.test.*
+
+# Secrets
+.env
+.env.*
+!.env.example
+secrets.json
+
+# Logs
+logs.txt
+*.log
+
+# Git
+.git/
+.gitignore
+
+# Docs
+README.md
+QUICKSTART.md
+SETUP.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit (not needed in production)
+app.py
+.streamlit/
+frontend/design_system.py
+ui/

@@ -1,17 +1,23 @@
 """
 WealthOS — FastAPI Backend
 All endpoints wired to Supabase CRUD layer.
+
+In production (Railway/Render/Docker):
+  FastAPI serves the React frontend from frontend/dist
+  as static files, so one URL serves everything.
 """
 
 import os
 import io
 import uuid
+from pathlib import Path
 from typing import Optional, List
 from datetime import date
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import logging
@@ -44,17 +50,13 @@ app = FastAPI(title="WealthOS API", version="2.1.0")
 
 
 def _allowed_origins() -> list[str]:
-    """Allow local dev frontends on the common Vite/Streamlit ports."""
-    env_origins = [origin.strip() for origin in os.getenv("FRONTEND_URL", "").split(",") if origin.strip()]
+    env_origins = [o.strip() for o in os.getenv("FRONTEND_URL", "").split(",") if o.strip()]
     default_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5175",
-        "http://127.0.0.1:5175",
     ]
     return list(dict.fromkeys([*default_origins, *env_origins]))
 
@@ -72,19 +74,13 @@ app.add_middleware(
 async def global_exception_handler(request: Request, exc: Exception):
     error_message = str(exc)
     logger.error(f"Unhandled exception: {error_message}", exc_info=exc)
-    if "SUPABASE" in error_message or "Database" in error_message or "connection" in error_message.lower():
-        return JSONResponse(
-            status_code=503,
-            content={
-                "error": "Service Unavailable",
-                "message": "Database connection failed. Check your .env file.",
-                "details": error_message
-            }
-        )
-    return JSONResponse(
-        status_code=500,
-        content={"error": "Internal Server Error", "details": error_message}
-    )
+    if any(k in error_message for k in ["SUPABASE", "Database", "connection"]):
+        return JSONResponse(status_code=503, content={
+            "error": "Service Unavailable",
+            "message": "Database connection failed. Check your environment variables.",
+            "details": error_message
+        })
+    return JSONResponse(status_code=500, content={"error": "Internal Server Error", "details": error_message})
 
 
 # ── Auth helper ────────────────────────────────────────────────
@@ -141,7 +137,7 @@ class WatchlistIn(BaseModel):
 
 class ImportConfirmIn(BaseModel):
     holdings: List[dict]
-    merge_strategy: str = "skip"   # skip | update | always_add
+    merge_strategy: str = "skip"
     broker: Optional[str] = None
 
 
@@ -154,12 +150,6 @@ def health():
 # ── Market Status ────────────────────────────────────────────────
 @app.get("/api/market/status", tags=["Market"])
 def market_status():
-    """
-    Returns current NSE/BSE market session status.
-    No authentication required — public endpoint.
-    Timezone: Asia/Kolkata (IST).
-    Sessions: open | pre_open | after_hours | closed
-    """
     try:
         return get_market_status()
     except Exception as e:
@@ -246,12 +236,9 @@ def delete_watchlist(ticker: str, user_id: str = Depends(get_user_id)):
     return {"deleted": True}
 
 
-# ── Upload: CSV (legacy endpoints kept for compatibility) ────────
+# ── Upload: CSV ────────────────────────────────────────────────
 @app.post("/upload/holdings-csv")
-async def upload_holdings_csv(
-    file: UploadFile = File(...),
-    user_id: str = Depends(get_user_id)
-):
+async def upload_holdings_csv(file: UploadFile = File(...), user_id: str = Depends(get_user_id)):
     session = create_upload_session(user_id, file.filename, "csv_holdings")
     session_id = session.get("id")
     try:
@@ -271,10 +258,7 @@ async def upload_holdings_csv(
 
 
 @app.post("/upload/transactions-csv")
-async def upload_transactions_csv(
-    file: UploadFile = File(...),
-    user_id: str = Depends(get_user_id)
-):
+async def upload_transactions_csv(file: UploadFile = File(...), user_id: str = Depends(get_user_id)):
     session = create_upload_session(user_id, file.filename, "csv_transactions")
     session_id = session.get("id")
     try:
@@ -294,10 +278,7 @@ async def upload_transactions_csv(
 
 
 @app.post("/upload/image")
-async def upload_screenshot(
-    file: UploadFile = File(...),
-    user_id: str = Depends(get_user_id)
-):
+async def upload_screenshot(file: UploadFile = File(...), user_id: str = Depends(get_user_id)):
     session = create_upload_session(user_id, file.filename, "image_screenshot")
     session_id = session.get("id")
     try:
@@ -314,7 +295,7 @@ async def upload_screenshot(
                     "avg_buy_price": float(row["Avg_Buy_Price"]) if row["Avg_Buy_Price"] else 0,
                     "exchange": row.get("Exchange", "NSE"),
                     "asset_class": row.get("Asset_Type", "equity").lower(),
-            })
+                })
             persisted = True
             try:
                 saved = bulk_upsert_holdings(user_id, holdings)
@@ -333,34 +314,19 @@ async def upload_screenshot(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── Import API (new — used by React ImportPortfolio page) ─────────
+# ── Import API ─────────────────────────────────────────────────
 @app.post("/api/import/upload", tags=["Import"])
-async def import_upload(
-    file: UploadFile = File(...),
-    user_id: str = Depends(get_user_id),
-):
-    """
-    Step 1: Parse an uploaded CSV/XLSX file.
-    Returns a preview payload with detected broker, holdings list, and insights.
-    Does NOT persist to the database — that happens in /api/import/confirm.
-    """
+async def import_upload(file: UploadFile = File(...), user_id: str = Depends(get_user_id)):
     allowed_types = (".csv", ".xlsx", ".xls")
     if not any(file.filename.lower().endswith(ext) for ext in allowed_types):
-        raise HTTPException(
-            status_code=415,
-            detail=f"Unsupported file type. Please upload a CSV or Excel (.xlsx/.xls) file."
-        )
-
+        raise HTTPException(status_code=415, detail="Unsupported file type. Upload CSV or Excel.")
     session = create_upload_session(user_id, file.filename, "import_preview")
     session_id = session.get("id")
     try:
         file_bytes = await file.read()
         payload = process_import_file(file_bytes, file.filename)
         payload["session_id"] = session_id
-        update_upload_session(
-            session_id, "preview",
-            recognized_data={"count": payload["count"], "broker": payload["broker"]}
-        )
+        update_upload_session(session_id, "preview", recognized_data={"count": payload["count"], "broker": payload["broker"]})
         return payload
     except ValueError as e:
         update_upload_session(session_id, "failed", error=str(e))
@@ -372,20 +338,11 @@ async def import_upload(
 
 
 @app.post("/api/import/confirm", tags=["Import"])
-def import_confirm(
-    body: ImportConfirmIn,
-    user_id: str = Depends(get_user_id),
-):
-    """
-    Step 2: Confirm and persist the (optionally edited) holdings.
-    Applies merge_strategy: skip | update | always_add.
-    Returns summary: {message, total_saved, saved, updated, skipped}.
-    """
+def import_confirm(body: ImportConfirmIn, user_id: str = Depends(get_user_id)):
     if not body.holdings:
         raise HTTPException(status_code=422, detail="No holdings provided.")
-
     try:
-        result = apply_confirm(
+        return apply_confirm(
             user_id=user_id,
             holdings=body.holdings,
             merge_strategy=body.merge_strategy,
@@ -394,7 +351,6 @@ def import_confirm(
             get_holdings_fn=get_holdings,
             upsert_holding_fn=upsert_holding,
         )
-        return result
     except Exception as e:
         logger.error(f"import_confirm error: {e}", exc_info=e)
         raise HTTPException(status_code=500, detail=f"Confirm failed: {e}")
@@ -407,11 +363,7 @@ async def ai_chat(body: ChatMessageIn, user_id: str = Depends(get_user_id)):
     portfolio = get_portfolio_summary(user_id)
     history = get_conversation_history(user_id, session_id)
     save_message(user_id, session_id, "user", body.message, portfolio_snapshot=portfolio)
-    response = get_cfo_response(
-        user_message=body.message,
-        portfolio=portfolio,
-        history=history
-    )
+    response = get_cfo_response(user_message=body.message, portfolio=portfolio, history=history)
     save_message(user_id, session_id, "assistant", response, tokens=len(response) // 4)
     return {"reply": response, "session_id": session_id}
 
@@ -421,6 +373,13 @@ def ai_history(session_id: str, user_id: str = Depends(get_user_id)):
     return get_conversation_history(user_id, session_id)
 
 
+# ── Serve React frontend (production only) ───────────────────────
+# Mount AFTER all API routes so /api/* is never caught by static handler
+_frontend_dist = Path(__file__).parent / "frontend" / "dist"
+if _frontend_dist.exists():
+    app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="spa")
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

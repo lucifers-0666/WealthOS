@@ -8,6 +8,7 @@ fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
 python-multipart>=0.0.9
 starlette>=0.36.0,<0.42.0
+streamlit>=1.40.0
 
 # Database
 supabase>=2.4.0

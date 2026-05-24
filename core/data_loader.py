@@ -15,21 +15,42 @@ def _normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Lower-case and strip column names, map common aliases."""
     df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
     aliases = {
-        "ticker": "symbol",
-        "stock": "symbol",
-        "scrip": "symbol",
-        "isin": "symbol",
-        "qty": "quantity",
-        "shares": "quantity",
-        "units": "quantity",
-        "avg_cost": "avg_price",
-        "average_price": "avg_price",
-        "buy_price": "avg_price",
-        "purchase_price": "avg_price",
-        "cost": "avg_price",
-        "ltp": "current_price",
-        "last_price": "current_price",
-        "cmp": "current_price",
+        # symbol aliases
+        "ticker":           "symbol",
+        "stock":            "symbol",
+        "scrip":            "symbol",
+        "isin":             "symbol",
+        # Groww / broker exports use 'company' as the stock identifier
+        "company":          "symbol",
+        "company_name":     "symbol",
+        "instrument":       "symbol",
+        "security":         "symbol",
+        "security_name":    "symbol",
+        # quantity aliases
+        "qty":              "quantity",
+        "shares":           "quantity",
+        "units":            "quantity",
+        "no_of_shares":     "quantity",
+        # avg price aliases
+        "avg_cost":         "avg_price",
+        "average_price":    "avg_price",
+        "buy_price":        "avg_price",
+        "purchase_price":   "avg_price",
+        "cost":             "avg_price",
+        "avg_buy_price":    "avg_price",
+        # current/market price aliases
+        "ltp":              "current_price",
+        "last_price":       "current_price",
+        "cmp":              "current_price",
+        "market_price":     "current_price",
+        "last_traded_price": "current_price",
+        "price":            "current_price",
+        # other common aliases
+        "invested_value":   "invested_amount",
+        "current_value":    "total_value",
+        "returns_amount":   "unrealized_pnl",
+        "p&l":              "unrealized_pnl",
+        "gain_loss":        "unrealized_pnl",
     }
     df.rename(columns=aliases, inplace=True)
     return df
@@ -80,9 +101,11 @@ def parse_holdings_csv(file_obj: io.BytesIO) -> List[Dict[str, Any]]:
     Parse a holdings CSV file (BytesIO) into a list of dicts
     compatible with the FastAPI /upload/holdings-csv endpoint.
 
-    Expected columns (flexible aliases supported):
-        symbol/ticker, quantity/qty, avg_price/avg_cost/buy_price
-    Optional: name, sector, asset_class, exchange, currency
+    Supported column formats:
+      - Standard:  symbol/ticker, quantity/qty, avg_price/avg_cost
+      - Groww:     Company, Shares, Average Price, Market Price
+      - Zerodha:   Instrument, Qty, Avg cost, LTP
+      - Upstox:    Symbol, Quantity, Avg Buy Price, LTP
     """
     try:
         df = pd.read_csv(file_obj)
@@ -98,6 +121,11 @@ def parse_holdings_csv(file_obj: io.BytesIO) -> List[Dict[str, Any]]:
     df["avg_price"] = pd.to_numeric(df["avg_price"], errors="coerce")
     df.dropna(subset=["symbol", "quantity", "avg_price"], inplace=True)
     df = df[df["quantity"] > 0].copy()
+
+    # Use original company/symbol value as both ticker and display name
+    # Keep original casing for name, uppercase for ticker
+    if "name" not in df.columns:
+        df["name"] = df["symbol"].str.strip()  # preserve original casing for name
     df["symbol"] = df["symbol"].str.strip().str.upper()
 
     for col in OPTIONAL_COLS:
@@ -110,17 +138,24 @@ def parse_holdings_csv(file_obj: io.BytesIO) -> List[Dict[str, Any]]:
     if "currency" not in df.columns:
         df["currency"] = "INR"
 
+    # current_price is optional — default to avg_price if not present
+    if "current_price" not in df.columns:
+        df["current_price"] = df["avg_price"]
+    else:
+        df["current_price"] = pd.to_numeric(df["current_price"], errors="coerce").fillna(df["avg_price"])
+
     holdings = []
     for _, row in df.iterrows():
         holdings.append({
-            "ticker": row["symbol"],
-            "company_name": row.get("name", "") or "",
-            "quantity": float(row["quantity"]),
+            "ticker":        row["symbol"],
+            "company_name":  str(row.get("name", "") or row["symbol"]),
+            "quantity":      float(row["quantity"]),
             "avg_buy_price": float(row["avg_price"]),
-            "exchange": str(row.get("exchange", "NSE") or "NSE"),
-            "asset_class": str(row.get("asset_class", "equity") or "equity"),
-            "currency": str(row.get("currency", "INR") or "INR"),
-            "sector": str(row.get("sector", "") or ""),
+            "current_price": float(row["current_price"]),
+            "exchange":      str(row.get("exchange", "NSE") or "NSE"),
+            "asset_class":   str(row.get("asset_class", "equity") or "equity"),
+            "currency":      str(row.get("currency", "INR") or "INR"),
+            "sector":        str(row.get("sector", "") or ""),
         })
     return holdings
 
@@ -143,18 +178,19 @@ def parse_transactions_csv(file_obj: io.BytesIO) -> List[Dict[str, Any]]:
 
     # Alias mapping for transactions
     txn_aliases = {
-        "symbol": "ticker",
-        "stock": "ticker",
-        "scrip": "ticker",
-        "type": "action",
-        "trade_type": "action",
-        "side": "action",
-        "qty": "quantity",
-        "shares": "quantity",
-        "trade_price": "price",
-        "execution_price": "price",
-        "date": "transaction_date",
-        "trade_date": "transaction_date",
+        "symbol":           "ticker",
+        "stock":            "ticker",
+        "scrip":            "ticker",
+        "company":          "ticker",
+        "type":             "action",
+        "trade_type":       "action",
+        "side":             "action",
+        "qty":              "quantity",
+        "shares":           "quantity",
+        "trade_price":      "price",
+        "execution_price":  "price",
+        "date":             "transaction_date",
+        "trade_date":       "transaction_date",
     }
     df.rename(columns=txn_aliases, inplace=True)
 
@@ -179,14 +215,14 @@ def parse_transactions_csv(file_obj: io.BytesIO) -> List[Dict[str, Any]]:
     transactions = []
     for _, row in df.iterrows():
         transactions.append({
-            "ticker": row["ticker"],
-            "action": row["action"],
-            "quantity": float(row["quantity"]),
-            "price": float(row["price"]),
+            "ticker":           row["ticker"],
+            "action":           row["action"],
+            "quantity":         float(row["quantity"]),
+            "price":            float(row["price"]),
             "transaction_date": str(row["transaction_date"]),
-            "exchange": str(row.get("exchange", "NSE") or "NSE"),
-            "broker": str(row.get("broker", "") or ""),
-            "notes": str(row.get("notes", "") or ""),
+            "exchange":         str(row.get("exchange", "NSE") or "NSE"),
+            "broker":           str(row.get("broker", "") or ""),
+            "notes":            str(row.get("notes", "") or ""),
         })
     return transactions
 

@@ -54,9 +54,12 @@ def _allowed_origins() -> list[str]:
     default_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5175",
+        "http://127.0.0.1:5175",
     ]
     return list(dict.fromkeys([*default_origins, *env_origins]))
 
@@ -363,7 +366,11 @@ async def ai_chat(body: ChatMessageIn, user_id: str = Depends(get_user_id)):
     portfolio = get_portfolio_summary(user_id)
     history = get_conversation_history(user_id, session_id)
     save_message(user_id, session_id, "user", body.message, portfolio_snapshot=portfolio)
-    response = get_cfo_response(user_message=body.message, portfolio=portfolio, history=history)
+    try:
+        response = get_cfo_response(user_message=body.message, portfolio=portfolio, history=history)
+    except Exception as e:
+        logger.error(f"AI chat error: {e}", exc_info=e)
+        return {"success": False, "error": str(e), "message": "AI service unavailable", "session_id": session_id}
     save_message(user_id, session_id, "assistant", response, tokens=len(response) // 4)
     return {"reply": response, "session_id": session_id}
 

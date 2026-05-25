@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../lib/useAuth.js';
 import { usePortfolio } from '../lib/usePortfolio.js';
+import { resetPassword } from '../lib/auth.js';
 import { getProfile, updateProfile } from '../services/portfolio.js';
 import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
 import { ShieldCheck, UserCircle2, Bell, Lock, Save, Activity } from 'lucide-react';
@@ -20,7 +21,7 @@ const badgeStyle = (tone) => ({
 });
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { portfolio, transactions } = usePortfolio();
   const queryClient = useQueryClient();
 
@@ -58,6 +59,7 @@ export default function Profile() {
       default_view: 'command',
     },
   });
+  const [securityNotice, setSecurityNotice] = useState(null);
 
   useEffect(() => {
     if (!profileQuery.data) return;
@@ -123,6 +125,20 @@ export default function Profile() {
         horizon: form.investment_horizon,
       },
     });
+  }
+
+  async function handlePasswordReset() {
+    if (!user?.email) {
+      setSecurityNotice('No email is attached to this profile session.');
+      return;
+    }
+    await resetPassword(user.email);
+    setSecurityNotice('Password reset flow has been initiated for this account.');
+  }
+
+  async function handleLogoutAll() {
+    await signOut();
+    window.location.assign('/login');
   }
 
   if (profileQuery.isLoading) {
@@ -204,9 +220,10 @@ export default function Profile() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Lock size={14} /> Password reset available via your identity provider.</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ShieldCheck size={14} /> MFA readiness placeholder in place.</div>
             </div>
+            {securityNotice && <div style={{ marginTop: 12, color: theme.colors.gold, fontSize: 13 }}>{securityNotice}</div>}
             <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-              <button style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px', background: 'transparent', color: theme.colors.textSoft, cursor: 'pointer' }}>Reset password</button>
-              <button style={{ border: 0, borderRadius: 12, padding: '10px 14px', background: 'rgba(200,179,142,0.12)', color: theme.colors.gold, cursor: 'pointer' }}>Logout all devices</button>
+              <button onClick={handlePasswordReset} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px', background: 'transparent', color: theme.colors.textSoft, cursor: 'pointer' }}>Reset password</button>
+              <button onClick={handleLogoutAll} style={{ border: 0, borderRadius: 12, padding: '10px 14px', background: 'rgba(200,179,142,0.12)', color: theme.colors.gold, cursor: 'pointer' }}>Logout all devices</button>
             </div>
           </div>
         </div>

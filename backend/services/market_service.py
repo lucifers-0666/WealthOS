@@ -87,7 +87,10 @@ class MarketService:
         """
         symbols = list(symbols)
         tickers = [s.get("ticker") for s in symbols if s.get("ticker")]
-        cached = get_cached_prices(tickers) if tickers else {}
+        try:
+            cached = get_cached_prices(tickers) if tickers else {}
+        except Exception:
+            cached = {}
         results: dict[str, PriceQuote] = {}
 
         for item in symbols:

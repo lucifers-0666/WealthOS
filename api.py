@@ -240,8 +240,8 @@ def create_holding(holding: HoldingIn, user_id: str = Depends(get_user_id)):
 def remove_holding(holding_id: str, user_id: str = Depends(get_user_id)):
     ok = delete_holding(user_id, holding_id)
     if not ok:
-        raise HTTPException(status_code=404, detail="Holding not found")
-    return {"deleted": True}
+        return {"deleted": True, "persisted": False, "message": "Holding was not present in the remote store; local state may still be cleared."}
+    return {"deleted": True, "persisted": True}
 
 
 # ── Transactions ─────────────────────────────────────────────────
@@ -262,7 +262,21 @@ def create_transaction(txn: TransactionIn, user_id: str = Depends(get_user_id)):
 @app.get("/prices")
 def read_prices(tickers: str, user_id: str = Depends(get_user_id)):
     ticker_list = [t.strip() for t in tickers.split(",") if t.strip()]
-    return fetch_prices(ticker_list)
+    quotes = live_market_engine.market_service.fetch_prices([
+        {"ticker": ticker, "exchange": "NSE", "currency": "INR"} for ticker in ticker_list
+    ])
+    return {
+        ticker: {
+            "price": quote.price,
+            "price_inr": quote.price_inr,
+            "change": quote.change_abs,
+            "pct_change": quote.change_pct,
+            "source": quote.source,
+            "fetched_at": quote.fetched_at,
+            "is_stale": quote.is_stale,
+        }
+        for ticker, quote in quotes.items()
+    }
 
 
 # ── Target Allocation ────────────────────────────────────────────

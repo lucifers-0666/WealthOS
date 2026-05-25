@@ -1,6 +1,7 @@
 import { theme } from '../lib/theme.js';
 
 const NEWSAPI_KEY = import.meta.env.VITE_NEWSAPI_KEY || '';
+const NEWS_CACHE_KEY = 'wealthos:market-news-cache';
 
 const CATEGORY_QUERIES = {
   All: 'Indian stock market NSE BSE economy',
@@ -45,10 +46,28 @@ export function classifySentiment(article) {
 }
 
 export async function fetchMarketNews({ query, category = 'All', portfolioTickers = [] } = {}) {
+  const readCache = () => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const cached = JSON.parse(window.localStorage.getItem(NEWS_CACHE_KEY) || '[]');
+      return Array.isArray(cached) ? cached : [];
+    } catch {
+      window.localStorage.removeItem(NEWS_CACHE_KEY);
+      return [];
+    }
+  };
+
+  const writeCache = (articles) => {
+    if (typeof window === 'undefined' || !Array.isArray(articles) || !articles.length) return;
+    window.localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify(articles.slice(0, 40)));
+  };
+
   if (!NEWSAPI_KEY) {
+    const cached = readCache();
     return {
-      articles: [],
-      error: 'Add VITE_NEWSAPI_KEY to load live market news.',
+      articles: cached,
+      error: cached.length ? 'Live news key is missing. Showing cached intelligence.' : 'Add VITE_NEWSAPI_KEY to load live market news.',
+      cached: cached.length > 0,
     };
   }
 
@@ -78,13 +97,16 @@ export async function fetchMarketNews({ query, category = 'All', portfolioTicker
       }))
       .sort((a, b) => b.relevanceScore - a.relevanceScore || new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
 
+    writeCache(articles);
     return { articles, error: null };
   } catch (error) {
+    const cached = readCache();
     return {
-      articles: [],
+      articles: cached,
       error: error.name === 'AbortError'
-        ? 'Market intelligence feed temporarily unavailable. Attempting reconnect...'
+        ? 'Market intelligence feed is delayed. Showing cached intelligence while reconnecting.'
         : error.message,
+      cached: cached.length > 0,
     };
   } finally {
     clearTimeout(timeout);

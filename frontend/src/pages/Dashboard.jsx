@@ -53,6 +53,15 @@ export default function Dashboard() {
     { label: 'Unrealised P&L', value: fmt(summary.total_pnl), sub: pct(summary.total_pnl_pct), tone: (summary.total_pnl || 0) >= 0 ? 'positive' : 'negative' },
     { label: 'Day change', value: fmt(summary.day_change), sub: pct(summary.day_change_pct), tone: (summary.day_change || 0) >= 0 ? 'positive' : 'negative' },
   ];
+  const tickerRibbon = useMemo(() => {
+    const base = [
+      { ticker: 'NIFTY 50', day_change_pct: 0, current_price: null },
+      { ticker: 'SENSEX', day_change_pct: 0, current_price: null },
+      { ticker: 'BANKNIFTY', day_change_pct: 0, current_price: null },
+      ...holdings.slice(0, 8),
+    ];
+    return [...base, ...base];
+  }, [holdings]);
 
   if (loading) {
     return <PageLoadingState title="Loading command center…" subtitle="Resolving live holdings, performance, and signal flow." />;
@@ -76,8 +85,19 @@ export default function Dashboard() {
           </button>
         </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
           {kpis.map((item) => <StatCard key={item.label} {...item} />)}
+        </div>
+        <div className="ticker-ribbon" style={{ marginTop: 16 }}>
+          <div className="ticker-ribbon-track">
+            {tickerRibbon.map((item, index) => (
+              <span key={`${item.ticker}-${index}`} className={(item.day_change_pct || 0) >= 0 ? 'ticker-up' : 'ticker-down'}>
+                <strong>{item.ticker}</strong>
+                {item.current_price ? fmt(item.current_price) : 'Live index'}
+                <em>{pct(item.day_change_pct || 0)}</em>
+              </span>
+            ))}
+          </div>
         </div>
       </section>
       <section style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 18, alignItems: 'start' }}>

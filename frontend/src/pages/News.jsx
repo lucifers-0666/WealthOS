@@ -61,6 +61,7 @@ export default function News() {
   const [search, setSearch] = useState('');
   const [error, setError] = useState(null);
   const [serviceNotice, setServiceNotice] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const portfolioTickers = useMemo(() => holdings.slice(0, 8).map((h) => h.ticker), [holdings]);
   const query = useMemo(() => search || '', [search]);
@@ -78,7 +79,8 @@ export default function News() {
       const result = await fetchMarketNews({ query, category, portfolioTickers });
       setArticles(result.articles || []);
       setError(result.error && result.articles.length === 0 ? result.error : null);
-      setServiceNotice(result.error && result.articles.length === 0 ? result.error : null);
+      setServiceNotice(result.error || null);
+      setLastUpdated(new Date());
       setLoading(false);
     }, 220);
 
@@ -111,7 +113,7 @@ export default function News() {
             <p style={{ margin: '10px 0 0', color: theme.colors.textSoft, lineHeight: 1.65 }}>Search live financial news and scan the feed through a calm, institutional lens.</p>
           </div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, color: theme.colors.textSoft }}>
-            <RadioTower size={15} /> Live feed
+            <RadioTower size={15} /> {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Live feed'}
           </div>
         </div>
       </section>

@@ -53,6 +53,7 @@ export default function Layout() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState('');
   const [paletteIndex, setPaletteIndex] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const paletteInputRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -310,7 +311,7 @@ export default function Layout() {
 
             <button className="btn-icon" aria-label="AI actions" onClick={() => navigate('/app/advisor')}><Zap size={15} /></button>
             <button className="btn-icon" aria-label="Command menu" onClick={() => setPaletteOpen(true)}><Command size={15} /></button>
-            <button className="btn-icon" aria-label="Notifications" style={{ position: 'relative' }}>
+            <button className="btn-icon" aria-label="Notifications" onClick={() => setNotificationsOpen((open) => !open)} style={{ position: 'relative' }}>
               <Bell size={15} />
               <span style={{ position: 'absolute', top: 8, right: 8, width: 6, height: 6, borderRadius: 99, background: theme.colors.gold }} />
             </button>
@@ -324,6 +325,29 @@ export default function Layout() {
       </div>
 
       <AnimatePresence>
+        {notificationsOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            style={{ position: 'fixed', top: 82, right: 72, zIndex: 75, width: 'min(340px, calc(100vw - 28px))', ...panelStyle({ padding: 14 }) }}
+          >
+            <div className="section-label">Notifications</div>
+            <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+              {[
+                ['Market sync active', 'Live websocket and fallback polling are online.'],
+                ['Advisor ready', 'Portfolio context is attached to AI requests.'],
+                ['Risk monitor', holdings.length ? `${holdings.length} holdings tracked.` : 'Import holdings to activate risk alerts.'],
+              ].map(([label, detail]) => (
+                <div key={label} style={{ padding: 12, borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(255,255,255,0.012)' }}>
+                  <div style={{ color: theme.colors.text, fontWeight: 700, fontSize: 13 }}>{label}</div>
+                  <div style={{ color: theme.colors.textSoft, fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>{detail}</div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {paletteOpen && (
           <motion.div
             initial={{ opacity: 0 }}

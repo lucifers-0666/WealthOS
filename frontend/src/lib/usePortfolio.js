@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from './api.js';
-import { getPortfolioHoldings } from './portfolioStore.js';
+import { getPortfolioHoldings, removePortfolioHolding, savePortfolioHoldings, upsertPortfolioHolding } from './portfolioStore.js';
 import { createReconnectingSocket } from '../services/websocket.js';
 import { useAuth } from './useAuth.js';
 
@@ -74,6 +74,11 @@ const buildSummary = (holdings) => {
 const EMPTY_ARRAY = [];
 const EMPTY_OBJECT = {};
 
+const normalizeTransaction = (row) => ({
+  ...row,
+  action: row.action || row.transaction_type || row.txn_type || 'BUY',
+});
+
 async function fetchPortfolioBundle() {
   try {
     const [port, txns, target, watch] = await Promise.all([
@@ -89,7 +94,7 @@ async function fetchPortfolioBundle() {
 
     return {
       holdings: normalizedHoldings,
-      transactions: Array.isArray(txns) ? txns : [],
+      transactions: Array.isArray(txns) ? txns.map(normalizeTransaction) : [],
       targetAllocation: Array.isArray(target) ? target : [],
       watchlist: Array.isArray(watch) ? watch : [],
       summary: buildSummary(normalizedHoldings),
@@ -125,6 +130,14 @@ export function usePortfolio() {
     mutationFn: api.createHolding,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
+    },
+    onError: (_error, data) => {
+      upsertPortfolioHolding({ ...data, id: data.ticker });
+      queryClient.setQueryData(['portfolio-bundle'], (current) => {
+        const existing = current || { holdings: [], transactions: [], targetAllocation: [], watchlist: [] };
+        const nextHoldings = [normalizeHolding({ ...data, id: data.ticker }), ...existing.holdings.filter((h) => h.ticker !== data.ticker)];
+        return { ...existing, holdings: nextHoldings, summary: buildSummary(nextHoldings), source: 'local' };
+      });
     },
   });
 
@@ -200,6 +213,20 @@ export function usePortfolio() {
   };
 
   useEffect(() => {
+    const onLocalPortfolioUpdate = (event) => {
+      const localHoldings = (event.detail || getPortfolioHoldings()).map(normalizeHolding);
+      queryClient.setQueryData(['portfolio-bundle'], (current) => ({
+        ...(current || {}),
+        holdings: localHoldings,
+        summary: buildSummary(localHoldings),
+        source: 'local',
+      }));
+    };
+    window.addEventListener('wealthos:portfolio-updated', onLocalPortfolioUpdate);
+    return () => window.removeEventListener('wealthos:portfolio-updated', onLocalPortfolioUpdate);
+  }, [queryClient]);
+
+  useEffect(() => {
     const wsBase = (import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/^http/i, 'ws');
     const wsRoot = wsBase.replace(/\/$/, '');
     const wsUrl = user?.id ? `${wsRoot}/ws/market-updates?user_id=${encodeURIComponent(user.id)}` : `${wsRoot}/ws/market-updates`;
@@ -241,6 +268,10 @@ export function usePortfolio() {
               live_updated_at: payload.updated_at || Date.now(),
             };
           });
+
+          if (Array.isArray(payload.holdings) && payload.holdings.length) {
+            savePortfolioHoldings(payload.holdings);
+          }
         } catch {
           // Ignore malformed live updates; polling will keep data fresh.
         }
@@ -261,8 +292,21 @@ export function usePortfolio() {
     marketStatus: bundleQuery.data?.market_status || null,
     liveUpdatedAt: bundleQuery.data?.live_updated_at || null,
     refresh,
-    addHolding: async (data) => addHoldingMutation.mutateAsync(data),
-    removeHolding: async (id) => removeHoldingMutation.mutateAsync(id),
+    addHolding: async (data) => {
+      try {
+        return await addHoldingMutation.mutateAsync(data);
+      } catch (error) {
+        return { ...data, id: data.ticker, persisted: false };
+      }
+    },
+    removeHolding: async (id) => {
+      removePortfolioHolding(id);
+      try {
+        return await removeHoldingMutation.mutateAsync(id);
+      } catch (error) {
+        return { deleted: true, persisted: false };
+      }
+    },
     addTransaction: async (data) => addTransactionMutation.mutateAsync(data),
     saveTargetAllocation: async (allocations) => saveTargetMutation.mutateAsync(allocations),
     addWatch: async (data) => addWatchMutation.mutateAsync(data),

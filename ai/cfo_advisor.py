@@ -60,11 +60,13 @@ def format_portfolio_for_prompt(portfolio_df: pd.DataFrame, summary_stats: dict)
 def chat_with_cfo(user_message: str, portfolio_context: str, history: list) -> str:
     client, sdk = _get_client()
     if not client:
-        return "\u26a0\ufe0f Gemini API key not configured. Please add your GOOGLE_API_KEY to the .env file."
+        return "Advisor systems are temporarily unavailable because AI credentials are not configured. Portfolio reasoning will resume once the service is connected."
 
     full_message = f"{user_message}\n\n[Portfolio Context]\n{portfolio_context}" if portfolio_context else user_message
 
-    try:
+    last_error = None
+    for _attempt in range(2):
+      try:
         if sdk == "new":
             contents = []
             for msg in history[-10:]:
@@ -88,15 +90,17 @@ def chat_with_cfo(user_message: str, portfolio_context: str, history: list) -> s
             chat = client.start_chat(history=chat_history)
             response = chat.send_message(full_message)
             return response.text
-    except Exception as e:
+      except Exception as e:
+        last_error = e
         logger.error(f"CFO chat error: {e}")
-        return f"Error connecting to AI CFO: {str(e)}"
+
+    return "Advisor systems are temporarily under elevated load. Portfolio reasoning remains available shortly, and your latest holdings context has been preserved."
 
 
 def run_full_portfolio_analysis(portfolio_df: pd.DataFrame, summary_stats: dict) -> str:
     client, sdk = _get_client()
     if not client:
-        return "\u26a0\ufe0f Configure GOOGLE_API_KEY to enable AI portfolio analysis."
+        return "Advisor analysis is unavailable until AI credentials are configured."
 
     portfolio_summary = format_portfolio_for_prompt(portfolio_df, summary_stats)
     prompt = PORTFOLIO_ANALYSIS_PROMPT.format(

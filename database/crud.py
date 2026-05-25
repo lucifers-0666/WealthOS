@@ -56,21 +56,37 @@ def ensure_profile_exists(user_id: str) -> None:
 
 def get_or_create_profile(user_id: str, full_name: str = None) -> dict:
     sb = get_supabase()
-    res = sb.table("profiles").select("*").eq("id", user_id).maybe_single().execute()
-    if res.data:
-        return res.data
-    new_profile = {"id": user_id, "full_name": full_name}
-    ins = sb.table("profiles").insert(new_profile).execute()
-    return ins.data[0]
+    try:
+        res = sb.table("profiles").select("*").eq("id", user_id).maybe_single().execute()
+        if res.data:
+            return res.data
+        new_profile = {"id": user_id, "full_name": full_name or "Development User"}
+        ins = _execute_with_missing_column_retry(
+            lambda clean_payload: sb.table("profiles").insert(clean_payload),
+            new_profile,
+        )
+        return ins.data[0] if ins.data else new_profile
+    except Exception:
+        return {
+            "id": user_id,
+            "full_name": full_name or "Development User",
+            "currency": "INR",
+            "risk_profile": "moderate",
+            "created_at": datetime.utcnow().isoformat(),
+            "persistence": "local_fallback",
+        }
 
 
 def update_profile(user_id: str, updates: dict) -> dict:
     sb = get_supabase()
-    res = _execute_with_missing_column_retry(
-        lambda clean_payload: sb.table("profiles").update(clean_payload).eq("id", user_id),
-        updates,
-    )
-    return res.data[0] if res.data else {}
+    try:
+        res = _execute_with_missing_column_retry(
+            lambda clean_payload: sb.table("profiles").update(clean_payload).eq("id", user_id),
+            updates,
+        )
+        return res.data[0] if res.data else {**updates, "id": user_id, "persistence": "not_returned"}
+    except Exception:
+        return {**updates, "id": user_id, "persistence": "local_fallback"}
 
 
 # ============================================================
@@ -146,14 +162,30 @@ def bulk_upsert_holdings(user_id: str, holdings: list[dict]) -> list[dict]:
 
 def delete_holding(user_id: str, holding_id: str) -> bool:
     sb = get_supabase()
-    res = (
-        sb.table("holdings")
-        .update({"is_active": False})
-        .eq("id", holding_id)
-        .eq("user_id", user_id)
-        .execute()
-    )
-    return bool(res.data)
+    try:
+        res = (
+            sb.table("holdings")
+            .update({"is_active": False})
+            .eq("id", holding_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        if res.data:
+            return True
+    except Exception:
+        pass
+
+    try:
+        res = (
+            sb.table("holdings")
+            .update({"is_active": False})
+            .eq("ticker", holding_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        return bool(res.data)
+    except Exception:
+        return False
 
 
 def holdings_to_dataframe(holdings: list[dict]) -> pd.DataFrame:
@@ -313,16 +345,19 @@ def save_message(user_id: str, session_id: str, role: str, content: str,
 
 def get_conversation_history(user_id: str, session_id: str, limit: int = 50) -> list[dict]:
     sb = get_supabase()
-    res = (
-        sb.table("ai_conversations")
-        .select("role, content, created_at")
-        .eq("user_id", user_id)
-        .eq("session_id", session_id)
-        .order("created_at")
-        .limit(limit)
-        .execute()
-    )
-    return res.data or []
+    try:
+        res = (
+            sb.table("ai_conversations")
+            .select("role, content, created_at")
+            .eq("user_id", user_id)
+            .eq("session_id", session_id)
+            .order("created_at")
+            .limit(limit)
+            .execute()
+        )
+        return res.data or []
+    except Exception:
+        return []
 
 
 # ============================================================

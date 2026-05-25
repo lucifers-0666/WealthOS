@@ -1,144 +1,233 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useChat } from '../lib/useChat.js';
-import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
-import { Send, Sparkles, MessageCircle, ShieldCheck } from 'lucide-react';
-import { PageErrorState, EmptyState } from '../components/PageStates.jsx';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { usePortfolio } from '../hooks/usePortfolio';
 
-const SUGGESTIONS = [
-  'Analyse my current portfolio and give me a health score',
-  'Which holdings should I rebalance based on my target allocation?',
-  'Calculate LTCG tax exposure on my equity holdings',
-  'Suggest a SIP plan to reach ₹1 crore in 10 years',
-  'What is my biggest concentration risk right now?',
-  'Compare my returns vs Nifty 50 benchmark',
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+const SMART_PROMPTS = [
+  { label: '⚖️ Rebalance', text: 'Analyze my current allocation and suggest a rebalancing plan.' },
+  { label: '🎯 Concentration Risk', text: 'Identify concentration risks in my portfolio and suggest fixes.' },
+  { label: '📊 vs NIFTY', text: 'Compare my portfolio performance against NIFTY 50 benchmark.' },
+  { label: '💡 SIP Plan', text: 'Suggest a monthly SIP plan based on my current holdings and risk profile.' },
+  { label: '🛡️ Tax Harvesting', text: 'Identify tax loss harvesting opportunities in my portfolio.' },
+  { label: '📉 Stress Test 10%', text: 'What happens to my portfolio if NIFTY falls 10%? Show sector impact.' },
+  { label: '💻 IT Sector -15%', text: 'Simulate a 15% drop in IT sector — what is my estimated portfolio impact?' },
 ];
 
-function Message({ msg }) {
-  const isUser = msg.role === 'user';
-  const isTyping = msg._typing;
-  return (
-    <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 12 }}>
-      <div style={{ maxWidth: '82%', display: 'flex', gap: 10, alignItems: 'flex-start', flexDirection: isUser ? 'row-reverse' : 'row' }}>
-        <div style={{ width: 34, height: 34, borderRadius: 11, display: 'grid', placeItems: 'center', background: isUser ? 'rgba(200,179,142,0.12)' : 'rgba(134,159,196,0.12)', color: isUser ? theme.colors.gold : theme.colors.accent, flexShrink: 0 }}>
-          <MessageCircle size={15} />
-        </div>
-        <div style={{ ...panelStyle({ padding: 16, maxWidth: '100%' }), borderColor: isUser ? 'rgba(200,179,142,0.22)' : theme.colors.border }}>
-          {isTyping ? (
-            <div style={{ color: theme.colors.textMuted }}>Thinking…</div>
-          ) : (
-            <div style={{ color: theme.colors.text, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{msg.content}</div>
-          )}
-          {msg.ts && !isTyping && <div style={{ color: theme.colors.textMuted, fontSize: 11, marginTop: 10 }}>{new Date(msg.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function AIAdvisor() {
-  const { messages, loading, error, sendMessage, clearChat, restoreHistory } = useChat();
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: 'Welcome to WealthOS AI Advisor. I have full context of your portfolio. How can I help you today?' }
+  ]);
   const [input, setInput] = useState('');
-  const bottomRef = useRef();
+  const [loading, setLoading] = useState(false);
+  const [streaming, setStreaming] = useState(false);
+  const [error, setError] = useState(null);
+  const endRef = useRef(null);
+  const abortRef = useRef(null);
+  const { portfolio, holdings } = usePortfolio();
 
   useEffect(() => {
-    restoreHistory();
-  }, [restoreHistory]);
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, streaming]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const buildPortfolioContext = useCallback(() => {
+    if (!portfolio && !holdings?.length) return '';
+    const h = holdings || [];
+    const topHoldings = h
+      .slice(0, 8)
+      .map(hh => `${hh.symbol}: ${hh.quantity} shares @ ₹${hh.avg_price}, current ₹${hh.ltp || hh.current_price || hh.avg_price}, P&L: ${hh.pnl_pct ? hh.pnl_pct.toFixed(1) : 0}%`)
+      .join('; ');
+    const totalValue = portfolio?.total_value || h.reduce((s, hh) => s + (hh.current_value || 0), 0);
+    const totalInvested = portfolio?.total_invested || h.reduce((s, hh) => s + (hh.invested_value || 0), 0);
+    const totalPnl = totalValue - totalInvested;
+    const pnlPct = totalInvested > 0 ? ((totalPnl / totalInvested) * 100).toFixed(2) : 0;
+    return `
+[PORTFOLIO CONTEXT]
+Total Value: ₹${Math.round(totalValue).toLocaleString('en-IN')}
+Total Invested: ₹${Math.round(totalInvested).toLocaleString('en-IN')}
+Overall P&L: ₹${Math.round(totalPnl).toLocaleString('en-IN')} (${pnlPct}%)
+Holdings Count: ${h.length}
+Top Holdings: ${topHoldings}
+[END CONTEXT]`;
+  }, [portfolio, holdings]);
 
-  function handleSend(text) {
-    const t = text || input;
-    if (!t.trim()) return;
+  const sendMessage = useCallback(async (text) => {
+    const userText = (text || input).trim();
+    if (!userText || loading) return;
+
+    setError(null);
     setInput('');
-    sendMessage(t);
-  }
+    const userMsg = { role: 'user', content: userText };
+    setMessages(prev => [...prev, userMsg]);
+    setLoading(true);
+
+    const context = buildPortfolioContext();
+    const fullPrompt = context ? `${context}\n\nUser: ${userText}` : userText;
+
+    // Try streaming first, fallback to regular
+    const streamSuccess = await tryStream(fullPrompt);
+    if (!streamSuccess) {
+      await tryRegular(fullPrompt);
+    }
+    setLoading(false);
+  }, [input, loading, buildPortfolioContext]);
+
+  const tryStream = async (prompt) => {
+    try {
+      abortRef.current = new AbortController();
+      const res = await fetch(`${API}/api/advisor/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+        body: JSON.stringify({ message: prompt }),
+        signal: abortRef.current.signal,
+      });
+      if (!res.ok || !res.body) return false;
+
+      setStreaming(true);
+      setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let full = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') break;
+            try { full += JSON.parse(data).text || ''; } catch { full += data; }
+          }
+        }
+        setMessages(prev => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (last?.streaming) copy[copy.length - 1] = { ...last, content: full };
+          return copy;
+        });
+      }
+      setMessages(prev => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (last?.streaming) copy[copy.length - 1] = { role: 'assistant', content: full };
+        return copy;
+      });
+      setStreaming(false);
+      return true;
+    } catch (e) {
+      if (e.name === 'AbortError') return true;
+      setStreaming(false);
+      return false;
+    }
+  };
+
+  const tryRegular = async (prompt) => {
+    let retries = 2;
+    while (retries >= 0) {
+      try {
+        const res = await fetch(`${API}/api/advisor/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+          body: JSON.stringify({ message: prompt }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const reply = data.reply || data.response || data.message || 'I could not generate a response right now.';
+          setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+          return;
+        }
+        retries--;
+        if (retries >= 0) await new Promise(r => setTimeout(r, 1000));
+      } catch (e) {
+        retries--;
+        if (retries >= 0) await new Promise(r => setTimeout(r, 1200));
+      }
+    }
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: 'Advisor systems are temporarily under elevated load. Please try again in a moment.',
+      isError: true,
+    }]);
+  };
 
   return (
-    <div style={{ display: 'grid', gap: 18 }}>
-      <section style={{ ...panelStyle({ padding: 24 }) }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start' }}>
-          <div style={{ maxWidth: 720 }}>
-            <div className="section-label">AI advisory desk</div>
-            <h2 className="editorial-title" style={{ margin: '8px 0 0', fontSize: 'clamp(2rem, 3vw, 3rem)' }}>An institutional AI analyst for rebalancing, tax, and risk decisions.</h2>
-            <p style={{ margin: '10px 0 0', color: theme.colors.textSoft, lineHeight: 1.65 }}>Ask the advisor about exposure, portfolio health, tax planning, and strategy — with your holdings as context.</p>
+    <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-cream">AI Advisor</h1>
+          <p className="text-xs text-muted mt-0.5">Portfolio-aware · Gemini powered</p>
+        </div>
+        {loading && (
+          <span className="flex items-center gap-2 text-xs text-emerald-400">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Thinking...
+          </span>
+        )}
+      </div>
+
+      {/* Smart Prompts */}
+      <div className="px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar border-b border-white/5">
+        {SMART_PROMPTS.map(sp => (
+          <button
+            key={sp.label}
+            onClick={() => sendMessage(sp.text)}
+            disabled={loading}
+            className="shrink-0 px-3 py-1.5 rounded-full text-xs border border-white/10 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-muted hover:text-emerald-300 transition-all disabled:opacity-40"
+          >
+            {sp.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ minHeight: 0 }}>
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                msg.role === 'user'
+                  ? 'bg-emerald-600/20 border border-emerald-500/20 text-cream'
+                  : msg.isError
+                  ? 'bg-red-900/20 border border-red-500/20 text-red-300'
+                  : 'bg-white/5 border border-white/10 text-cream/90'
+              }`}
+            >
+              {msg.content}
+              {msg.streaming && (
+                <span className="inline-flex gap-0.5 ml-1">
+                  <span className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </span>
+              )}
+            </div>
           </div>
-          <button onClick={clearChat} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px', background: 'transparent', color: theme.colors.text, cursor: 'pointer' }}>
-            Clear session
+        ))}
+        <div ref={endRef} />
+      </div>
+
+      {/* Input */}
+      <div className="px-4 py-4 border-t border-white/10">
+        <div className="flex gap-2">
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+            placeholder="Ask anything about your portfolio..."
+            disabled={loading}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-cream placeholder-muted text-sm focus:outline-none focus:border-emerald-500/50 transition disabled:opacity-50"
+          />
+          <button
+            onClick={() => sendMessage()}
+            disabled={loading || !input.trim()}
+            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition disabled:opacity-40"
+          >
+            Send
           </button>
         </div>
-      </section>
-
-      <section style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 18, alignItems: 'start' }}>
-        <div style={{ ...panelStyle({ padding: 18, minHeight: 700, display: 'flex', flexDirection: 'column' }) }}>
-          <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
-            {messages.length === 0 ? (
-              <EmptyState title="Your AI CFO is ready" message="Use the suggested prompts below or ask a custom question about your portfolio. Responses stay contextual and calm." />
-            ) : (
-              messages.map((m, i) => <Message key={i} msg={m} />)
-            )}
-            {error && <PageErrorState title="Advisor temporarily unavailable" message={error} />}
-            <div ref={bottomRef} />
-          </div>
-
-          <div style={{ marginTop: 14, display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              rows={2}
-              placeholder="Ask your CFO anything…"
-              style={{ ...fieldStyle({ minHeight: 62, resize: 'vertical', flex: 1, lineHeight: 1.6 }) }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-            />
-            <button onClick={() => handleSend()} disabled={loading} style={{ border: '0', borderRadius: 12, minHeight: 62, width: 62, background: theme.colors.text, color: '#0A201F', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
-              <Send size={16} />
-            </button>
-          </div>
-        </div>
-
-        <aside style={{ display: 'grid', gap: 18 }}>
-          <div style={{ ...panelStyle({ padding: 20 }) }}>
-            <div className="section-label">Quick prompts</div>
-            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Common advisory requests</h3>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {SUGGESTIONS.map((s) => (
-                <button key={s} onClick={() => handleSend(s)} style={{ textAlign: 'left', border: `1px solid ${theme.colors.border}`, background: 'rgba(255,255,255,0.01)', color: theme.colors.textSoft, borderRadius: 12, padding: '12px 14px', cursor: 'pointer', lineHeight: 1.5 }}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ ...panelStyle({ padding: 20 }) }}>
-            <div className="section-label">Context pack</div>
-            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>What the AI sees</h3>
-            <div style={{ display: 'grid', gap: 10, color: theme.colors.textSoft, lineHeight: 1.7, fontSize: 14 }}>
-              <div>Live portfolio positions</div>
-              <div>Transaction history</div>
-              <div>Target allocation</div>
-              <div>Indian tax rules (LTCG / STCG)</div>
-              <div>NSE / BSE market data</div>
-              <div>Latest financial news via retrieval</div>
-            </div>
-          </div>
-
-          <div style={{ ...panelStyle({ padding: 20 }) }}>
-            <div className="section-label">Session status</div>
-            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Conversation state</h3>
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: theme.colors.textSoft }}><span>Responses</span><span>{messages.filter((m) => m.role === 'assistant').length}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: theme.colors.textSoft }}><span>Typing</span><span>{loading ? 'Live' : 'Idle'}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: theme.colors.textSoft }}><span>Security</span><span style={{ color: theme.colors.success }}><ShieldCheck size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> Protected</span></div>
-            </div>
-          </div>
-        </aside>
-      </section>
+      </div>
     </div>
   );
 }

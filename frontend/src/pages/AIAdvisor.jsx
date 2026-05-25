@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { usePortfolio } from '../hooks/usePortfolio';
+import { usePortfolio } from '../lib/usePortfolio';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -44,12 +44,17 @@ export default function AIAdvisor() {
     return `[PORTFOLIO CONTEXT] Total Value: ₹${Math.round(totalValue).toLocaleString('en-IN')} | Invested: ₹${Math.round(totalInvested).toLocaleString('en-IN')} | P&L: ${pnlPct}% | Holdings: ${h.length} | Top: ${topHoldings}`;
   }, [portfolio, holdings]);
 
-  const getAuthHeaders = () => ({
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${localStorage.getItem('sb-access-token') || localStorage.getItem('token') || ''}`,
-  });
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('sb-access-token')
+      || localStorage.getItem('supabase.auth.token')
+      || localStorage.getItem('token')
+      || '';
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    };
+  };
 
-  // ── Stream attempt (primary) ─────────────────────────────────
   const tryStream = useCallback(async (prompt) => {
     try {
       abortRef.current = new AbortController();
@@ -99,7 +104,6 @@ export default function AIAdvisor() {
     }
   }, []);
 
-  // ── Non-stream fallback (retry 3x) ───────────────────────────
   const tryRegular = useCallback(async (prompt) => {
     let attempts = 3;
     while (attempts > 0) {
@@ -141,7 +145,6 @@ export default function AIAdvisor() {
 
   return (
     <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
-      {/* Header */}
       <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-cream">AI Advisor</h1>
@@ -155,7 +158,6 @@ export default function AIAdvisor() {
         )}
       </div>
 
-      {/* Smart Prompts */}
       <div className="px-4 py-3 flex gap-2 overflow-x-auto scrollbar-none border-b border-white/5">
         {SMART_PROMPTS.map(sp => (
           <button
@@ -169,7 +171,6 @@ export default function AIAdvisor() {
         ))}
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ minHeight: 0 }}>
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -196,7 +197,6 @@ export default function AIAdvisor() {
         <div ref={endRef} />
       </div>
 
-      {/* Input */}
       <div className="px-4 py-4 border-t border-white/10">
         <div className="flex gap-2">
           <input

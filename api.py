@@ -12,7 +12,8 @@ import io
 import uuid
 from pathlib import Path
 from typing import Optional, List
-from datetime import date
+from datetime import date, datetime, timedelta
+from collections import defaultdict
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Header, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,7 +50,7 @@ from backend.services.live_market_engine import LiveMarketEngine
 
 live_market_engine = LiveMarketEngine()
 
-app = FastAPI(title="WealthOS API", version="2.1.0")
+app = FastAPI(title="WealthOS API", version="2.2.0")
 
 
 @app.on_event("startup")
@@ -160,7 +161,7 @@ class ImportConfirmIn(BaseModel):
 # ── Health ─────────────────────────────────────────────────────────
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "2.1.0"}
+    return {"status": "ok", "version": "2.2.0"}
 
 
 # ── Market Status ────────────────────────────────────────────────
@@ -231,6 +232,98 @@ def read_holdings(user_id: str = Depends(get_user_id)):
 @app.get("/portfolio")
 def read_portfolio_summary(user_id: str = Depends(get_user_id)):
     return get_portfolio_summary(user_id)
+
+
+# ── Portfolio History ────────────────────────────────────────────
+@app.get("/portfolio/history", tags=["Portfolio"])
+def portfolio_history(
+    days: int = 90,
+    user_id: str = Depends(get_user_id),
+):
+    """
+    Returns daily portfolio value reconstructed from transactions.
+    Each point: { date: str (YYYY-MM-DD), value: float }
+    Uses buy/sell transactions to compute running cost basis per day.
+    Falls back to current holdings snapshot when no transactions exist.
+    """
+    try:
+        transactions = get_transactions(user_id)
+    except Exception as e:
+        logger.warning(f"portfolio_history: failed to fetch transactions: {e}")
+        transactions = []
+
+    # Build daily snapshots from transactions
+    # running_qty[ticker] -> qty held after each transaction
+    running_qty: dict[str, float] = defaultdict(float)
+    running_cost: dict[str, float] = defaultdict(float)  # total cost basis per ticker
+
+    # Sort transactions ascending by date
+    def _parse_date(t):
+        raw = t.get("transaction_date") or t.get("date") or ""
+        try:
+            return datetime.fromisoformat(raw[:10]).date()
+        except Exception:
+            return date.today()
+
+    sorted_txns = sorted(transactions, key=_parse_date)
+
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days)
+
+    # Build a map: date -> {ticker: (qty, avg_price)} at end of that day
+    daily_snapshots: dict[date, dict[str, tuple[float, float]]] = {}
+    last_snapshot: dict[str, tuple[float, float]] = {}
+
+    txn_by_date: dict[date, list[dict]] = defaultdict(list)
+    for txn in sorted_txns:
+        txn_by_date[_parse_date(txn)].append(txn)
+
+    # Walk from start_date forward
+    current = start_date
+    while current <= end_date:
+        day_txns = txn_by_date.get(current, [])
+        for txn in day_txns:
+            ticker = txn.get("ticker", "")
+            qty = float(txn.get("quantity") or 0)
+            price = float(txn.get("price") or 0)
+            action = (txn.get("action") or "buy").lower()
+            if action in ("buy", "purchase"):
+                prev_qty, prev_avg = last_snapshot.get(ticker, (0.0, 0.0))
+                new_qty = prev_qty + qty
+                new_avg = ((prev_avg * prev_qty) + (price * qty)) / new_qty if new_qty > 0 else price
+                last_snapshot[ticker] = (new_qty, new_avg)
+            elif action in ("sell", "sale"):
+                prev_qty, prev_avg = last_snapshot.get(ticker, (0.0, 0.0))
+                new_qty = max(0.0, prev_qty - qty)
+                last_snapshot[ticker] = (new_qty, prev_avg)
+        daily_snapshots[current] = dict(last_snapshot)
+        current += timedelta(days=1)
+
+    # If no transactions at all, use current holdings as flat baseline
+    if not sorted_txns:
+        try:
+            holdings = get_holdings(user_id)
+            for h in holdings:
+                ticker = h.get("ticker", "")
+                qty = float(h.get("quantity") or 0)
+                avg = float(h.get("avg_buy_price") or 0)
+                last_snapshot[ticker] = (qty, avg)
+        except Exception:
+            pass
+        current = start_date
+        while current <= end_date:
+            daily_snapshots[current] = dict(last_snapshot)
+            current += timedelta(days=1)
+
+    # Build time series using avg_buy_price as value proxy (no live price lookback)
+    result = []
+    for d in sorted(daily_snapshots.keys()):
+        snap = daily_snapshots[d]
+        value = sum(qty * avg for (qty, avg) in snap.values() if qty > 0)
+        result.append({"date": d.isoformat(), "value": round(value, 2)})
+
+    return {"history": result, "days": days, "points": len(result)}
+
 
 @app.post("/holdings")
 def create_holding(holding: HoldingIn, user_id: str = Depends(get_user_id)):

@@ -14,6 +14,8 @@ const News = lazy(() => import('./pages/News.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
+const Analytics = lazy(() => import('./pages/Analytics.jsx'));
+const Watchlist = lazy(() => import('./pages/Watchlist.jsx'));
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -38,41 +40,45 @@ export default function App() {
   return (
     <Suspense fallback={<div style={{padding:24}}>Loading…</div>}>
       <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route
-        path="/onboarding"
-        element={
-          <ProtectedRoute>
-            <Onboarding />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/app"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate to="/app/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="portfolio" element={<Portfolio />} />
-        <Route path="upload" element={<Upload />} />
-        <Route path="advisor" element={<AIAdvisor />} />
-        <Route path="news" element={<News />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/app"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/app/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="portfolio" element={<Portfolio />} />
+          <Route path="upload" element={<Upload />} />
+          <Route path="advisor" element={<AIAdvisor />} />
+          <Route path="news" element={<News />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="watchlist" element={<Watchlist />} />
           <Route path="profile" element={<Profile />} />
-        <Route path="settings" element={<Settings />} />
-      </Route>
-      <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
-      <Route path="/portfolio" element={<Navigate to="/app/portfolio" replace />} />
-      <Route path="/upload" element={<Navigate to="/app/upload" replace />} />
-      <Route path="/advisor" element={<Navigate to="/app/advisor" replace />} />
-      <Route path="/news" element={<Navigate to="/app/news" replace />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
+        <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+        <Route path="/portfolio" element={<Navigate to="/app/portfolio" replace />} />
+        <Route path="/upload" element={<Navigate to="/app/upload" replace />} />
+        <Route path="/advisor" element={<Navigate to="/app/advisor" replace />} />
+        <Route path="/news" element={<Navigate to="/app/news" replace />} />
+        <Route path="/analytics" element={<Navigate to="/app/analytics" replace />} />
+        <Route path="/watchlist" element={<Navigate to="/app/watchlist" replace />} />
         <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
-      <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

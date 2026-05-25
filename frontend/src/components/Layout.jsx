@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
+  BarChart2,
   Bell,
   Bot,
   Briefcase,
   ChevronLeft,
   ChevronRight,
   Command,
+  Eye,
   LayoutDashboard,
   Newspaper,
   Settings,
@@ -25,9 +27,11 @@ import { Search as SearchIcon } from 'lucide-react';
 const NAV = [
   { to: '/dashboard', label: 'Command', icon: LayoutDashboard, group: 'Core' },
   { to: '/portfolio', label: 'Portfolio', icon: Briefcase, group: 'Core' },
+  { to: '/analytics', label: 'Analytics', icon: BarChart2, group: 'Core' },
   { to: '/upload', label: 'Import', icon: Upload, group: 'Data' },
   { to: '/advisor', label: 'Advisor', icon: Bot, group: 'Intelligence' },
   { to: '/news', label: 'Signals', icon: Newspaper, group: 'Intelligence' },
+  { to: '/watchlist', label: 'Watchlist', icon: Eye, group: 'Intelligence' },
   { to: '/profile', label: 'Profile', icon: ShieldCheck, group: 'Control' },
   { to: '/settings', label: 'System', icon: Settings, group: 'Control' },
 ];
@@ -41,9 +45,11 @@ const grouped = NAV.reduce((acc, item) => {
 const titles = {
   '/dashboard': ['Command Center', 'Portfolio intelligence cockpit'],
   '/portfolio': ['Portfolio Matrix', 'Risk, allocation, and live exposure'],
+  '/analytics': ['Analytics', 'P&L breakdown, allocation, and heatmaps'],
   '/upload': ['Data Ingestion', 'Broker imports and OCR processing'],
   '/advisor': ['AI Analyst', 'Portfolio-aware financial reasoning'],
   '/news': ['Market Signals', 'Editorial intelligence feed'],
+  '/watchlist': ['Watchlist', 'Tracked symbols and price targets'],
   '/profile': ['Client Profile', 'Account settings and preferences'],
   '/settings': ['System Control', 'Keys, targets, and preferences'],
 };
@@ -83,14 +89,15 @@ export default function Layout() {
       label: item.ticker,
       description: item.company_name || 'Watchlist',
       keywords: [item.ticker, item.company_name, 'watchlist', 'signals'],
-      action: () => navigate('/app/news'),
+      action: () => navigate('/app/watchlist'),
     }));
 
     const actionItems = [
       { id: 'action:refresh', label: 'Refresh market data', description: 'Refetch portfolio and market status', keywords: ['refresh', 'reload', 'market'], action: () => refresh() },
       { id: 'action:advisor', label: 'Ask advisor', description: 'Open the AI Analyst', keywords: ['advisor', 'ai', 'ask'], action: () => navigate('/app/advisor') },
       { id: 'action:import', label: 'Import CSV', description: 'Open secure ingestion', keywords: ['import', 'csv', 'upload'], action: () => navigate('/app/upload') },
-      { id: 'action:watchlist', label: 'Open watchlist', description: 'Monitor tracked symbols', keywords: ['watchlist', 'signals'], action: () => navigate('/app/news') },
+      { id: 'action:watchlist', label: 'Open watchlist', description: 'Monitor tracked symbols', keywords: ['watchlist', 'signals'], action: () => navigate('/app/watchlist') },
+      { id: 'action:analytics', label: 'Open analytics', description: 'P&L breakdown and heatmaps', keywords: ['analytics', 'pnl', 'chart'], action: () => navigate('/app/analytics') },
       { id: 'action:profile', label: 'Open profile', description: 'Account and preferences', keywords: ['profile', 'account', 'settings'], action: () => navigate('/app/profile') },
     ];
 
@@ -108,7 +115,7 @@ export default function Layout() {
 
     const newsSearch = {
       id: `action:news-search:${query}`,
-      label: `Search news: “${query}”`,
+      label: `Search news: "${query}"`,
       description: 'Scan news for the current query',
       keywords: ['news', 'search', query],
       action: () => navigate(`/app/news?q=${encodeURIComponent(query)}`),

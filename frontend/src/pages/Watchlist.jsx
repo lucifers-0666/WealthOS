@@ -1,167 +1,244 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Eye, Loader2 } from 'lucide-react';
-import { panelStyle, fieldStyle, theme } from '../lib/theme.js';
-import { usePortfolio } from '../lib/usePortfolio.js';
-import { EmptyState, PageLoadingState } from '../components/PageStates.jsx';
-import api from '../lib/api.js';
+import { useState, useEffect, useCallback } from 'react';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-function fmt(n, d = 2) {
-  if (n == null || isNaN(n)) return '—';
-  return new Intl.NumberFormat('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d }).format(n);
-}
-
-const inputStyle = (extra = {}) =>
-  fieldStyle({ fontSize: 13, minHeight: 38, padding: '8px 12px', ...extra });
+const fmt = (n, d = 2) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtPct = (n) => (Number(n || 0) >= 0 ? '+' : '') + fmt(n) + '%';
 
 export default function Watchlist() {
-  const { watchlist, addWatch, removeWatch, loading } = usePortfolio();
-  const [ticker, setTicker] = useState('');
-  const [company, setCompany] = useState('');
-  const [targetPrice, setTargetPrice] = useState('');
-  const [adding, setAdding] = useState(false);
-  const [removing, setRemoving] = useState(null);
-  const [error, setError] = useState('');
+  const [items, setItems] = useState([]);
+  const [prices, setPrices] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [alertModal, setAlertModal] = useState(null);
+  const [alertForm, setAlertForm] = useState({ target_price: '', direction: 'above' });
+  const [recentSearches, setRecentSearches] = useState([]);
 
-  async function handleAdd(e) {
-    e.preventDefault();
-    const t = ticker.trim().toUpperCase();
-    if (!t) return;
-    setAdding(true);
-    setError('');
+  useEffect(() => { fetchWatchlist(); }, []);
+  useEffect(() => {
+    if (!items.length) return;
+    fetchPrices();
+    const id = setInterval(fetchPrices, 15000);
+    return () => clearInterval(id);
+  }, [items]);
+
+  const fetchWatchlist = async () => {
+    setLoading(true);
     try {
-      await addWatch({
-        ticker: t,
-        company_name: company.trim() || undefined,
-        target_price: targetPrice ? parseFloat(targetPrice) : undefined,
+      const res = await fetch(`${API}/api/watchlist`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
       });
-      setTicker('');
-      setCompany('');
-      setTargetPrice('');
-    } catch (err) {
-      setError(err?.message || 'Failed to add to watchlist.');
-    } finally {
-      setAdding(false);
-    }
-  }
+      if (res.ok) {
+        const data = await res.json();
+        setItems(data.watchlist || data || []);
+      }
+    } catch (e) { console.warn('Watchlist fetch failed'); }
+    finally { setLoading(false); }
+  };
 
-  async function handleRemove(t) {
-    setRemoving(t);
+  const fetchPrices = useCallback(async () => {
+    if (!items.length) return;
+    const symbols = items.map(i => i.symbol).join(',');
     try {
-      await removeWatch(t);
-    } finally {
-      setRemoving(null);
-    }
-  }
+      const res = await fetch(`${API}/api/market/batch?symbols=${symbols}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPrices(data.prices || data);
+      }
+    } catch (e) { console.warn('Price fetch failed'); }
+  }, [items]);
 
-  if (loading) return <PageLoadingState title="Loading watchlist…" subtitle="Fetching tracked symbols." />;
+  const handleSearch = async (q) => {
+    setSearch(q);
+    if (!q.trim() || q.length < 2) { setSearchResults([]); return; }
+    try {
+      const res = await fetch(`${API}/api/market/search?q=${encodeURIComponent(q)}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(data.results || []);
+      }
+    } catch (e) { setSearchResults([]); }
+  };
+
+  const addSymbol = async (symbol) => {
+    try {
+      const res = await fetch(`${API}/api/watchlist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+        body: JSON.stringify({ symbol }),
+      });
+      if (res.ok) {
+        setSearch('');
+        setSearchResults([]);
+        setRecentSearches(prev => [symbol, ...prev.filter(s => s !== symbol)].slice(0, 5));
+        await fetchWatchlist();
+      }
+    } catch (e) { console.warn('Add watchlist failed'); }
+  };
+
+  const removeSymbol = async (symbol) => {
+    try {
+      await fetch(`${API}/api/watchlist/${symbol}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+      });
+      await fetchWatchlist();
+    } catch (e) { console.warn('Remove watchlist failed'); }
+  };
+
+  const setAlert = async () => {
+    if (!alertModal || !alertForm.target_price) return;
+    try {
+      await fetch(`${API}/api/watchlist/alerts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+        body: JSON.stringify({ symbol: alertModal, ...alertForm }),
+      });
+      setAlertModal(null);
+    } catch (e) { console.warn('Set alert failed'); }
+  };
+
+  const change = (sym) => prices[sym]?.change_pct || 0;
+  const isUp = (sym) => change(sym) >= 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 32 }}>
-      {/* ── Add form ── */}
-      <div style={{ ...panelStyle({ padding: '18px 16px' }) }}>
-        <div className="section-label" style={{ marginBottom: 14 }}>Add to Watchlist</div>
-        <form onSubmit={handleAdd} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <label style={{ color: theme.colors.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>Ticker *</label>
-            <input
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value)}
-              placeholder="RELIANCE"
-              required
-              style={inputStyle({ width: 130 })}
-            />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <label style={{ color: theme.colors.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>Company</label>
-            <input
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder="Reliance Industries"
-              style={inputStyle({ width: 200 })}
-            />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <label style={{ color: theme.colors.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>Target ₹</label>
-            <input
-              value={targetPrice}
-              onChange={(e) => setTargetPrice(e.target.value)}
-              placeholder="3200"
-              type="number"
-              step="0.01"
-              style={inputStyle({ width: 120 })}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={adding}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px',
-              borderRadius: 12, border: `1px solid rgba(200,179,142,0.32)`,
-              background: 'rgba(200,179,142,0.1)', color: theme.colors.gold,
-              fontWeight: 700, fontSize: 13, cursor: adding ? 'not-allowed' : 'pointer',
-              opacity: adding ? 0.6 : 1,
-            }}
-          >
-            {adding ? <Loader2 size={14} className="animate-spin-slow" /> : <Plus size={14} />}
-            Add
-          </button>
-        </form>
-        {error && <div style={{ color: theme.colors.error, fontSize: 12, marginTop: 10 }}>{error}</div>}
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-cream">Watchlist</h1>
+          <p className="text-xs text-muted mt-1">Live prices · Price alerts · Updates every 15s</p>
+        </div>
+        <span className="text-xs text-emerald-400">{items.length} tracked</span>
       </div>
 
-      {/* ── List ── */}
-      {!watchlist.length ? (
-        <EmptyState
-          title="Watchlist is empty"
-          message="Add tickers above to track them here. You'll see live prices alongside your targets."
+      {/* Search */}
+      <div className="relative">
+        <input
+          value={search}
+          onChange={e => handleSearch(e.target.value)}
+          placeholder="Search NSE symbol (e.g. RELIANCE, TCS)..."
+          className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-cream placeholder-muted text-sm focus:outline-none focus:border-emerald-500/50"
         />
-      ) : (
-        <div style={{ ...panelStyle({ padding: '16px' }) }}>
-          <div className="section-label" style={{ marginBottom: 12 }}>Tracked Symbols — {watchlist.length}</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {watchlist.map((item) => (
-              <div
-                key={item.ticker}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 10px', borderRadius: 12,
-                  borderBottom: `1px solid ${theme.colors.border}`,
-                  transition: 'background 180ms ease',
-                }}
-              >
-                <div style={{ width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center', background: 'rgba(134,159,196,0.1)', border: `1px solid rgba(134,159,196,0.22)`, flexShrink: 0 }}>
-                  <Eye size={15} color={theme.colors.accent} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: theme.colors.text, fontWeight: 700, fontSize: 14 }}>{item.ticker}</div>
-                  {item.company_name && <div style={{ color: theme.colors.textMuted, fontSize: 12 }}>{item.company_name}</div>}
-                </div>
-                {item.ltp != null && (
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: theme.colors.text, fontWeight: 700, fontSize: 13 }}>₹{fmt(item.ltp)}</div>
-                    {item.day_change_pct != null && (
-                      <div style={{ color: item.day_change_pct >= 0 ? theme.colors.success : theme.colors.error, fontSize: 11 }}>
-                        {item.day_change_pct >= 0 ? '+' : ''}{fmt(item.day_change_pct, 2)}%
-                      </div>
-                    )}
-                  </div>
-                )}
-                {item.target_price != null && (
-                  <div style={{ textAlign: 'right', minWidth: 72 }}>
-                    <div style={{ color: theme.colors.textMuted, fontSize: 11 }}>Target</div>
-                    <div style={{ color: theme.colors.gold, fontWeight: 700, fontSize: 13 }}>₹{fmt(item.target_price)}</div>
-                  </div>
-                )}
+        {(searchResults.length > 0 || (search.length > 0 && searchResults.length === 0)) && (
+          <div className="absolute top-full mt-1 left-0 right-0 z-20 bg-surface border border-white/10 rounded-xl overflow-hidden shadow-xl">
+            {searchResults.length === 0 ? (
+              <div className="px-4 py-3 text-xs text-muted">No symbols found for "{search}"</div>
+            ) : (
+              searchResults.map(r => (
                 <button
-                  onClick={() => handleRemove(item.ticker)}
-                  disabled={removing === item.ticker}
-                  aria-label={`Remove ${item.ticker} from watchlist`}
-                  style={{ padding: 8, borderRadius: 10, border: 0, background: 'transparent', color: theme.colors.textMuted, cursor: 'pointer', opacity: removing === item.ticker ? 0.4 : 1 }}
+                  key={r.symbol || r}
+                  onClick={() => addSymbol(r.symbol || r)}
+                  className="w-full px-4 py-2.5 text-left text-sm hover:bg-white/5 transition flex items-center justify-between"
                 >
-                  {removing === item.ticker ? <Loader2 size={14} className="animate-spin-slow" /> : <Trash2 size={14} />}
+                  <span className="text-cream font-medium">{r.symbol || r}</span>
+                  <span className="text-xs text-muted">{r.name || ''}</span>
                 </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Recent searches */}
+      {recentSearches.length > 0 && !search && (
+        <div className="flex gap-2 items-center">
+          <span className="text-xs text-muted">Recent:</span>
+          {recentSearches.map(s => (
+            <button key={s} onClick={() => addSymbol(s)}
+              className="text-xs px-2 py-1 rounded-lg bg-white/5 text-muted hover:text-cream transition">
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Table */}
+      {loading ? (
+        <div className="space-y-3">{[...Array(5)].map((_, i) => (
+          <div key={i} className="h-16 rounded-2xl bg-white/5 animate-pulse" />
+        ))}</div>
+      ) : items.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="text-4xl mb-3">📈</div>
+          <p className="font-medium text-cream">Your watchlist is empty</p>
+          <p className="text-xs text-muted mt-1">Search for any NSE symbol above to start tracking</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map(item => {
+            const sym = item.symbol;
+            const p = prices[sym] || {};
+            const up = (p.change_pct || 0) >= 0;
+            return (
+              <div key={sym} className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/8 transition group">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-cream">{sym}</span>
+                    <span className="text-xs text-muted">{item.name || ''}</span>
+                  </div>
+                  <div className="flex gap-3 mt-1 text-xs text-muted">
+                    {p.week_52_high && <span>52W H: ₹{fmt(p.week_52_high)}</span>}
+                    {p.week_52_low && <span>52W L: ₹{fmt(p.week_52_low)}</span>}
+                    {p.market_cap > 0 && <span>Mcap: ₹{fmt(p.market_cap / 1e7, 0)}Cr</span>}
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-sm font-bold text-cream">₹{fmt(p.ltp || 0)}</p>
+                  <p className={`text-xs font-medium ${up ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {fmtPct(p.change_pct)}
+                  </p>
+                </div>
+
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                  <button
+                    onClick={() => { setAlertModal(sym); setAlertForm({ target_price: '', direction: 'above' }); }}
+                    className="p-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 transition text-xs"
+                    title="Set price alert"
+                  >🔔</button>
+                  <button
+                    onClick={() => removeSymbol(sym)}
+                    className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition text-xs"
+                    title="Remove from watchlist"
+                  >×</button>
+                </div>
               </div>
-            ))}
+            );
+          })}
+        </div>
+      )}
+
+      {/* Alert Modal */}
+      {alertModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-surface border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h2 className="text-base font-semibold text-cream">Set Price Alert — {alertModal}</h2>
+            <div className="space-y-3">
+              <select
+                value={alertForm.direction}
+                onChange={e => setAlertForm(p => ({ ...p, direction: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-cream text-sm"
+              >
+                <option value="above">Price goes above</option>
+                <option value="below">Price goes below</option>
+              </select>
+              <input
+                type="number"
+                placeholder="Target price (₹)"
+                value={alertForm.target_price}
+                onChange={e => setAlertForm(p => ({ ...p, target_price: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-cream placeholder-muted text-sm"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setAlertModal(null)} className="px-4 py-2 text-sm text-muted hover:text-cream">Cancel</button>
+              <button onClick={setAlert} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg">Set Alert</button>
+            </div>
           </div>
         </div>
       )}

@@ -17,11 +17,13 @@ from collections import defaultdict
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Header, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import logging
+import asyncio
+import json
 from PIL import Image
 
 load_dotenv()
@@ -50,7 +52,7 @@ from backend.services.live_market_engine import LiveMarketEngine
 
 live_market_engine = LiveMarketEngine()
 
-app = FastAPI(title="WealthOS API", version="2.2.0")
+app = FastAPI(title="WealthOS API", version="2.3.0")
 
 
 @app.on_event("startup")
@@ -146,6 +148,10 @@ class ChatMessageIn(BaseModel):
     message: str
     session_id: Optional[str] = None
 
+class AdvisorChatIn(BaseModel):
+    message: str
+    session_id: Optional[str] = None
+
 class WatchlistIn(BaseModel):
     ticker: str
     exchange: str = "NSE"
@@ -161,7 +167,7 @@ class ImportConfirmIn(BaseModel):
 # ── Health ─────────────────────────────────────────────────────────
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "2.2.0"}
+    return {"status": "ok", "version": "2.3.0"}
 
 
 # ── Market Status ────────────────────────────────────────────────
@@ -180,7 +186,6 @@ async def websocket_market_status(websocket: WebSocket):
     try:
         while True:
             await websocket.send_json({"status": get_market_status()})
-            import asyncio
             await asyncio.sleep(15)
     except WebSocketDisconnect:
         return
@@ -240,24 +245,15 @@ def portfolio_history(
     days: int = 90,
     user_id: str = Depends(get_user_id),
 ):
-    """
-    Returns daily portfolio value reconstructed from transactions.
-    Each point: { date: str (YYYY-MM-DD), value: float }
-    Uses buy/sell transactions to compute running cost basis per day.
-    Falls back to current holdings snapshot when no transactions exist.
-    """
     try:
         transactions = get_transactions(user_id)
     except Exception as e:
         logger.warning(f"portfolio_history: failed to fetch transactions: {e}")
         transactions = []
 
-    # Build daily snapshots from transactions
-    # running_qty[ticker] -> qty held after each transaction
     running_qty: dict[str, float] = defaultdict(float)
-    running_cost: dict[str, float] = defaultdict(float)  # total cost basis per ticker
+    running_cost: dict[str, float] = defaultdict(float)
 
-    # Sort transactions ascending by date
     def _parse_date(t):
         raw = t.get("transaction_date") or t.get("date") or ""
         try:
@@ -270,7 +266,6 @@ def portfolio_history(
     end_date = date.today()
     start_date = end_date - timedelta(days=days)
 
-    # Build a map: date -> {ticker: (qty, avg_price)} at end of that day
     daily_snapshots: dict[date, dict[str, tuple[float, float]]] = {}
     last_snapshot: dict[str, tuple[float, float]] = {}
 
@@ -278,7 +273,6 @@ def portfolio_history(
     for txn in sorted_txns:
         txn_by_date[_parse_date(txn)].append(txn)
 
-    # Walk from start_date forward
     current = start_date
     while current <= end_date:
         day_txns = txn_by_date.get(current, [])
@@ -299,7 +293,6 @@ def portfolio_history(
         daily_snapshots[current] = dict(last_snapshot)
         current += timedelta(days=1)
 
-    # If no transactions at all, use current holdings as flat baseline
     if not sorted_txns:
         try:
             holdings = get_holdings(user_id)
@@ -315,7 +308,6 @@ def portfolio_history(
             daily_snapshots[current] = dict(last_snapshot)
             current += timedelta(days=1)
 
-    # Build time series using avg_buy_price as value proxy (no live price lookback)
     result = []
     for d in sorted(daily_snapshots.keys()):
         snap = daily_snapshots[d]
@@ -519,9 +511,9 @@ def import_confirm(body: ImportConfirmIn, user_id: str = Depends(get_user_id)):
         raise HTTPException(status_code=500, detail=f"Confirm failed: {e}")
 
 
-# ── AI CFO Chat ──────────────────────────────────────────────────
+# ── AI CFO Chat (legacy route — kept for compatibility) ──────────
 @app.post("/ai/chat")
-async def ai_chat(body: ChatMessageIn, user_id: str = Depends(get_user_id)):
+async def ai_chat_legacy(body: ChatMessageIn, user_id: str = Depends(get_user_id)):
     session_id = body.session_id or str(uuid.uuid4())
     portfolio = get_portfolio_summary(user_id)
     history = get_conversation_history(user_id, session_id)
@@ -530,9 +522,128 @@ async def ai_chat(body: ChatMessageIn, user_id: str = Depends(get_user_id)):
         response = get_cfo_response(user_message=body.message, portfolio=portfolio, history=history)
     except Exception as e:
         logger.error(f"AI chat error: {e}", exc_info=e)
-        return {"success": False, "error": str(e), "message": "AI service unavailable", "session_id": session_id}
+        return {
+            "success": False,
+            "error": "advisor_unavailable",
+            "reply": "Advisor systems are temporarily under elevated load. Please try again in a moment.",
+            "session_id": session_id
+        }
     save_message(user_id, session_id, "assistant", response, tokens=len(response) // 4)
     return {"reply": response, "session_id": session_id}
+
+
+# ── AI Advisor Routes (frontend-facing) ──────────────────────────
+@app.post("/api/advisor/chat", tags=["AI Advisor"])
+async def advisor_chat(body: AdvisorChatIn, user_id: str = Depends(get_user_id)):
+    """
+    Primary AI advisor endpoint used by AIAdvisor.jsx (non-streaming fallback).
+    Returns: { reply: str, session_id: str }
+    Never exposes raw error strings to the frontend.
+    """
+    session_id = body.session_id or str(uuid.uuid4())
+    try:
+        portfolio = get_portfolio_summary(user_id)
+    except Exception:
+        portfolio = {}
+    try:
+        history = get_conversation_history(user_id, session_id)
+    except Exception:
+        history = []
+
+    try:
+        save_message(user_id, session_id, "user", body.message, portfolio_snapshot=portfolio)
+    except Exception:
+        pass
+
+    try:
+        response = get_cfo_response(
+            user_message=body.message,
+            portfolio=portfolio,
+            history=history
+        )
+        if not response or not response.strip():
+            response = "I was unable to generate a response for that query. Please try rephrasing."
+    except Exception as e:
+        logger.error(f"advisor_chat error: {e}", exc_info=e)
+        response = "Advisor systems are temporarily under elevated load. Your portfolio context is preserved — please try again in a moment."
+
+    try:
+        save_message(user_id, session_id, "assistant", response, tokens=len(response) // 4)
+    except Exception:
+        pass
+
+    return {"reply": response, "session_id": session_id}
+
+
+@app.post("/api/advisor/stream", tags=["AI Advisor"])
+async def advisor_stream(body: AdvisorChatIn, user_id: str = Depends(get_user_id)):
+    """
+    Streaming AI advisor endpoint — returns Server-Sent Events.
+    Frontend reads via ReadableStream and renders tokens incrementally.
+    Falls back gracefully if Gemini streaming is unavailable.
+    """
+    session_id = body.session_id or str(uuid.uuid4())
+    try:
+        portfolio = get_portfolio_summary(user_id)
+    except Exception:
+        portfolio = {}
+    try:
+        history = get_conversation_history(user_id, session_id)
+    except Exception:
+        history = []
+
+    try:
+        save_message(user_id, session_id, "user", body.message, portfolio_snapshot=portfolio)
+    except Exception:
+        pass
+
+    async def event_generator():
+        collected = ""
+        try:
+            # Try to get a full response and stream it word-by-word for smooth UX
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: get_cfo_response(
+                    user_message=body.message,
+                    portfolio=portfolio,
+                    history=history
+                )
+            )
+            if not response or not response.strip():
+                response = "I was unable to generate a response for that query. Please try rephrasing."
+
+            # Stream word-by-word with small delay for natural feel
+            words = response.split(' ')
+            for i, word in enumerate(words):
+                chunk = word + (' ' if i < len(words) - 1 else '')
+                collected += chunk
+                payload = json.dumps({"text": chunk})
+                yield f"data: {payload}\n\n"
+                await asyncio.sleep(0.02)  # ~50 words/sec
+
+        except Exception as e:
+            logger.error(f"advisor_stream error: {e}", exc_info=e)
+            fallback = "Advisor systems are temporarily under elevated load. Please try again in a moment."
+            collected = fallback
+            yield f"data: {json.dumps({'text': fallback})}\n\n"
+
+        yield "data: [DONE]\n\n"
+
+        try:
+            if collected.strip():
+                save_message(user_id, session_id, "assistant", collected.strip(), tokens=len(collected) // 4)
+        except Exception:
+            pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        }
+    )
 
 
 @app.get("/ai/history")
@@ -541,7 +652,6 @@ def ai_history(session_id: str, user_id: str = Depends(get_user_id)):
 
 
 # ── Serve React frontend (production only) ───────────────────────
-# Mount AFTER all API routes so /api/* is never caught by static handler
 _frontend_dist = Path(__file__).parent / "frontend" / "dist"
 if _frontend_dist.exists():
     app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="spa")

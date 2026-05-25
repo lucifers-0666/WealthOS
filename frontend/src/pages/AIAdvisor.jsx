@@ -13,6 +13,8 @@ const SMART_PROMPTS = [
   { label: '💻 IT Sector -15%', text: 'Simulate a 15% drop in IT sector — what is my estimated portfolio impact?' },
 ];
 
+const FALLBACK_MSG = 'Advisor systems are temporarily under elevated load. Your portfolio context is preserved — please try again in a moment.';
+
 export default function AIAdvisor() {
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Welcome to WealthOS AI Advisor. I have full context of your portfolio. How can I help you today?' }
@@ -20,7 +22,6 @@ export default function AIAdvisor() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(false);
-  const [error, setError] = useState(null);
   const endRef = useRef(null);
   const abortRef = useRef(null);
   const { portfolio, holdings } = usePortfolio();
@@ -34,49 +35,27 @@ export default function AIAdvisor() {
     const h = holdings || [];
     const topHoldings = h
       .slice(0, 8)
-      .map(hh => `${hh.symbol}: ${hh.quantity} shares @ ₹${hh.avg_price}, current ₹${hh.ltp || hh.current_price || hh.avg_price}, P&L: ${hh.pnl_pct ? hh.pnl_pct.toFixed(1) : 0}%`)
+      .map(hh => `${hh.symbol || hh.ticker}: ${hh.quantity} @ ₹${hh.avg_price || hh.avg_buy_price}, P&L: ${hh.pnl_pct ? hh.pnl_pct.toFixed(1) : 0}%`)
       .join('; ');
     const totalValue = portfolio?.total_value || h.reduce((s, hh) => s + (hh.current_value || 0), 0);
     const totalInvested = portfolio?.total_invested || h.reduce((s, hh) => s + (hh.invested_value || 0), 0);
     const totalPnl = totalValue - totalInvested;
     const pnlPct = totalInvested > 0 ? ((totalPnl / totalInvested) * 100).toFixed(2) : 0;
-    return `
-[PORTFOLIO CONTEXT]
-Total Value: ₹${Math.round(totalValue).toLocaleString('en-IN')}
-Total Invested: ₹${Math.round(totalInvested).toLocaleString('en-IN')}
-Overall P&L: ₹${Math.round(totalPnl).toLocaleString('en-IN')} (${pnlPct}%)
-Holdings Count: ${h.length}
-Top Holdings: ${topHoldings}
-[END CONTEXT]`;
+    return `[PORTFOLIO CONTEXT] Total Value: ₹${Math.round(totalValue).toLocaleString('en-IN')} | Invested: ₹${Math.round(totalInvested).toLocaleString('en-IN')} | P&L: ${pnlPct}% | Holdings: ${h.length} | Top: ${topHoldings}`;
   }, [portfolio, holdings]);
 
-  const sendMessage = useCallback(async (text) => {
-    const userText = (text || input).trim();
-    if (!userText || loading) return;
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('sb-access-token') || localStorage.getItem('token') || ''}`,
+  });
 
-    setError(null);
-    setInput('');
-    const userMsg = { role: 'user', content: userText };
-    setMessages(prev => [...prev, userMsg]);
-    setLoading(true);
-
-    const context = buildPortfolioContext();
-    const fullPrompt = context ? `${context}\n\nUser: ${userText}` : userText;
-
-    // Try streaming first, fallback to regular
-    const streamSuccess = await tryStream(fullPrompt);
-    if (!streamSuccess) {
-      await tryRegular(fullPrompt);
-    }
-    setLoading(false);
-  }, [input, loading, buildPortfolioContext]);
-
-  const tryStream = async (prompt) => {
+  // ── Stream attempt (primary) ─────────────────────────────────
+  const tryStream = useCallback(async (prompt) => {
     try {
       abortRef.current = new AbortController();
       const res = await fetch(`${API}/api/advisor/stream`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ message: prompt }),
         signal: abortRef.current.signal,
       });
@@ -92,13 +71,11 @@ Top Holdings: ${topHoldings}
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') break;
-            try { full += JSON.parse(data).text || ''; } catch { full += data; }
-          }
+        for (const line of chunk.split('\n')) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try { full += JSON.parse(data).text || ''; } catch { full += data; }
         }
         setMessages(prev => {
           const copy = [...prev];
@@ -110,46 +87,57 @@ Top Holdings: ${topHoldings}
       setMessages(prev => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
-        if (last?.streaming) copy[copy.length - 1] = { role: 'assistant', content: full };
+        if (last?.streaming) copy[copy.length - 1] = { role: 'assistant', content: full || FALLBACK_MSG };
         return copy;
       });
       setStreaming(false);
       return true;
     } catch (e) {
-      if (e.name === 'AbortError') return true;
       setStreaming(false);
+      if (e.name === 'AbortError') return true;
       return false;
     }
-  };
+  }, []);
 
-  const tryRegular = async (prompt) => {
-    let retries = 2;
-    while (retries >= 0) {
+  // ── Non-stream fallback (retry 3x) ───────────────────────────
+  const tryRegular = useCallback(async (prompt) => {
+    let attempts = 3;
+    while (attempts > 0) {
       try {
         const res = await fetch(`${API}/api/advisor/chat`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ message: prompt }),
         });
         if (res.ok) {
           const data = await res.json();
-          const reply = data.reply || data.response || data.message || 'I could not generate a response right now.';
+          const reply = data.reply || data.response || data.message || FALLBACK_MSG;
           setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
           return;
         }
-        retries--;
-        if (retries >= 0) await new Promise(r => setTimeout(r, 1000));
-      } catch (e) {
-        retries--;
-        if (retries >= 0) await new Promise(r => setTimeout(r, 1200));
-      }
+      } catch (_) {}
+      attempts--;
+      if (attempts > 0) await new Promise(r => setTimeout(r, 1500));
     }
-    setMessages(prev => [...prev, {
-      role: 'assistant',
-      content: 'Advisor systems are temporarily under elevated load. Please try again in a moment.',
-      isError: true,
-    }]);
-  };
+    setMessages(prev => [...prev, { role: 'assistant', content: FALLBACK_MSG, isError: true }]);
+  }, []);
+
+  const sendMessage = useCallback(async (text) => {
+    const userText = (text || input).trim();
+    if (!userText || loading) return;
+
+    setInput('');
+    setMessages(prev => [...prev, { role: 'user', content: userText }]);
+    setLoading(true);
+
+    const context = buildPortfolioContext();
+    const fullPrompt = context ? `${context}\n\nUser: ${userText}` : userText;
+
+    const streamOk = await tryStream(fullPrompt);
+    if (!streamOk) await tryRegular(fullPrompt);
+
+    setLoading(false);
+  }, [input, loading, buildPortfolioContext, tryStream, tryRegular]);
 
   return (
     <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
@@ -162,13 +150,13 @@ Top Holdings: ${topHoldings}
         {loading && (
           <span className="flex items-center gap-2 text-xs text-emerald-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            Thinking...
+            {streaming ? 'Streaming...' : 'Thinking...'}
           </span>
         )}
       </div>
 
       {/* Smart Prompts */}
-      <div className="px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar border-b border-white/5">
+      <div className="px-4 py-3 flex gap-2 overflow-x-auto scrollbar-none border-b border-white/5">
         {SMART_PROMPTS.map(sp => (
           <button
             key={sp.label}
@@ -190,13 +178,13 @@ Top Holdings: ${topHoldings}
                 msg.role === 'user'
                   ? 'bg-emerald-600/20 border border-emerald-500/20 text-cream'
                   : msg.isError
-                  ? 'bg-red-900/20 border border-red-500/20 text-red-300'
+                  ? 'bg-amber-900/20 border border-amber-500/20 text-amber-200'
                   : 'bg-white/5 border border-white/10 text-cream/90'
               }`}
             >
               {msg.content}
               {msg.streaming && (
-                <span className="inline-flex gap-0.5 ml-1">
+                <span className="inline-flex gap-0.5 ml-1 align-middle">
                   <span className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -224,9 +212,10 @@ Top Holdings: ${topHoldings}
             disabled={loading || !input.trim()}
             className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition disabled:opacity-40"
           >
-            Send
+            {loading ? '...' : 'Send'}
           </button>
         </div>
+        <p className="text-xs text-muted/50 mt-2 text-center">Powered by Gemini · Portfolio context auto-injected</p>
       </div>
     </div>
   );

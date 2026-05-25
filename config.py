@@ -17,6 +17,8 @@ SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 NEWSAPI_KEY = os.getenv("NEWSAPI_KEY", "")
 ALPHA_VANTAGE_KEY = os.getenv("ALPHA_VANTAGE_KEY", "")
+TWELVE_DATA_KEY = os.getenv("TWELVE_DATA_KEY", "")
+FINNHUB_KEY = os.getenv("FINNHUB_KEY", "")
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN", "")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 SECRET_KEY = os.getenv("SECRET_KEY", "")
@@ -29,6 +31,8 @@ def get_missing_keys():
     if not GOOGLE_API_KEY: missing.append("GOOGLE_API_KEY")
     if not NEWSAPI_KEY: missing.append("NEWSAPI_KEY")
     if not ALPHA_VANTAGE_KEY: missing.append("ALPHA_VANTAGE_KEY")
+    if not TWELVE_DATA_KEY: missing.append("TWELVE_DATA_KEY")
+    if not FINNHUB_KEY: missing.append("FINNHUB_KEY")
     if not SECRET_KEY: missing.append("SECRET_KEY")
     return missing
 

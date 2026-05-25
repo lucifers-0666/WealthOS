@@ -12,6 +12,7 @@ const Upload = lazy(() => import('./pages/Upload.jsx'));
 const AIAdvisor = lazy(() => import('./pages/AIAdvisor.jsx'));
 const News = lazy(() => import('./pages/News.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
+const Profile = lazy(() => import('./pages/Profile.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 
 function ProtectedRoute({ children }) {
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="upload" element={<Upload />} />
         <Route path="advisor" element={<AIAdvisor />} />
         <Route path="news" element={<News />} />
+          <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
       </Route>
       <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
@@ -68,6 +70,7 @@ export default function App() {
       <Route path="/upload" element={<Navigate to="/app/upload" replace />} />
       <Route path="/advisor" element={<Navigate to="/app/advisor" replace />} />
       <Route path="/news" element={<Navigate to="/app/news" replace />} />
+        <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
       <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -28,6 +28,7 @@ const NAV = [
   { to: '/upload', label: 'Import', icon: Upload, group: 'Data' },
   { to: '/advisor', label: 'Advisor', icon: Bot, group: 'Intelligence' },
   { to: '/news', label: 'Signals', icon: Newspaper, group: 'Intelligence' },
+  { to: '/profile', label: 'Profile', icon: ShieldCheck, group: 'Control' },
   { to: '/settings', label: 'System', icon: Settings, group: 'Control' },
 ];
 
@@ -43,6 +44,7 @@ const titles = {
   '/upload': ['Data Ingestion', 'Broker imports and OCR processing'],
   '/advisor': ['AI Analyst', 'Portfolio-aware financial reasoning'],
   '/news': ['Market Signals', 'Editorial intelligence feed'],
+  '/profile': ['Client Profile', 'Account settings and preferences'],
   '/settings': ['System Control', 'Keys, targets, and preferences'],
 };
 
@@ -50,10 +52,11 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState('');
+  const [paletteIndex, setPaletteIndex] = useState(0);
   const paletteInputRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { holdings, refresh } = usePortfolio();
+  const { holdings, watchlist, refresh } = usePortfolio();
   const [title, sub] = titles[location.pathname.replace('/app', '')] || ['WealthOS', 'Financial operating system'];
   const meta = useMemo(() => ({ latency: '22ms' }), []);
 
@@ -74,21 +77,44 @@ export default function Layout() {
       action: () => navigate('/app/portfolio'),
     }));
 
+    const watchItems = watchlist.slice(0, 10).map((item) => ({
+      id: `watchlist:${item.id || item.ticker}`,
+      label: item.ticker,
+      description: item.company_name || 'Watchlist',
+      keywords: [item.ticker, item.company_name, 'watchlist', 'signals'],
+      action: () => navigate('/app/news'),
+    }));
+
     const actionItems = [
       { id: 'action:refresh', label: 'Refresh market data', description: 'Refetch portfolio and market status', keywords: ['refresh', 'reload', 'market'], action: () => refresh() },
       { id: 'action:advisor', label: 'Ask advisor', description: 'Open the AI Analyst', keywords: ['advisor', 'ai', 'ask'], action: () => navigate('/app/advisor') },
       { id: 'action:import', label: 'Import CSV', description: 'Open secure ingestion', keywords: ['import', 'csv', 'upload'], action: () => navigate('/app/upload') },
+      { id: 'action:watchlist', label: 'Open watchlist', description: 'Monitor tracked symbols', keywords: ['watchlist', 'signals'], action: () => navigate('/app/news') },
+      { id: 'action:profile', label: 'Open profile', description: 'Account and preferences', keywords: ['profile', 'account', 'settings'], action: () => navigate('/app/profile') },
     ];
 
-    return [...actionItems, ...pageItems, ...holdingItems];
-  }, [holdings, navigate, refresh]);
+    return [...actionItems, ...pageItems, ...holdingItems, ...watchItems];
+  }, [holdings, navigate, refresh, watchlist]);
 
   const fuse = useMemo(() => new Fuse(commandItems, { keys: ['label', 'description', 'keywords'], threshold: 0.35, ignoreLocation: true }), [commandItems]);
   const commandResults = useMemo(() => {
     const query = paletteQuery.trim();
-    if (!query) return commandItems.slice(0, 8);
-    return fuse.search(query).slice(0, 8).map((result) => result.item);
-  }, [commandItems, fuse, paletteQuery]);
+    const baseResults = !query
+      ? commandItems.slice(0, 8)
+      : fuse.search(query).slice(0, 7).map((result) => result.item);
+
+    if (!query) return baseResults;
+
+    const newsSearch = {
+      id: `action:news-search:${query}`,
+      label: `Search news: “${query}”`,
+      description: 'Scan news for the current query',
+      keywords: ['news', 'search', query],
+      action: () => navigate(`/app/news?q=${encodeURIComponent(query)}`),
+    };
+
+    return [newsSearch, ...baseResults];
+  }, [commandItems, fuse, navigate, paletteQuery]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -109,6 +135,7 @@ export default function Layout() {
       window.setTimeout(() => paletteInputRef.current?.focus(), 0);
     } else {
       setPaletteQuery('');
+      setPaletteIndex(0);
     }
   }, [paletteOpen]);
 
@@ -116,6 +143,23 @@ export default function Layout() {
     item.action();
     setPaletteOpen(false);
     setPaletteQuery('');
+    setPaletteIndex(0);
+  }
+
+  function handlePaletteKeyDown(event) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setPaletteIndex((idx) => Math.min(idx + 1, commandResults.length - 1));
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setPaletteIndex((idx) => Math.max(idx - 1, 0));
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const item = commandResults[paletteIndex];
+      if (item) runCommand(item);
+    }
   }
 
   return (
@@ -244,24 +288,33 @@ export default function Layout() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {/* Search bar */}
-            <button type="button" onClick={() => setPaletteOpen(true)} className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 9, width: 280, padding: '8px 10px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(10,32,31,0.42)', cursor: 'pointer' }}>
+            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 9, width: 300, padding: '8px 10px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(10,32,31,0.42)' }}>
               <SearchIcon size={14} color={theme.colors.textMuted} />
-              <span style={{ color: theme.colors.textMuted, fontSize: 12, flex: 1, textAlign: 'left' }}>Search assets, filings, notes</span>
+              <input
+                value={paletteQuery}
+                onChange={(e) => {
+                  setPaletteQuery(e.target.value);
+                  setPaletteOpen(true);
+                }}
+                onFocus={() => setPaletteOpen(true)}
+                placeholder="Search holdings, watchlist, news…"
+                style={{ flex: 1, border: 0, outline: 'none', background: 'transparent', color: theme.colors.text, fontSize: 12 }}
+              />
               <span className="mono" style={{ color: theme.colors.textMuted, fontSize: 10, border: `1px solid ${theme.colors.border}`, borderRadius: 6, padding: '1px 5px' }}>CTRL K</span>
-            </button>
+            </div>
 
             {/* ── Real-time market status badge ── */}
             <div className="hide-tablet">
               <MarketStatusBadge showClock={true} showNextOpen={true} />
             </div>
 
-            <button className="btn-icon" aria-label="AI actions"><Zap size={15} /></button>
-            <button className="btn-icon" aria-label="Command menu"><Command size={15} /></button>
+            <button className="btn-icon" aria-label="AI actions" onClick={() => navigate('/app/advisor')}><Zap size={15} /></button>
+            <button className="btn-icon" aria-label="Command menu" onClick={() => setPaletteOpen(true)}><Command size={15} /></button>
             <button className="btn-icon" aria-label="Notifications" style={{ position: 'relative' }}>
               <Bell size={15} />
               <span style={{ position: 'absolute', top: 8, right: 8, width: 6, height: 6, borderRadius: 99, background: theme.colors.gold }} />
             </button>
-            <div style={{ width: 36, height: 36, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'rgba(200,179,142,0.1)', border: '1px solid rgba(200,179,142,0.22)', color: theme.colors.gold, fontWeight: 800 }}>W</div>
+            <button onClick={() => navigate('/app/profile')} style={{ width: 36, height: 36, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'rgba(200,179,142,0.1)', border: '1px solid rgba(200,179,142,0.22)', color: theme.colors.gold, fontWeight: 800, cursor: 'pointer' }} aria-label="Open profile">W</button>
           </div>
         </header>
 
@@ -293,6 +346,7 @@ export default function Layout() {
                   ref={paletteInputRef}
                   value={paletteQuery}
                   onChange={(e) => setPaletteQuery(e.target.value)}
+                  onKeyDown={handlePaletteKeyDown}
                   placeholder="Search holdings, pages, or quick actions…"
                   style={{ flex: 1, border: 0, outline: 'none', background: 'transparent', color: theme.colors.text, fontSize: 14 }}
                 />
@@ -303,7 +357,7 @@ export default function Layout() {
                   <button
                     key={item.id}
                     onClick={() => runCommand(item)}
-                    style={{ textAlign: 'left', border: `1px solid ${theme.colors.border}`, borderRadius: 12, background: 'rgba(255,255,255,0.01)', padding: '12px 14px', cursor: 'pointer', color: theme.colors.text }}
+                    style={{ textAlign: 'left', border: `1px solid ${theme.colors.border}`, borderRadius: 12, background: commandResults[paletteIndex]?.id === item.id ? 'rgba(200,179,142,0.08)' : 'rgba(255,255,255,0.01)', padding: '12px 14px', cursor: 'pointer', color: theme.colors.text }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                       <strong style={{ fontSize: 14 }}>{item.label}</strong>

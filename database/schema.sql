@@ -12,11 +12,19 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name TEXT,
+    username TEXT,
     avatar_url TEXT,
+    bio TEXT,
     currency TEXT DEFAULT 'INR' CHECK (currency IN ('INR', 'USD', 'EUR', 'GBP')),
     risk_profile TEXT DEFAULT 'moderate' CHECK (risk_profile IN ('conservative', 'moderate', 'aggressive')),
+    investment_horizon TEXT,
     investment_goal TEXT,
     target_corpus DECIMAL(20, 2),
+    preferred_sectors TEXT[],
+    rebalance_frequency TEXT,
+    investment_profile JSONB,
+    notification_settings JSONB,
+    ui_preferences JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

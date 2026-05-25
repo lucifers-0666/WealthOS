@@ -4,10 +4,12 @@
  * and backed by React Query for caching, retries, and background refetches.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from './api.js';
 import { getPortfolioHoldings } from './portfolioStore.js';
+import { createReconnectingSocket } from '../services/websocket.js';
+import { useAuth } from './useAuth.js';
 
 const n = (value) => {
   const num = Number(value);
@@ -109,6 +111,9 @@ async function fetchPortfolioBundle() {
 
 export function usePortfolio() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const liveSocketRef = useRef(null);
+  const previousPricesRef = useRef({});
 
   const bundleQuery = useQuery({
     queryKey: ['portfolio-bundle'],
@@ -194,6 +199,57 @@ export function usePortfolio() {
     await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
   };
 
+  useEffect(() => {
+    const wsBase = (import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/^http/i, 'ws');
+    const wsRoot = wsBase.replace(/\/$/, '');
+    const wsUrl = user?.id ? `${wsRoot}/ws/market-updates?user_id=${encodeURIComponent(user.id)}` : `${wsRoot}/ws/market-updates`;
+
+    liveSocketRef.current = createReconnectingSocket(wsUrl, {
+      onMessage: (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (!payload || payload.type !== 'market_update') return;
+
+          queryClient.setQueryData(['portfolio-bundle'], (current) => {
+            if (!current) return current;
+            const incomingHoldings = Array.isArray(payload.holdings) && payload.holdings.length
+              ? payload.holdings.map(normalizeHolding)
+              : current.holdings;
+
+            const updatedHoldings = incomingHoldings.map((holding) => {
+              const prevPrice = previousPricesRef.current[holding.ticker];
+              const nextPrice = holding.current_price;
+              let flash = null;
+              if (Number.isFinite(prevPrice) && Number.isFinite(nextPrice) && prevPrice !== nextPrice) {
+                flash = nextPrice > prevPrice ? 'up' : 'down';
+              }
+              previousPricesRef.current[holding.ticker] = nextPrice;
+              return {
+                ...holding,
+                price_flash: flash,
+                price_source: payload.sources?.[holding.ticker],
+                price_stale: payload.stale_tickers?.includes(holding.ticker) || false,
+              };
+            });
+
+            return {
+              ...current,
+              holdings: updatedHoldings,
+              watchlist: Array.isArray(payload.watchlist) ? payload.watchlist : current.watchlist,
+              summary: buildSummary(updatedHoldings),
+              market_status: payload.market_status || current.market_status,
+              live_updated_at: payload.updated_at || Date.now(),
+            };
+          });
+        } catch {
+          // Ignore malformed live updates; polling will keep data fresh.
+        }
+      },
+    });
+
+    return () => liveSocketRef.current?.close();
+  }, [queryClient, user?.id]);
+
   return {
     portfolio,
     holdings,
@@ -202,6 +258,8 @@ export function usePortfolio() {
     watchlist,
     loading,
     error,
+    marketStatus: bundleQuery.data?.market_status || null,
+    liveUpdatedAt: bundleQuery.data?.live_updated_at || null,
     refresh,
     addHolding: async (data) => addHoldingMutation.mutateAsync(data),
     removeHolding: async (id) => removeHoldingMutation.mutateAsync(id),

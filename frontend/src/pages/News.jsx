@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { usePortfolio } from '../lib/usePortfolio.js';
 import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
 import { ArrowUpRight, Search, RadioTower, AlertTriangle } from 'lucide-react';
@@ -53,6 +54,7 @@ function ArticleCard({ article }) {
 
 export default function News() {
   const { holdings } = usePortfolio();
+  const [searchParams] = useSearchParams();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [category, setCategory] = useState('All');
@@ -62,6 +64,13 @@ export default function News() {
 
   const portfolioTickers = useMemo(() => holdings.slice(0, 8).map((h) => h.ticker), [holdings]);
   const query = useMemo(() => search || '', [search]);
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setSearch(q);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     setLoading(true);

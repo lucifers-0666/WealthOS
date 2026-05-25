@@ -66,7 +66,10 @@ def get_or_create_profile(user_id: str, full_name: str = None) -> dict:
 
 def update_profile(user_id: str, updates: dict) -> dict:
     sb = get_supabase()
-    res = sb.table("profiles").update(updates).eq("id", user_id).execute()
+    res = _execute_with_missing_column_retry(
+        lambda clean_payload: sb.table("profiles").update(clean_payload).eq("id", user_id),
+        updates,
+    )
     return res.data[0] if res.data else {}
 
 

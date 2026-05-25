@@ -16,6 +16,16 @@ const labelStyle = {
   marginBottom: 8,
 };
 
+const flashStyle = (flash) => {
+  if (flash === 'up') {
+    return { animation: 'price-flash-up 1.2s ease' };
+  }
+  if (flash === 'down') {
+    return { animation: 'price-flash-down 1.2s ease' };
+  }
+  return {};
+};
+
 function fmt(n) {
   if (n == null) return '—';
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
@@ -154,9 +164,14 @@ export default function Portfolio() {
                     <td>{h.exchange || '—'}</td>
                     <td>{h.quantity}</td>
                     <td>{fmt(h.avg_buy_price)}</td>
-                    <td>{fmt(h.current_price)}</td>
-                    <td>{fmt(h.current_value)}</td>
-                    <td style={{ color: h.unrealised_pnl >= 0 ? theme.colors.success : theme.colors.error }}>{fmt(h.unrealised_pnl)}</td>
+                    <td style={flashStyle(h.price_flash)}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>{fmt(h.current_price)}</span>
+                        {h.price_stale && <span style={{ fontSize: 10, color: theme.colors.textMuted }}>stale</span>}
+                      </div>
+                    </td>
+                    <td style={flashStyle(h.price_flash)}>{fmt(h.current_value)}</td>
+                    <td style={{ ...flashStyle(h.price_flash), color: h.unrealised_pnl >= 0 ? theme.colors.success : theme.colors.error }}>{fmt(h.unrealised_pnl)}</td>
                     <td style={{ color: h.unrealised_pnl_pct >= 0 ? theme.colors.success : theme.colors.error }}>{h.unrealised_pnl_pct != null ? `${h.unrealised_pnl_pct >= 0 ? '+' : ''}${h.unrealised_pnl_pct.toFixed(2)}%` : '—'}</td>
                     <td>
                       <button onClick={() => setPendingDelete(h)} aria-label={`Remove ${h.ticker}`} style={{ border: '0', background: 'transparent', color: theme.colors.textMuted, cursor: 'pointer' }}>
@@ -206,6 +221,17 @@ export default function Portfolio() {
           </button>
         </div>
       )}
+
+      <style>{`
+        @keyframes price-flash-up {
+          0% { background: rgba(111, 174, 141, 0.18); }
+          100% { background: transparent; }
+        }
+        @keyframes price-flash-down {
+          0% { background: rgba(244, 63, 94, 0.18); }
+          100% { background: transparent; }
+        }
+      `}</style>
     </div>
   );
 }

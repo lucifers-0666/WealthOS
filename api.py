@@ -45,8 +45,21 @@ from core.image_ocr import extract_holdings_from_image
 from core.market_status import get_market_status
 from core.import_engine import process_import_file, apply_confirm
 from ai.cfo_advisor import get_cfo_response
+from backend.services.live_market_engine import LiveMarketEngine
+
+live_market_engine = LiveMarketEngine()
 
 app = FastAPI(title="WealthOS API", version="2.1.0")
+
+
+@app.on_event("startup")
+async def _start_live_market_engine():
+    await live_market_engine.start()
+
+
+@app.on_event("shutdown")
+async def _stop_live_market_engine():
+    await live_market_engine.stop()
 
 
 def _allowed_origins() -> list[str]:
@@ -176,6 +189,28 @@ async def websocket_market_status(websocket: WebSocket):
             await websocket.close()
         except Exception:
             pass
+
+
+def _get_ws_user_id(websocket: WebSocket) -> str | None:
+    return websocket.query_params.get("user_id") or os.getenv("DEV_USER_ID")
+
+
+@app.websocket("/ws/market-updates")
+async def websocket_market_updates(websocket: WebSocket):
+    user_id = _get_ws_user_id(websocket)
+    if not user_id:
+        await websocket.close(code=1008)
+        return
+
+    await live_market_engine.connect(websocket, user_id)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        await live_market_engine.disconnect(websocket, user_id)
+    except Exception as exc:
+        logger.error(f"websocket_market_updates error: {exc}", exc_info=exc)
+        await live_market_engine.disconnect(websocket, user_id)
 
 
 # ── Profile ─────────────────────────────────────────────────────

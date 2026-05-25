@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { uploadHoldingsCSV, uploadTransactionsCSV, uploadScreenshot } from '../lib/api.js';
 import { savePortfolioHoldings } from '../lib/portfolioStore.js';
 import { theme, panelStyle } from '../lib/theme.js';
 import { FileSpreadsheet, Image as ImageIcon, UploadCloud, CheckCircle2, Clock3 } from 'lucide-react';
+import { EmptyState } from '../components/PageStates.jsx';
 
 function DropZone({ label, accept, onFile, status, result, icon, hint }) {
   const ref = useRef();
@@ -203,6 +204,8 @@ export default function Upload() {
               )}
             </div>
           )}
+
+          {!preview && imgStatus === 'idle' && <EmptyState title="Awaiting screenshot preview" message="Upload a broker screenshot to see holdings extracted here." />}
         </div>
       </section>
     </div>

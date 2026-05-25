@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePortfolio } from '../lib/usePortfolio.js';
 import { useAuth } from '../lib/useAuth.js';
+import { updateProfile as updateProfileApi } from '../services/portfolio.js';
 import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
-import { LogOut, Settings2, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { LogOut, ShieldCheck, SlidersHorizontal, CheckCircle2 } from 'lucide-react';
 
 const ASSET_CLASSES = [
   { key: 'equity_IN', label: 'Indian Equity' },
@@ -19,8 +20,22 @@ export default function Settings() {
   const { targetAllocation, saveTargetAllocation } = usePortfolio();
   const { user, signOut } = useAuth();
   const [allocations, setAllocations] = useState({});
+  const [profile, setProfile] = useState({ currency: 'INR', risk_profile: 'moderate', investment_goal: '', target_corpus: '' });
+  const [preferences, setPreferences] = useState({ strategy_mode: 'balanced', rebalance_frequency: 'monthly' });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem('wealthos:system-preferences');
+    if (stored) {
+      try {
+        setPreferences((prev) => ({ ...prev, ...JSON.parse(stored) }));
+      } catch {
+        // ignore malformed local preferences
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const map = {};
@@ -41,6 +56,25 @@ export default function Settings() {
       await saveTargetAllocation(arr);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSaveProfile() {
+    setSaving(true);
+    try {
+      await updateProfileApi({
+        currency: profile.currency,
+        risk_profile: profile.risk_profile,
+        investment_goal: profile.investment_goal || null,
+        target_corpus: profile.target_corpus ? Number(profile.target_corpus) : null,
+      });
+      window.localStorage.setItem('wealthos:system-preferences', JSON.stringify(preferences));
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2500);
     } catch (err) {
       alert(err.message);
     } finally {
@@ -80,6 +114,55 @@ export default function Settings() {
             <button onClick={handleSignOut} style={{ marginTop: 16, border: '0', borderRadius: 12, padding: '11px 14px', background: 'rgba(182,106,106,0.12)', color: theme.colors.error, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <LogOut size={15} /> Sign out
             </button>
+          </div>
+
+          <div style={{ ...panelStyle({ padding: 20 }) }}>
+            <div className="section-label">Profile preferences</div>
+            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Currency, risk, and corpus goals</h3>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Currency</label>
+                <select value={profile.currency} onChange={(e) => setProfile((p) => ({ ...p, currency: e.target.value }))} style={fieldStyle()}>
+                  {['INR', 'USD', 'EUR', 'GBP'].map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Risk level</label>
+                <select value={profile.risk_profile} onChange={(e) => setProfile((p) => ({ ...p, risk_profile: e.target.value }))} style={fieldStyle()}>
+                  {['conservative', 'moderate', 'aggressive'].map((r) => <option key={r}>{r}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Investment goal</label>
+                <input value={profile.investment_goal} onChange={(e) => setProfile((p) => ({ ...p, investment_goal: e.target.value }))} placeholder="Retirement, house, corpus planning…" style={fieldStyle()} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Target corpus</label>
+                <input type="number" min={0} step="any" value={profile.target_corpus} onChange={(e) => setProfile((p) => ({ ...p, target_corpus: e.target.value }))} placeholder="10000000" style={fieldStyle()} />
+              </div>
+            </div>
+            <div style={{ marginTop: 14, color: theme.colors.textSoft, fontSize: 13 }}>
+              These preferences persist to your profile row in Supabase when configured.
+            </div>
+          </div>
+
+          <div style={{ ...panelStyle({ padding: 20 }) }}>
+            <div className="section-label">Operating preferences</div>
+            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Strategy mode and rebalance cadence</h3>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Strategy mode</label>
+                <select value={preferences.strategy_mode} onChange={(e) => setPreferences((p) => ({ ...p, strategy_mode: e.target.value }))} style={fieldStyle()}>
+                  {['conservative', 'balanced', 'growth'].map((m) => <option key={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Rebalance frequency</label>
+                <select value={preferences.rebalance_frequency} onChange={(e) => setPreferences((p) => ({ ...p, rebalance_frequency: e.target.value }))} style={fieldStyle()}>
+                  {['monthly', 'quarterly', 'semiannual', 'annual'].map((r) => <option key={r}>{r}</option>)}
+                </select>
+              </div>
+            </div>
           </div>
 
           <div style={{ ...panelStyle({ padding: 20 }) }}>
@@ -127,9 +210,14 @@ export default function Settings() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><SlidersHorizontal size={15} /> Total target allocation</div>
             <strong style={{ color: valid ? theme.colors.text : theme.colors.error }}>{total.toFixed(1)}%</strong>
           </div>
-          <button onClick={handleSave} disabled={saving || (!valid && total > 0)} style={{ marginTop: 16, border: '0', borderRadius: 12, padding: '12px 16px', background: theme.colors.text, color: '#0A201F', fontWeight: 700, cursor: 'pointer' }}>
-            {saving ? 'Saving…' : saved ? 'Saved' : 'Save allocation'}
-          </button>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
+            <button onClick={handleSaveProfile} disabled={saving} style={{ border: '0', borderRadius: 12, padding: '12px 16px', background: theme.colors.text, color: '#0A201F', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <CheckCircle2 size={15} /> {saving ? 'Saving…' : profileSaved ? 'Profile saved' : 'Save profile'}
+            </button>
+            <button onClick={handleSave} disabled={saving || (!valid && total > 0)} style={{ border: '0', borderRadius: 12, padding: '12px 16px', background: 'rgba(255,255,255,0.03)', color: theme.colors.text, fontWeight: 700, cursor: 'pointer' }}>
+              {saving ? 'Saving…' : saved ? 'Saved' : 'Save allocation'}
+            </button>
+          </div>
         </div>
       </section>
     </div>

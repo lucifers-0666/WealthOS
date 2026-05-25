@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
   Bot,
@@ -9,7 +9,6 @@ import {
   Command,
   LayoutDashboard,
   Newspaper,
-  Search,
   Settings,
   ShieldCheck,
   TrendingUp,
@@ -17,8 +16,11 @@ import {
   Zap,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import Fuse from 'fuse.js';
 import { theme, panelStyle } from '../lib/theme.js';
 import MarketStatusBadge from './MarketStatusBadge.jsx';
+import { usePortfolio } from '../lib/usePortfolio.js';
+import { Search as SearchIcon } from 'lucide-react';
 
 const NAV = [
   { to: '/dashboard', label: 'Command', icon: LayoutDashboard, group: 'Core' },
@@ -46,9 +48,75 @@ const titles = {
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState('');
+  const paletteInputRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { holdings, refresh } = usePortfolio();
   const [title, sub] = titles[location.pathname.replace('/app', '')] || ['WealthOS', 'Financial operating system'];
   const meta = useMemo(() => ({ latency: '22ms' }), []);
+
+  const commandItems = useMemo(() => {
+    const pageItems = NAV.map((item) => ({
+      id: item.to,
+      label: item.label,
+      description: `Navigate to ${item.label.toLowerCase()}`,
+      keywords: [item.label, item.group, item.to, 'page'],
+      action: () => navigate(`/app${item.to}`),
+    }));
+
+    const holdingItems = holdings.slice(0, 12).map((holding) => ({
+      id: `holding:${holding.id}`,
+      label: holding.ticker,
+      description: holding.company_name || holding.sector || 'Holding',
+      keywords: [holding.ticker, holding.company_name, holding.sector, 'holding', 'portfolio'],
+      action: () => navigate('/app/portfolio'),
+    }));
+
+    const actionItems = [
+      { id: 'action:refresh', label: 'Refresh market data', description: 'Refetch portfolio and market status', keywords: ['refresh', 'reload', 'market'], action: () => refresh() },
+      { id: 'action:advisor', label: 'Ask advisor', description: 'Open the AI Analyst', keywords: ['advisor', 'ai', 'ask'], action: () => navigate('/app/advisor') },
+      { id: 'action:import', label: 'Import CSV', description: 'Open secure ingestion', keywords: ['import', 'csv', 'upload'], action: () => navigate('/app/upload') },
+    ];
+
+    return [...actionItems, ...pageItems, ...holdingItems];
+  }, [holdings, navigate, refresh]);
+
+  const fuse = useMemo(() => new Fuse(commandItems, { keys: ['label', 'description', 'keywords'], threshold: 0.35, ignoreLocation: true }), [commandItems]);
+  const commandResults = useMemo(() => {
+    const query = paletteQuery.trim();
+    if (!query) return commandItems.slice(0, 8);
+    return fuse.search(query).slice(0, 8).map((result) => result.item);
+  }, [commandItems, fuse, paletteQuery]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen((value) => !value);
+      }
+      if (event.key === 'Escape') {
+        setPaletteOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (paletteOpen) {
+      window.setTimeout(() => paletteInputRef.current?.focus(), 0);
+    } else {
+      setPaletteQuery('');
+    }
+  }, [paletteOpen]);
+
+  function runCommand(item) {
+    item.action();
+    setPaletteOpen(false);
+    setPaletteQuery('');
+  }
 
   return (
     <div
@@ -176,11 +244,11 @@ export default function Layout() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {/* Search bar */}
-            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 9, width: 280, padding: '8px 10px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(10,32,31,0.42)' }}>
-              <Search size={14} color={theme.colors.textMuted} />
-              <span style={{ color: theme.colors.textMuted, fontSize: 12, flex: 1 }}>Search assets, filings, notes</span>
+            <button type="button" onClick={() => setPaletteOpen(true)} className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 9, width: 280, padding: '8px 10px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(10,32,31,0.42)', cursor: 'pointer' }}>
+              <SearchIcon size={14} color={theme.colors.textMuted} />
+              <span style={{ color: theme.colors.textMuted, fontSize: 12, flex: 1, textAlign: 'left' }}>Search assets, filings, notes</span>
               <span className="mono" style={{ color: theme.colors.textMuted, fontSize: 10, border: `1px solid ${theme.colors.border}`, borderRadius: 6, padding: '1px 5px' }}>CTRL K</span>
-            </div>
+            </button>
 
             {/* ── Real-time market status badge ── */}
             <div className="hide-tablet">
@@ -201,6 +269,57 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      <AnimatePresence>
+        {paletteOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(2,6,23,0.62)', backdropFilter: 'blur(10px)', display: 'grid', placeItems: 'start center', paddingTop: 72 }}
+            onClick={() => setPaletteOpen(false)}
+          >
+            <motion.div
+              initial={{ y: 18, opacity: 0, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 16, opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: 'min(760px, calc(100vw - 28px))', ...panelStyle({ padding: 18 }) }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${theme.colors.border}`, borderRadius: 14, padding: '10px 12px', background: 'rgba(10,32,31,0.42)' }}>
+                <SearchIcon size={16} color={theme.colors.textMuted} />
+                <input
+                  ref={paletteInputRef}
+                  value={paletteQuery}
+                  onChange={(e) => setPaletteQuery(e.target.value)}
+                  placeholder="Search holdings, pages, or quick actions…"
+                  style={{ flex: 1, border: 0, outline: 'none', background: 'transparent', color: theme.colors.text, fontSize: 14 }}
+                />
+                <span className="mono" style={{ color: theme.colors.textMuted, fontSize: 10, border: `1px solid ${theme.colors.border}`, borderRadius: 6, padding: '1px 5px' }}>ESC</span>
+              </div>
+              <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+                {commandResults.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => runCommand(item)}
+                    style={{ textAlign: 'left', border: `1px solid ${theme.colors.border}`, borderRadius: 12, background: 'rgba(255,255,255,0.01)', padding: '12px 14px', cursor: 'pointer', color: theme.colors.text }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                      <strong style={{ fontSize: 14 }}>{item.label}</strong>
+                      <span style={{ color: theme.colors.textMuted, fontSize: 11 }}>{item.id.startsWith('action:') ? 'Action' : item.id.startsWith('holding:') ? 'Holding' : 'Navigation'}</span>
+                    </div>
+                    <div style={{ color: theme.colors.textSoft, fontSize: 12, marginTop: 4 }}>{item.description}</div>
+                  </button>
+                ))}
+                {!commandResults.length && (
+                  <div style={{ color: theme.colors.textMuted, padding: '12px 2px' }}>No matches found. Try another term or a page name.</div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Pulse animation keyframe — injected once */}
       <style>{`

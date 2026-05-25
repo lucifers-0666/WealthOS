@@ -2,6 +2,7 @@ import React, { useMemo, Suspense, lazy } from 'react';
 import { usePortfolio } from '../lib/usePortfolio.js';
 import { theme, panelStyle } from '../lib/theme.js';
 import { RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
+import { PageLoadingState, PageErrorState, EmptyState } from '../components/PageStates.jsx';
 const DashboardCharts = lazy(() => import('../components/DashboardCharts.jsx'));
 
 function fmt(n) {
@@ -54,11 +55,11 @@ export default function Dashboard() {
   ];
 
   if (loading) {
-    return <div style={{ ...panelStyle({ padding: 24, minHeight: 420 }) }}>Loading command center…</div>;
+    return <PageLoadingState title="Loading command center…" subtitle="Resolving live holdings, performance, and signal flow." />;
   }
 
   if (error) {
-    return <div style={{ ...panelStyle({ padding: 24, minHeight: 220, color: theme.colors.error }) }}>Failed to load portfolio: {error}</div>;
+    return <PageErrorState title="Command center unavailable" message={error} />;
   }
 
   return (
@@ -82,9 +83,13 @@ export default function Dashboard() {
       <section style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 18, alignItems: 'start' }}>
         <div style={{ display: 'grid', gap: 18 }}>
           <div style={{ ...panelStyle({ padding: 20 }) }}>
-            <Suspense fallback={<div style={{ minHeight: 320, display: 'grid', placeItems: 'center' }}>Loading charts…</div>}>
-              <DashboardCharts allocationData={allocationData} topPositions={topPositions} chartData={portfolio?.history || []} />
-            </Suspense>
+            {holdings.length ? (
+              <Suspense fallback={<PageLoadingState title="Preparing charts…" subtitle="Rendering allocation and exposure visuals." />}>
+                <DashboardCharts allocationData={allocationData} topPositions={topPositions} chartData={portfolio?.history || []} />
+              </Suspense>
+            ) : (
+              <EmptyState title="No holdings to chart" message="Import a portfolio to unlock allocations and live exposure visuals." />
+            )}
           </div>
         </div>
 

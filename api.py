@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Optional, List
 from datetime import date
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Header, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Header, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -158,6 +158,24 @@ def market_status():
     except Exception as e:
         logger.error(f"Market status error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.websocket("/ws/market-status")
+async def websocket_market_status(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            await websocket.send_json({"status": get_market_status()})
+            import asyncio
+            await asyncio.sleep(15)
+    except WebSocketDisconnect:
+        return
+    except Exception as exc:
+        logger.error(f"websocket_market_status error: {exc}", exc_info=exc)
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 
 # ── Profile ─────────────────────────────────────────────────────

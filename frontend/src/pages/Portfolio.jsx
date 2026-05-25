@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { usePortfolio } from '../lib/usePortfolio.js';
 import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
-import { Plus, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, AlertTriangle, X, Undo2 } from 'lucide-react';
+import { PageLoadingState, PageErrorState, EmptyState } from '../components/PageStates.jsx';
 
 const EXCHANGES = ['NSE', 'BSE', 'NYSE', 'NASDAQ', 'LSE'];
 const ASSET_CLASSES = ['equity', 'etf', 'gold', 'debt', 'crypto', 'reit'];
@@ -26,12 +27,20 @@ export default function Portfolio() {
   const [form, setForm] = useState({ ticker: '', company_name: '', quantity: '', avg_buy_price: '', exchange: 'NSE', asset_class: 'equity' });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [undoHolding, setUndoHolding] = useState(null);
 
   const stats = useMemo(() => {
     const invested = holdings.reduce((sum, h) => sum + (h.invested_value || 0), 0);
     const value = holdings.reduce((sum, h) => sum + (h.current_value || 0), 0);
     return { invested, value, pnl: value - invested };
   }, [holdings]);
+
+  useEffect(() => {
+    if (!undoHolding) return undefined;
+    const timer = window.setTimeout(() => setUndoHolding(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [undoHolding]);
 
   function setField(k, v) {
     setForm((p) => ({ ...p, [k]: v }));
@@ -50,6 +59,34 @@ export default function Portfolio() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    const snapshot = pendingDelete;
+    setPendingDelete(null);
+    await removeHolding(snapshot.id);
+    setUndoHolding(snapshot);
+  }
+
+  async function handleUndo() {
+    if (!undoHolding) return;
+    const snapshot = undoHolding;
+    setUndoHolding(null);
+    await addHolding({
+      ticker: snapshot.ticker,
+      company_name: snapshot.company_name,
+      quantity: snapshot.quantity,
+      avg_buy_price: snapshot.avg_buy_price,
+      exchange: snapshot.exchange,
+      asset_class: snapshot.asset_class,
+      currency: snapshot.currency,
+      sector: snapshot.sector,
+    });
+  }
+
+  if (loading) {
+    return <PageLoadingState title="Loading portfolio matrix…" subtitle="Resolving live holdings, allocations, and activity." />;
   }
 
   return (
@@ -98,10 +135,9 @@ export default function Portfolio() {
         </form>
       )}
 
-      {loading && <div style={{ ...panelStyle({ padding: 24 }) }}>Loading holdings…</div>}
-      {error && <div style={{ ...panelStyle({ padding: 24, color: theme.colors.error }) }}>{error}</div>}
+      {error && <PageErrorState title="Portfolio data unavailable" message={error} />}
 
-      {!loading && holdings.length > 0 && (
+      {holdings.length > 0 && (
         <div style={{ ...panelStyle({ padding: 20 }) }}>
           <div style={{ overflowX: 'auto' }}>
             <table className="data-table">
@@ -123,7 +159,7 @@ export default function Portfolio() {
                     <td style={{ color: h.unrealised_pnl >= 0 ? theme.colors.success : theme.colors.error }}>{fmt(h.unrealised_pnl)}</td>
                     <td style={{ color: h.unrealised_pnl_pct >= 0 ? theme.colors.success : theme.colors.error }}>{h.unrealised_pnl_pct != null ? `${h.unrealised_pnl_pct >= 0 ? '+' : ''}${h.unrealised_pnl_pct.toFixed(2)}%` : '—'}</td>
                     <td>
-                      <button onClick={() => removeHolding(h.id)} aria-label={`Remove ${h.ticker}`} style={{ border: '0', background: 'transparent', color: theme.colors.textMuted, cursor: 'pointer' }}>
+                      <button onClick={() => setPendingDelete(h)} aria-label={`Remove ${h.ticker}`} style={{ border: '0', background: 'transparent', color: theme.colors.textMuted, cursor: 'pointer' }}>
                         <Trash2 size={15} />
                       </button>
                     </td>
@@ -135,9 +171,39 @@ export default function Portfolio() {
         </div>
       )}
 
-      {!loading && holdings.length === 0 && (
-        <div style={{ ...panelStyle({ padding: 24, color: theme.colors.textSoft }) }}>
-          No holdings yet. Upload a CSV or add positions manually.
+      {holdings.length === 0 && <EmptyState title="No holdings yet" message="Upload a CSV or add positions manually to populate your portfolio matrix." />}
+
+      {pendingDelete && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,14,13,0.58)', display: 'grid', placeItems: 'center', zIndex: 80, padding: 18 }}>
+          <div style={{ ...panelStyle({ padding: 22, maxWidth: 520, width: '100%' }) }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: theme.colors.warning, marginBottom: 12 }}>
+              <AlertTriangle size={18} />
+              <strong>Delete holding?</strong>
+            </div>
+            <p style={{ margin: 0, color: theme.colors.textSoft, lineHeight: 1.7 }}>
+              Remove <strong style={{ color: theme.colors.text }}>{pendingDelete.ticker}</strong> from the portfolio registry.
+              You can undo this for a short time after confirmation.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
+              <button onClick={() => setPendingDelete(null)} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px', background: 'transparent', color: theme.colors.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <X size={14} /> Cancel
+              </button>
+              <button onClick={confirmDelete} style={{ border: '0', borderRadius: 12, padding: '10px 14px', background: theme.colors.error, color: '#0A201F', fontWeight: 800, cursor: 'pointer' }}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {undoHolding && (
+        <div style={{ position: 'fixed', right: 18, bottom: 18, zIndex: 90, ...panelStyle({ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }) }}>
+          <div style={{ color: theme.colors.textSoft, fontSize: 13 }}>
+            Deleted <strong style={{ color: theme.colors.text }}>{undoHolding.ticker}</strong>
+          </div>
+          <button onClick={handleUndo} style={{ border: '0', borderRadius: 10, padding: '8px 12px', background: theme.colors.text, color: '#0A201F', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 800 }}>
+            <Undo2 size={14} /> Undo
+          </button>
         </div>
       )}
     </div>

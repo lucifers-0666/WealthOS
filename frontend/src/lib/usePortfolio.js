@@ -1,10 +1,11 @@
 /**
  * WealthOS — usePortfolio hook
- * Single source of truth for portfolio data — wired to real API.
- * Replaces the old in-memory portfolioStore.js.
+ * Single source of truth for portfolio data — wired to the centralized API client
+ * and backed by React Query for caching, retries, and background refetches.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from './api.js';
 import { getPortfolioHoldings } from './portfolioStore.js';
 
@@ -68,78 +69,129 @@ const buildSummary = (holdings) => {
   };
 };
 
+const EMPTY_ARRAY = [];
+const EMPTY_OBJECT = {};
+
+async function fetchPortfolioBundle() {
+  try {
+    const [port, txns, target, watch] = await Promise.all([
+      api.getPortfolio(),
+      api.getTransactions(),
+      api.getTargetAllocation(),
+      api.getWatchlist(),
+    ]);
+
+    const apiHoldings = Array.isArray(port) ? port : [];
+    const sourceHoldings = apiHoldings.length ? apiHoldings : getPortfolioHoldings();
+    const normalizedHoldings = sourceHoldings.map(normalizeHolding);
+
+    return {
+      holdings: normalizedHoldings,
+      transactions: Array.isArray(txns) ? txns : [],
+      targetAllocation: Array.isArray(target) ? target : [],
+      watchlist: Array.isArray(watch) ? watch : [],
+      summary: buildSummary(normalizedHoldings),
+      source: apiHoldings.length ? 'api' : 'local',
+    };
+  } catch (error) {
+    const fallbackHoldings = getPortfolioHoldings().map(normalizeHolding);
+    return {
+      holdings: fallbackHoldings,
+      transactions: [],
+      targetAllocation: [],
+      watchlist: [],
+      summary: buildSummary(fallbackHoldings),
+      source: 'fallback',
+      error: error?.message || 'Unable to load portfolio from the server.',
+    };
+  }
+}
+
 export function usePortfolio() {
-  const [portfolio, setPortfolio] = useState(null);
-  const [holdings, setHoldings] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [targetAllocation, setTargetAllocationState] = useState([]);
-  const [watchlist, setWatchlist] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const queryClient = useQueryClient();
 
-  const fetchPortfolio = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [port, txns, target, watch] = await Promise.all([
-        api.getPortfolio(),
-        api.getTransactions(),
-        api.getTargetAllocation(),
-        api.getWatchlist(),
-      ]);
-      const apiHoldings = Array.isArray(port) ? port : [];
-      const sourceHoldings = apiHoldings.length ? apiHoldings : getPortfolioHoldings();
-      const normalizedHoldings = sourceHoldings.map(normalizeHolding);
-      const summary = buildSummary(normalizedHoldings);
-      setPortfolio({ holdings: normalizedHoldings, summary, history: [] });
-      setHoldings(normalizedHoldings);
-      setTransactions(txns);
-      setTargetAllocationState(target);
-      setWatchlist(watch);
-    } catch (err) {
-      const fallbackHoldings = getPortfolioHoldings().map(normalizeHolding);
-      setPortfolio({ holdings: fallbackHoldings, summary: buildSummary(fallbackHoldings), history: [] });
-      setHoldings(fallbackHoldings);
-      setError(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const bundleQuery = useQuery({
+    queryKey: ['portfolio-bundle'],
+    queryFn: fetchPortfolioBundle,
+    refetchInterval: 60_000,
+  });
 
-  useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
+  const addHoldingMutation = useMutation({
+    mutationFn: api.createHolding,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
+    },
+  });
 
-  const addHolding = async (data) => {
-    const result = await api.createHolding(data);
-    await fetchPortfolio();
-    return result;
-  };
+  const removeHoldingMutation = useMutation({
+    mutationFn: api.deleteHolding,
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['portfolio-bundle'] });
+      const previous = queryClient.getQueryData(['portfolio-bundle']);
+      queryClient.setQueryData(['portfolio-bundle'], (current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          holdings: current.holdings.filter((holding) => String(holding.id) !== String(id)),
+          summary: buildSummary(current.holdings.filter((holding) => String(holding.id) !== String(id))),
+        };
+      });
+      return { previous };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['portfolio-bundle'], context.previous);
+      }
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
+    },
+  });
 
-  const removeHolding = async (id) => {
-    await api.deleteHolding(id);
-    await fetchPortfolio();
-  };
+  const addTransactionMutation = useMutation({
+    mutationFn: api.createTransaction,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
+    },
+  });
 
-  const addTransaction = async (data) => {
-    const result = await api.createTransaction(data);
-    await fetchPortfolio();
-    return result;
-  };
+  const saveTargetMutation = useMutation({
+    mutationFn: api.setTargetAllocation,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
+    },
+  });
 
-  const saveTargetAllocation = async (allocations) => {
-    const result = await api.setTargetAllocation(allocations);
-    setTargetAllocationState(allocations);
-    return result;
-  };
+  const addWatchMutation = useMutation({
+    mutationFn: api.addToWatchlist,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
+    },
+  });
 
-  const addWatch = async (data) => {
-    const result = await api.addToWatchlist(data);
-    setWatchlist((prev) => [...prev, result]);
-    return result;
-  };
+  const removeWatchMutation = useMutation({
+    mutationFn: api.removeFromWatchlist,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
+    },
+  });
 
-  const removeWatch = async (ticker) => {
-    await api.removeFromWatchlist(ticker);
-    setWatchlist((prev) => prev.filter((w) => w.ticker !== ticker));
+  const portfolio = useMemo(() => ({
+    holdings: bundleQuery.data?.holdings || [],
+    summary: bundleQuery.data?.summary || buildSummary([]),
+    history: [],
+    source: bundleQuery.data?.source || 'api',
+  }), [bundleQuery.data]);
+
+  const holdings = bundleQuery.data?.holdings || EMPTY_ARRAY;
+  const transactions = bundleQuery.data?.transactions || EMPTY_ARRAY;
+  const targetAllocation = bundleQuery.data?.targetAllocation || EMPTY_ARRAY;
+  const watchlist = bundleQuery.data?.watchlist || EMPTY_ARRAY;
+  const loading = bundleQuery.isLoading;
+  const error = bundleQuery.data?.source === 'fallback' ? null : (bundleQuery.error?.message || bundleQuery.data?.error || null);
+
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
   };
 
   return {
@@ -150,12 +202,12 @@ export function usePortfolio() {
     watchlist,
     loading,
     error,
-    refresh: fetchPortfolio,
-    addHolding,
-    removeHolding,
-    addTransaction,
-    saveTargetAllocation,
-    addWatch,
-    removeWatch,
+    refresh,
+    addHolding: async (data) => addHoldingMutation.mutateAsync(data),
+    removeHolding: async (id) => removeHoldingMutation.mutateAsync(id),
+    addTransaction: async (data) => addTransactionMutation.mutateAsync(data),
+    saveTargetAllocation: async (allocations) => saveTargetMutation.mutateAsync(allocations),
+    addWatch: async (data) => addWatchMutation.mutateAsync(data),
+    removeWatch: async (ticker) => removeWatchMutation.mutateAsync(ticker),
   };
 }

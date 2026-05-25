@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useChat } from '../lib/useChat.js';
 import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
 import { Send, Sparkles, MessageCircle, ShieldCheck } from 'lucide-react';
+import { PageErrorState, EmptyState } from '../components/PageStates.jsx';
 
 const SUGGESTIONS = [
   'Analyse my current portfolio and give me a health score',
@@ -73,19 +74,11 @@ export default function AIAdvisor() {
         <div style={{ ...panelStyle({ padding: 18, minHeight: 700, display: 'flex', flexDirection: 'column' }) }}>
           <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
             {messages.length === 0 ? (
-              <div style={{ minHeight: 560, display: 'grid', placeItems: 'center', textAlign: 'center', padding: 30 }}>
-                <div style={{ maxWidth: 520 }}>
-                  <div style={{ width: 54, height: 54, borderRadius: 18, display: 'grid', placeItems: 'center', margin: '0 auto 16px', background: 'rgba(200,179,142,0.12)', color: theme.colors.gold }}>
-                    <Sparkles size={22} />
-                  </div>
-                  <h3 style={{ margin: 0, fontFamily: 'Space Grotesk, Inter, sans-serif', fontSize: 28 }}>Your AI CFO is ready.</h3>
-                  <p style={{ margin: '10px 0 0', color: theme.colors.textSoft, lineHeight: 1.7 }}>Use the suggested prompts below or ask a custom question about your portfolio. Responses stay contextual and calm.</p>
-                </div>
-              </div>
+              <EmptyState title="Your AI CFO is ready" message="Use the suggested prompts below or ask a custom question about your portfolio. Responses stay contextual and calm." />
             ) : (
               messages.map((m, i) => <Message key={i} msg={m} />)
             )}
-            {error && <div style={{ color: theme.colors.error, marginTop: 12 }}>{error}</div>}
+            {error && <PageErrorState title="Advisor temporarily unavailable" message={error} />}
             <div ref={bottomRef} />
           </div>
 

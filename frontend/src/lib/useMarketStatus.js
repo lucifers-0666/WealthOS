@@ -1,11 +1,12 @@
 /**
  * useMarketStatus.js
  * React hook for real-time NSE/BSE market session status.
- * Falls back to a client-side calculation if the API is unreachable.
- * Polls every 30 seconds.
+ * Prefers websocket updates and falls back to polling + client-side timing.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { getMarketStatus } from './api.js';
+import { createReconnectingSocket } from '../services/websocket.js';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 const POLL_INTERVAL_MS = 30_000;
@@ -80,14 +81,11 @@ export function useMarketStatus() {
   const [status, setStatus] = useState(() => computeStatusLocally());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const socketRef = useRef(null);
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/market/status`, {
-        signal: AbortSignal.timeout(4000),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await getMarketStatus();
       setStatus({ ...data, source: 'api' });
       setError(null);
     } catch {
@@ -104,6 +102,32 @@ export function useMarketStatus() {
     const id = setInterval(fetchStatus, POLL_INTERVAL_MS);
     return () => clearInterval(id);
   }, [fetchStatus]);
+
+  useEffect(() => {
+    const wsBase = (import.meta.env.VITE_WS_URL || API_BASE).replace(/^http/i, 'ws');
+    const wsUrl = `${wsBase.replace(/\/$/, '')}/ws/market-status`;
+
+    try {
+      socketRef.current = createReconnectingSocket(wsUrl, {
+        onMessage: (event) => {
+          try {
+            const payload = JSON.parse(event.data);
+            if (payload?.status) {
+              setStatus({ ...payload.status, source: 'websocket' });
+              setError(null);
+              setLoading(false);
+            }
+          } catch {
+            // Ignore malformed messages; polling remains active.
+          }
+        },
+      });
+    } catch {
+      // Socket setup failed, keep polling only.
+    }
+
+    return () => socketRef.current?.close();
+  }, []);
 
   // Update the live clock every second regardless of API polling
   useEffect(() => {

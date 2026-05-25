@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { usePortfolio } from '../lib/usePortfolio.js';
 import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
-import { ArrowUpRight, Search, RadioTower } from 'lucide-react';
+import { ArrowUpRight, Search, RadioTower, AlertTriangle } from 'lucide-react';
+import debounce from 'lodash.debounce';
+import { fetchMarketNews } from '../services/news.js';
+import { PageLoadingState, PageErrorState, EmptyState } from '../components/PageStates.jsx';
 
-const NEWSAPI_KEY = import.meta.env.VITE_NEWSAPI_KEY || '';
 const CATEGORIES = ['All', 'Markets', 'Economy', 'Stocks', 'Mutual Funds', 'Global'];
 
-function fetchNews(query) {
-  const q = query || 'Indian stock market NSE BSE';
-  const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${NEWSAPI_KEY}`;
-  return fetch(url).then((r) => r.json());
+function sentimentTone(sentiment) {
+  if (sentiment === 'Bullish') return theme.colors.success;
+  if (sentiment === 'Bearish') return theme.colors.error;
+  return theme.colors.textMuted;
 }
 
 function ArticleCard({ article }) {
@@ -35,6 +37,12 @@ function ArticleCard({ article }) {
         </div>
         <h3 style={{ margin: 0, fontFamily: 'Space Grotesk, Inter, sans-serif', fontSize: 19, lineHeight: 1.35 }}>{article.title}</h3>
         {article.description && <p style={{ margin: 0, color: theme.colors.textSoft, lineHeight: 1.65, fontSize: 14 }}>{article.description}</p>}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ border: `1px solid ${theme.colors.border}`, color: sentimentTone(article.sentiment), borderRadius: 999, padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>{article.sentiment || 'Neutral'}</span>
+          {typeof article.relevanceScore === 'number' && (
+            <span style={{ border: `1px solid ${theme.colors.border}`, color: theme.colors.textSoft, borderRadius: 999, padding: '6px 10px', fontSize: 11 }}>Relevance {article.relevanceScore}</span>
+          )}
+        </div>
         <a href={articleUrl} target="_blank" rel="noopener noreferrer" style={{ color: theme.colors.gold, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13 }}>
           Read full article <ArrowUpRight size={14} />
         </a>
@@ -50,24 +58,39 @@ export default function News() {
   const [category, setCategory] = useState('All');
   const [search, setSearch] = useState('');
   const [error, setError] = useState(null);
+  const [serviceNotice, setServiceNotice] = useState(null);
 
-  const tickers = holdings.slice(0, 5).map((h) => h.ticker.replace('.NS', '').replace('.BO', '')).join(' OR ');
-  const query = useMemo(() => search || (tickers ? `(${tickers}) stock India` : 'Indian stock market NSE'), [search, tickers]);
+  const portfolioTickers = useMemo(() => holdings.slice(0, 8).map((h) => h.ticker), [holdings]);
+  const query = useMemo(() => search || '', [search]);
 
   useEffect(() => {
-    if (!NEWSAPI_KEY) {
-      setError('Add VITE_NEWSAPI_KEY to your frontend env to load live market news.');
-      return;
-    }
     setLoading(true);
-    fetchNews(query)
-      .then((data) => {
-        if (data.status === 'ok') setArticles(data.articles || []);
-        else setError(data.message || 'Failed to load news');
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [query]);
+    const run = debounce(async () => {
+      const result = await fetchMarketNews({ query, category, portfolioTickers });
+      setArticles(result.articles || []);
+      setError(result.error && result.articles.length === 0 ? result.error : null);
+      setServiceNotice(result.error && result.articles.length === 0 ? result.error : null);
+      setLoading(false);
+    }, 220);
+
+    run();
+    return () => run.cancel();
+  }, [query, category, portfolioTickers]);
+
+  const filteredArticles = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return articles.filter((article) => {
+      const text = `${article.title || ''} ${article.description || ''} ${article.source?.name || ''}`.toLowerCase();
+      const categoryMatch = category === 'All'
+        || (category === 'Markets' && /market|index|sensex|nifty|bse|nse/.test(text))
+        || (category === 'Economy' && /economy|rbi|inflation|rates|gdp|macro/.test(text))
+        || (category === 'Stocks' && /stock|earnings|q[1-4]|results|shares|equity/.test(text))
+        || (category === 'Mutual Funds' && /fund|sip|mutual/.test(text))
+        || (category === 'Global' && /global|fed|wall street|nasdaq|dow|s&p/.test(text));
+      const searchMatch = !q || text.includes(q);
+      return categoryMatch && searchMatch;
+    });
+  }, [articles, category, search]);
 
   return (
     <div style={{ display: 'grid', gap: 18 }}>
@@ -109,16 +132,22 @@ export default function News() {
             ))}
           </div>
         </div>
+        {serviceNotice && (
+          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, color: theme.colors.textMuted, fontSize: 13 }}>
+            <AlertTriangle size={14} />
+            {serviceNotice}
+          </div>
+        )}
       </section>
 
-      {error && <div style={{ ...panelStyle({ padding: 18, color: theme.colors.error }) }}>{error}</div>}
+      {error && <PageErrorState title="Market feed paused" message={error} />}
 
       {loading ? (
-        <div style={{ ...panelStyle({ padding: 24 }) }}>Loading news…</div>
+        <PageLoadingState title="Loading market intelligence…" subtitle="Gathering live headlines and portfolio-relevant signals." />
       ) : (
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
-          {articles.map((a, i) => <ArticleCard key={i} article={a} />)}
-          {!articles.length && !error && <div style={{ ...panelStyle({ padding: 24, color: theme.colors.textSoft }) }}>No articles found. Try a different search.</div>}
+          {filteredArticles.map((a, i) => <ArticleCard key={i} article={a} />)}
+          {!filteredArticles.length && !error && <EmptyState title="No articles found" message="Try a broader search or switch categories." />}
         </section>
       )}
     </div>

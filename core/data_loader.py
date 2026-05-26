@@ -1,6 +1,7 @@
 import io
 import pandas as pd
 import numpy as np
+import re
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any
@@ -9,6 +10,50 @@ REQUIRED_COLS = {"symbol", "quantity", "avg_price"}
 OPTIONAL_COLS = {"name", "sector", "asset_class", "exchange", "notes"}
 
 REQUIRED_TXN_COLS = {"ticker", "action", "quantity", "price", "transaction_date"}
+
+
+COMPANY_TO_TICKER = {
+    "SUZLON ENERGY": "SUZLON",
+    "BHARAT COKING COAL": "BCCL",
+    "EMMVEE PHOTOVOLTAIC": "EMMVEE",
+    "ASHOK LEYLAND": "ASHOKLEY",
+    "IOCL": "IOC",
+    "BHARAT ELECTRONICS": "BEL",
+    "NTPC": "NTPC",
+    "ADANI POWER": "ADANIPOWER",
+    "AURI GROW INDIA": "AURIGROW",
+    "SBISENSEX": "SBISENSEX",
+    "SBI MF - SBI GOLD": "SETFGOLD",
+    "NIPPON ETF HANGSENG": "HNGSNGBEES",
+    "MONQ50": "MONQ50",
+    "MODEFENCE": "MODEFENCE",
+    "TATAGOLD": "TATAGOLD",
+    "GROWW NIFTY INDIA RAILWAY": "RAILWAY",
+    "MIRAE ASSET NYSE FANG+": "MAFANG",
+}
+
+
+def _resolve_symbol_from_company(raw_symbol: str) -> str:
+    """
+    Resolve broker/company-name rows to exchange symbols.
+    Falls back to normalized uppercase token when no mapping is known.
+    """
+    if not raw_symbol:
+        return ""
+
+    cleaned = str(raw_symbol).strip().upper()
+    if cleaned in COMPANY_TO_TICKER:
+        return COMPANY_TO_TICKER[cleaned]
+
+    canonical = re.sub(r"[^A-Z0-9+&-]+", "", cleaned)
+    if canonical in COMPANY_TO_TICKER:
+        return COMPANY_TO_TICKER[canonical]
+
+    # If the value already looks like a ticker, keep it.
+    if re.fullmatch(r"[A-Z][A-Z0-9&+-]{1,20}", canonical or ""):
+        return canonical
+
+    return canonical[:20]
 
 
 def _normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -126,7 +171,8 @@ def parse_holdings_csv(file_obj: io.BytesIO) -> List[Dict[str, Any]]:
     # Keep original casing for name, uppercase for ticker
     if "name" not in df.columns:
         df["name"] = df["symbol"].str.strip()  # preserve original casing for name
-    df["symbol"] = df["symbol"].str.strip().str.upper()
+    # Resolve company-style symbols to tickers used for live market fetch.
+    df["symbol"] = df["symbol"].apply(_resolve_symbol_from_company)
 
     for col in OPTIONAL_COLS:
         if col not in df.columns:
@@ -138,11 +184,15 @@ def parse_holdings_csv(file_obj: io.BytesIO) -> List[Dict[str, Any]]:
     if "currency" not in df.columns:
         df["currency"] = "INR"
 
-    # current_price is optional — default to avg_price if not present
-    if "current_price" not in df.columns:
-        df["current_price"] = df["avg_price"]
+    # NOTE: CSV market prices are often stale and should NOT drive valuation.
+    # We still parse and keep them only as reference.
+    if "current_price" in df.columns:
+        df["csv_market_price"] = pd.to_numeric(df["current_price"], errors="coerce")
     else:
-        df["current_price"] = pd.to_numeric(df["current_price"], errors="coerce").fillna(df["avg_price"])
+        df["csv_market_price"] = np.nan
+
+    # Set current_price to avg_price at import time; live services overwrite with LTP.
+    df["current_price"] = df["avg_price"]
 
     holdings = []
     for _, row in df.iterrows():
@@ -152,6 +202,7 @@ def parse_holdings_csv(file_obj: io.BytesIO) -> List[Dict[str, Any]]:
             "quantity":      float(row["quantity"]),
             "avg_buy_price": float(row["avg_price"]),
             "current_price": float(row["current_price"]),
+            "csv_market_price": float(row["csv_market_price"]) if pd.notna(row.get("csv_market_price")) else None,
             "exchange":      str(row.get("exchange", "NSE") or "NSE"),
             "asset_class":   str(row.get("asset_class", "equity") or "equity"),
             "currency":      str(row.get("currency", "INR") or "INR"),

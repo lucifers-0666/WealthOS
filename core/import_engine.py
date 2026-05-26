@@ -23,6 +23,20 @@ _HOLDINGS_ALIASES: Dict[str, str] = {
 
 _REQUIRED = {"symbol", "quantity", "avg_price"}
 
+_COMPANY_TO_TICKER = {
+    "SUZLON ENERGY": "SUZLON",
+    "BHARAT COKING COAL": "BCCL",
+    "EMMVEE PHOTOVOLTAIC": "EMMVEE",
+    "ASHOK LEYLAND": "ASHOKLEY",
+    "IOCL": "IOC",
+    "BHARAT ELECTRONICS": "BEL",
+    "ADANI POWER": "ADANIPOWER",
+    "SBISENSEX": "SBISENSEX",
+    "SBI MF - SBI GOLD": "SETFGOLD",
+    "NIPPON ETF HANGSENG": "HNGSNGBEES",
+    "MIRAE ASSET NYSE FANG+": "MAFANG",
+}
+
 
 # ── Broker fingerprinting ─────────────────────────────────────────────────────
 _BROKER_SIGNATURES: List[Tuple[str, List[str]]] = [
@@ -87,7 +101,11 @@ def _normalise_rows(df: pd.DataFrame) -> pd.DataFrame:
 # ── Symbol resolution (basic .NS / .BO suffix stripper) ──────────────────────
 def _resolve_symbol(sym: str) -> str:
     """Strip exchange suffixes from Yahoo/NSE symbols."""
-    return re.sub(r"\.(NS|BO|BSE|NSE)$", "", sym.upper()).strip()
+    raw = (sym or "").strip().upper()
+    if raw in _COMPANY_TO_TICKER:
+        return _COMPANY_TO_TICKER[raw]
+    base = re.sub(r"\.(NS|BO|BSE|NSE)$", "", raw).strip()
+    return re.sub(r"[^A-Z0-9&+-]+", "", base)[:24]
 
 
 # ── Chunked CSV parser ────────────────────────────────────────────────────────

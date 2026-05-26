@@ -233,6 +233,8 @@ class LiveMarketEngine:
             current_value = quantity * price if quantity and price else invested
             pnl = current_value - invested
             pnl_pct = (pnl / invested * 100) if invested else 0.0
+            day_change = quantity * change_abs if quantity else 0.0
+            day_change_pct = change_pct
             total_value += current_value
 
             merged.append({
@@ -247,6 +249,8 @@ class LiveMarketEngine:
                 "change_pct": round(change_pct, 4),
                 "change_abs": round(change_abs, 4),
                 "price_change_pct": round(change_pct, 4),
+                "day_change": round(day_change, 2),
+                "day_change_pct": round(day_change_pct, 4),
                 "day_high": round(day_high, 4),
                 "day_low": round(day_low, 4),
                 "volume": round(volume, 0),

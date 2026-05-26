@@ -318,14 +318,14 @@
 
   .allocation-donut-panel {
     display: grid;
-    grid-template-columns: minmax(190px, 0.92fr) minmax(170px, 0.8fr);
+    grid-template-columns: minmax(210px, 1fr) minmax(180px, 0.9fr);
     gap: 12px;
     align-items: center;
   }
 
   .allocation-chart-wrap {
     position: relative;
-    width: min(280px, 100%);
+    width: min(320px, 100%);
     aspect-ratio: 1;
     margin: 0 auto;
   }
@@ -441,6 +441,16 @@
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 0.09em;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .position-bar-meta strong {
+    flex-shrink: 0;
+    margin-left: 8px;
   }
 
   .position-bar-track {
@@ -854,6 +864,14 @@ body {
   .allocation-insights-panel {
     grid-template-columns: 1fr !important;
   }
+
+  .allocation-donut-panel {
+    gap: 14px;
+  }
+
+  .allocation-chart-wrap {
+    width: min(270px, 100%);
+  }
   .allocation-insights-panel {
     grid-column: auto;
   }
@@ -863,10 +881,19 @@ body {
   body { font-size: 13px; }
   .hide-mobile { display: none !important; }
   .data-table th, .data-table td { padding: 9px 10px; }
-  .allocation-chart-wrap { max-width: 238px; }
+  .allocation-chart-wrap { max-width: 228px; }
   .allocation-donut-panel,
   .allocation-bars-panel,
   .allocation-insights-panel {
     padding: 12px;
+  }
+
+  .position-bar-meta {
+    align-items: flex-start;
+  }
+
+  .position-bar-meta span,
+  .position-bar-meta strong {
+    font-size: 10px;
   }
 }

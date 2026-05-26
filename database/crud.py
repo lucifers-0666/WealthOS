@@ -16,6 +16,14 @@ from database.supabase_client import get_supabase, get_supabase_service
 MISSING_COLUMN_RE = re.compile(r"Could not find the '([^']+)' column")
 
 
+def _is_uuid(value: str) -> bool:
+    try:
+        UUID(str(value))
+        return True
+    except Exception:
+        return False
+
+
 def _execute_with_missing_column_retry(query_factory, payload: dict):
     """Retry Supabase writes after dropping columns absent from older schemas."""
     current = [dict(item) for item in payload] if isinstance(payload, list) else dict(payload)
@@ -39,6 +47,8 @@ def _execute_with_missing_column_retry(query_factory, payload: dict):
 
 def ensure_profile_exists(user_id: str) -> None:
     """Create the dev profile row required by older tables with profile FKs."""
+    if not _is_uuid(user_id):
+        return
     sb = get_supabase()
     existing = sb.table("profiles").select("id").eq("id", user_id).limit(1).execute()
     if existing.data:
@@ -55,6 +65,15 @@ def ensure_profile_exists(user_id: str) -> None:
 # ============================================================
 
 def get_or_create_profile(user_id: str, full_name: str = None) -> dict:
+    if not _is_uuid(user_id):
+        return {
+            "id": user_id,
+            "full_name": full_name or "Development User",
+            "currency": "INR",
+            "risk_profile": "moderate",
+            "created_at": datetime.utcnow().isoformat(),
+            "persistence": "local_fallback",
+        }
     sb = get_supabase()
     try:
         res = sb.table("profiles").select("*").eq("id", user_id).maybe_single().execute()
@@ -78,6 +97,8 @@ def get_or_create_profile(user_id: str, full_name: str = None) -> dict:
 
 
 def update_profile(user_id: str, updates: dict) -> dict:
+    if not _is_uuid(user_id):
+        return {**updates, "id": user_id, "persistence": "local_fallback"}
     sb = get_supabase()
     try:
         res = _execute_with_missing_column_retry(
@@ -94,6 +115,8 @@ def update_profile(user_id: str, updates: dict) -> dict:
 # ============================================================
 
 def get_holdings(user_id: str, active_only: bool = True) -> list[dict]:
+    if not _is_uuid(user_id):
+        return []
     sb = get_supabase()
     q = sb.table("holdings").select("*").eq("user_id", user_id)
     if active_only:
@@ -104,6 +127,8 @@ def get_holdings(user_id: str, active_only: bool = True) -> list[dict]:
 
 def get_portfolio_summary(user_id: str) -> list[dict]:
     """Returns holdings joined with live prices via the portfolio_summary view."""
+    if not _is_uuid(user_id):
+        return []
     sb = get_supabase()
     res = (
         sb.table("portfolio_summary")
@@ -120,6 +145,8 @@ def upsert_holding(user_id: str, holding: dict) -> dict:
     Pass full holding dict including: ticker, quantity, avg_buy_price, exchange, asset_class.
     """
     ensure_profile_exists(user_id)
+    if not _is_uuid(user_id):
+        return {**holding, "user_id": user_id, "persistence": "local_fallback"}
     sb = get_supabase()
     payload = {**holding, "user_id": user_id}
     try:
@@ -213,6 +240,8 @@ def get_transactions(
     to_date: date = None,
     limit: int = 500
 ) -> list[dict]:
+    if not _is_uuid(user_id):
+        return []
     sb = get_supabase()
     q = sb.table("transactions").select("*").eq("user_id", user_id)
     if ticker:
@@ -229,6 +258,8 @@ def get_transactions(
 
 def add_transaction(user_id: str, txn: dict) -> dict:
     ensure_profile_exists(user_id)
+    if not _is_uuid(user_id):
+        return {**txn, "user_id": user_id, "persistence": "local_fallback"}
     sb = get_supabase()
     payload = {**txn, "user_id": user_id}
     if "action" in payload and "transaction_type" not in payload:
@@ -242,6 +273,8 @@ def add_transaction(user_id: str, txn: dict) -> dict:
 
 def bulk_add_transactions(user_id: str, txns: list[dict]) -> list[dict]:
     ensure_profile_exists(user_id)
+    if not _is_uuid(user_id):
+        return [{**txn, "user_id": user_id, "persistence": "local_fallback"} for txn in txns]
     sb = get_supabase()
     payloads = []
     for txn in txns:
@@ -299,6 +332,8 @@ def is_price_stale(fetched_at_str: str, ttl_minutes: int = 5) -> bool:
 # ============================================================
 
 def get_target_allocation(user_id: str) -> list[dict]:
+    if not _is_uuid(user_id):
+        return []
     sb = get_supabase()
     res = sb.table("target_allocations").select("*").eq("user_id", user_id).execute()
     return res.data or []
@@ -306,6 +341,8 @@ def get_target_allocation(user_id: str) -> list[dict]:
 
 def set_target_allocation(user_id: str, allocations: list[dict]) -> list[dict]:
     """Full replace of target allocations. Pass list of {asset_class, target_pct}."""
+    if not _is_uuid(user_id):
+        return allocations
     sb = get_supabase()
     payloads = [{**a, "user_id": user_id} for a in allocations]
     res = (
@@ -324,6 +361,8 @@ def save_message(user_id: str, session_id: str, role: str, content: str,
                  portfolio_snapshot: dict = None, tokens: int = 0, model: str = "gemini-1.5-pro") -> dict:
     try:
         ensure_profile_exists(user_id)
+        if not _is_uuid(user_id):
+            return {"user_id": user_id, "session_id": session_id, "role": role, "content": content, "persistence": "local_fallback"}
         sb = get_supabase()
         payload = {
             "user_id": user_id,
@@ -344,6 +383,8 @@ def save_message(user_id: str, session_id: str, role: str, content: str,
 
 
 def get_conversation_history(user_id: str, session_id: str, limit: int = 50) -> list[dict]:
+    if not _is_uuid(user_id):
+        return []
     sb = get_supabase()
     try:
         res = (
@@ -365,6 +406,8 @@ def get_conversation_history(user_id: str, session_id: str, limit: int = 50) -> 
 # ============================================================
 
 def get_watchlist(user_id: str) -> list[dict]:
+    if not _is_uuid(user_id):
+        return []
     sb = get_supabase()
     res = sb.table("watchlist").select("*").eq("user_id", user_id).execute()
     return res.data or []
@@ -372,6 +415,15 @@ def get_watchlist(user_id: str) -> list[dict]:
 
 def add_to_watchlist(user_id: str, ticker: str, exchange: str = "NSE",
                      company_name: str = None, target_price: float = None) -> dict:
+    if not _is_uuid(user_id):
+        return {
+            "user_id": user_id,
+            "ticker": ticker,
+            "exchange": exchange,
+            "company_name": company_name,
+            "target_price": target_price,
+            "persistence": "local_fallback",
+        }
     sb = get_supabase()
     payload = {
         "user_id": user_id,
@@ -380,11 +432,19 @@ def add_to_watchlist(user_id: str, ticker: str, exchange: str = "NSE",
         "company_name": company_name,
         "target_price": target_price
     }
-    res = sb.table("watchlist").upsert(payload, on_conflict="user_id,ticker").execute()
+    try:
+        res = _execute_with_missing_column_retry(
+            lambda clean_payload: sb.table("watchlist").upsert(clean_payload, on_conflict="user_id,ticker"),
+            payload,
+        )
+    except Exception:
+        return {**payload, "persistence": "local_fallback"}
     return res.data[0] if res.data else {}
 
 
 def remove_from_watchlist(user_id: str, ticker: str) -> bool:
+    if not _is_uuid(user_id):
+        return True
     sb = get_supabase()
     res = sb.table("watchlist").delete().eq("user_id", user_id).eq("ticker", ticker).execute()
     return bool(res.data)
@@ -397,6 +457,8 @@ def remove_from_watchlist(user_id: str, ticker: str) -> bool:
 def create_upload_session(user_id: str, file_name: str, file_type: str) -> dict:
     try:
         ensure_profile_exists(user_id)
+        if not _is_uuid(user_id):
+            return {"id": f"local-{file_name}", "user_id": user_id, "filename": file_name, "file_type": file_type, "status": "pending", "persistence": "local_fallback"}
         sb = get_supabase()
         payload = {"user_id": user_id, "filename": file_name, "file_type": file_type, "status": "pending"}
         res = _execute_with_missing_column_retry(

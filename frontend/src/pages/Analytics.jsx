@@ -1,8 +1,19 @@
-import React, { useMemo } from 'react';
-import { BarChart2, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { BarChart2, TrendingUp, TrendingDown, Activity, LineChart as LineChartIcon, Shield, Percent, Scale, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { panelStyle, theme } from '../lib/theme.js';
 import { usePortfolio } from '../lib/usePortfolio.js';
 import { PageLoadingState, EmptyState } from '../components/PageStates.jsx';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
 // ── Helpers ──────────────────────────────────────────────────────
 function fmt(n, digits = 2) {
@@ -118,9 +129,136 @@ function StatCard({ label, value, sub, color, icon: Icon }) {
   );
 }
 
+function calcReturns(values) {
+  const out = [];
+  for (let i = 1; i < values.length; i += 1) {
+    const prev = values[i - 1];
+    const curr = values[i];
+    if (!prev || !curr) continue;
+    out.push((curr - prev) / prev);
+  }
+  return out;
+}
+
+function calcStdDev(numbers) {
+  if (!numbers.length) return 0;
+  const mean = numbers.reduce((s, n) => s + n, 0) / numbers.length;
+  const variance = numbers.reduce((s, n) => s + ((n - mean) ** 2), 0) / numbers.length;
+  return Math.sqrt(variance);
+}
+
+function calcCagr(first, last, days) {
+  if (!first || !last || first <= 0 || days <= 0) return 0;
+  const years = days / 365;
+  if (years <= 0) return 0;
+  return ((last / first) ** (1 / years) - 1) * 100;
+}
+
+function calcDrawdownSeries(values) {
+  let peak = 0;
+  return values.map((value) => {
+    peak = Math.max(peak, value);
+    return peak > 0 ? ((value - peak) / peak) * 100 : 0;
+  });
+}
+
+function calcBeta(portfolioReturns, benchmarkReturns) {
+  const pairs = portfolioReturns
+    .map((r, i) => [r, benchmarkReturns[i]])
+    .filter(([p, b]) => Number.isFinite(p) && Number.isFinite(b));
+  if (pairs.length < 2) return 0;
+  const pMean = pairs.reduce((s, [p]) => s + p, 0) / pairs.length;
+  const bMean = pairs.reduce((s, [, b]) => s + b, 0) / pairs.length;
+  const cov = pairs.reduce((s, [p, b]) => s + ((p - pMean) * (b - bMean)), 0) / pairs.length;
+  const bVar = pairs.reduce((s, [, b]) => s + ((b - bMean) ** 2), 0) / pairs.length;
+  return bVar > 0 ? cov / bVar : 0;
+}
+
+function calcXirr(transactions, currentValue) {
+  if (!transactions.length || !currentValue) return 0;
+  const cashFlows = [];
+  transactions.forEach((txn) => {
+    const date = txn.transaction_date || txn.date;
+    const action = (txn.action || 'buy').toLowerCase();
+    const amount = (Number(txn.price || 0) * Number(txn.quantity || 0));
+    if (!date || !amount) return;
+    cashFlows.push({
+      date: new Date(date),
+      value: action === 'sell' ? amount : -amount,
+    });
+  });
+  cashFlows.push({ date: new Date(), value: Number(currentValue) });
+  if (cashFlows.length < 2) return 0;
+
+  const daysBetween = (a, b) => (b - a) / (1000 * 60 * 60 * 24);
+  const npv = (rate) => cashFlows.reduce((sum, cf) => {
+    const years = daysBetween(cashFlows[0].date, cf.date) / 365;
+    return sum + (cf.value / ((1 + rate) ** years));
+  }, 0);
+
+  let rate = 0.12;
+  for (let i = 0; i < 30; i += 1) {
+    const f = npv(rate);
+    const eps = 1e-5;
+    const deriv = (npv(rate + eps) - f) / eps;
+    if (!Number.isFinite(deriv) || deriv === 0) break;
+    const next = rate - (f / deriv);
+    if (!Number.isFinite(next)) break;
+    if (Math.abs(next - rate) < 1e-6) return next * 100;
+    rate = next;
+  }
+  return rate * 100;
+}
+
 // ── Main Page ────────────────────────────────────────────────────
 export default function Analytics() {
   const { holdings, summary, loading } = usePortfolio();
+  const [range, setRange] = useState('90');
+  const [history, setHistory] = useState([]);
+  const [benchmark, setBenchmark] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const load = async () => {
+      setLoadingHistory(true);
+      try {
+        const token = localStorage.getItem('token') || '';
+        const [portfolioRes, benchmarkRes, txnRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/portfolio/history?days=${range}`, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          }),
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/market/history?symbol=NIFTYBEES&range=${range === '30' ? '1M' : range === '90' ? '3M' : range === '365' ? '1Y' : '1M'}`, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          }),
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/transactions`, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          }),
+        ]);
+
+        const portfolioJson = portfolioRes.ok ? await portfolioRes.json() : { history: [] };
+        const benchmarkJson = benchmarkRes.ok ? await benchmarkRes.json() : { points: [] };
+        const txnJson = txnRes.ok ? await txnRes.json() : [];
+
+        setHistory(portfolioJson.history || []);
+        setBenchmark(benchmarkJson.points || []);
+        setTransactions(Array.isArray(txnJson) ? txnJson : (txnJson.transactions || txnJson.data || []));
+      } catch {
+        setHistory([]);
+        setBenchmark([]);
+        setTransactions([]);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+    load();
+    return () => controller.abort();
+  }, [range]);
+
+  const [transactions, setTransactions] = useState([]);
 
   const derived = useMemo(() => {
     if (!holdings.length) return null;
@@ -152,19 +290,64 @@ export default function Analytics() {
     const totalCost = withPnl.reduce((s, h) => s + h.cost, 0);
     const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
 
-    return { withPnl, sorted, maxAbs, donutSlices, best, worst, totalPnl, totalPnlPct };
-  }, [holdings]);
+    const historyValues = history.map((p) => Number(p.value || 0)).filter(Boolean);
+    const benchmarkValues = benchmark.map((p) => Number(p.value || p.Close || 0)).filter(Boolean);
+    const portfolioReturns = calcReturns(historyValues);
+    const benchmarkReturns = calcReturns(benchmarkValues);
+    const drawdownSeries = calcDrawdownSeries(historyValues);
+    const maxDrawdown = drawdownSeries.length ? Math.min(...drawdownSeries) : 0;
+    const volatility = calcStdDev(portfolioReturns) * Math.sqrt(252) * 100;
+    const sharpe = portfolioReturns.length ? ((portfolioReturns.reduce((s, r) => s + r, 0) / portfolioReturns.length) * 252 * 100 - 6.5) / (volatility || 1) : 0;
+    const cagr = calcCagr(historyValues[0], historyValues[historyValues.length - 1], Number(range));
+    const beta = calcBeta(portfolioReturns, benchmarkReturns);
+    const xirr = calcXirr(transactions, summary?.total_value || historyValues[historyValues.length - 1] || totalCost + totalPnl);
+
+    const chartData = history.map((p, index) => ({
+      date: p.date,
+      portfolio: Number(p.value || 0),
+      benchmark: Number(benchmark[index]?.value || benchmark[index]?.Close || 0),
+      drawdown: drawdownSeries[index] || 0,
+    }));
+
+    return { withPnl, sorted, maxAbs, donutSlices, best, worst, totalPnl, totalPnlPct, cagr, xirr, volatility, sharpe, beta, maxDrawdown, chartData };
+  }, [benchmark, history, holdings, range, summary?.total_value, transactions]);
 
   if (loading) return <PageLoadingState title="Loading analytics…" subtitle="Crunching portfolio performance data." />;
   if (!holdings.length) return <EmptyState title="No holdings to analyse" message="Import or add holdings to see your analytics dashboard." />;
 
-  const { withPnl, sorted, maxAbs, donutSlices, best, worst, totalPnl, totalPnlPct } = derived;
+  const { withPnl, sorted, maxAbs, donutSlices, best, worst, totalPnl, totalPnlPct, cagr, xirr, volatility, sharpe, beta, maxDrawdown, chartData } = derived;
 
   const winners = sorted.filter((h) => h.pnl >= 0);
   const losers = sorted.filter((h) => h.pnl < 0).reverse();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div className="section-label">Performance Analytics</div>
+          <div style={{ color: theme.colors.textMuted, fontSize: 12 }}>Historical return analysis, benchmark comparison, and risk metrics.</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {['30', '90', '365'].map((value) => (
+            <button
+              key={value}
+              onClick={() => setRange(value)}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 999,
+                border: `1px solid ${range === value ? theme.colors.gold : theme.colors.border}`,
+                background: range === value ? 'rgba(213,181,115,0.12)' : 'transparent',
+                color: theme.colors.text,
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              {value === '30' ? '30D' : value === '90' ? '90D' : '1Y'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── KPI Row ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
         <StatCard
@@ -194,6 +377,77 @@ export default function Analytics() {
           sub={`${winners.length} winners · ${losers.length} losers`}
           icon={Activity}
         />
+        <StatCard
+          label="CAGR"
+          value={`${fmt(cagr, 2)}%`}
+          sub="Annualized return"
+          color={cagr >= 0 ? theme.colors.success : theme.colors.error}
+          icon={ArrowUpRight}
+        />
+        <StatCard
+          label="XIRR"
+          value={`${fmt(xirr, 2)}%`}
+          sub="Cash-flow weighted return"
+          color={xirr >= 0 ? theme.colors.success : theme.colors.error}
+          icon={Percent}
+        />
+        <StatCard
+          label="Volatility"
+          value={`${fmt(volatility, 2)}%`}
+          sub="Annualized standard deviation"
+          icon={Shield}
+        />
+        <StatCard
+          label="Sharpe / Beta"
+          value={`${fmt(sharpe, 2)} / ${fmt(beta, 2)}`}
+          sub={`Max drawdown ${fmt(maxDrawdown, 2)}%`}
+          icon={Scale}
+        />
+      </div>
+
+      <div style={{ ...panelStyle({ padding: '18px 16px' }) }}>
+        <div className="section-label" style={{ marginBottom: 14 }}>Portfolio vs Benchmark</div>
+        <div style={{ height: 280, width: '100%' }}>
+          {loadingHistory ? (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.textMuted }}>Loading history…</div>
+          ) : chartData.length ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                <XAxis dataKey="date" tick={{ fill: theme.colors.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: theme.colors.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
+                <Tooltip
+                  contentStyle={{ background: '#0f1e1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, color: theme.colors.text }}
+                />
+                <Line type="monotone" dataKey="portfolio" stroke={theme.colors.gold} strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="benchmark" stroke={theme.colors.accent} strokeWidth={2} dot={false} strokeDasharray="5 4" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.textMuted }}>No history available yet.</div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ ...panelStyle({ padding: '18px 16px' }) }}>
+        <div className="section-label" style={{ marginBottom: 14 }}>Drawdown Profile</div>
+        <div style={{ height: 180, width: '100%' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="drawdownFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={theme.colors.error} stopOpacity={0.35} />
+                  <stop offset="95%" stopColor={theme.colors.error} stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+              <XAxis dataKey="date" tick={{ fill: theme.colors.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: theme.colors.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
+              <Tooltip contentStyle={{ background: '#0f1e1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, color: theme.colors.text }} />
+              <Area type="monotone" dataKey="drawdown" stroke={theme.colors.error} fill="url(#drawdownFill)" strokeWidth={2} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* ── Allocation + P&L ── */}

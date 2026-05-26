@@ -30,6 +30,8 @@ export default function Dashboard() {
   const { portfolio, holdings, transactions, watchlist, loading, error, refresh } = usePortfolio();
 
   const summary = portfolio?.summary || {};
+  const resolvedDayChange = summary.day_change ?? holdings.reduce((sum, item) => sum + Number(item.day_change || 0), 0);
+  const resolvedDayChangePct = summary.day_change_pct ?? (summary.current_value ? (resolvedDayChange / summary.current_value) * 100 : 0);
 
   const allocationData = useMemo(() => {
     const groups = {};
@@ -51,7 +53,7 @@ export default function Dashboard() {
     { label: 'Portfolio value', value: fmt(summary.current_value), sub: 'Live portfolio valuation', tone: 'neutral' },
     { label: 'Total invested', value: fmt(summary.total_invested), sub: 'Cost basis across active positions', tone: 'neutral' },
     { label: 'Unrealised P&L', value: fmt(summary.total_pnl), sub: pct(summary.total_pnl_pct), tone: (summary.total_pnl || 0) >= 0 ? 'positive' : 'negative' },
-    { label: 'Day change', value: fmt(summary.day_change), sub: pct(summary.day_change_pct), tone: (summary.day_change || 0) >= 0 ? 'positive' : 'negative' },
+    { label: 'Day change', value: fmt(resolvedDayChange), sub: pct(resolvedDayChangePct), tone: (resolvedDayChange || 0) >= 0 ? 'positive' : 'negative' },
   ];
   const tickerRibbon = useMemo(() => {
     const base = [

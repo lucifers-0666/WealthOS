@@ -48,6 +48,7 @@ from core.image_ocr import extract_holdings_from_image
 from core.market_status import get_market_status
 from core.import_engine import process_import_file, apply_confirm
 from ai.cfo_advisor import get_cfo_response
+from ai.rag_engine import fetch_news_for_symbols
 from backend.services.live_market_engine import LiveMarketEngine
 
 live_market_engine = LiveMarketEngine()
@@ -158,6 +159,11 @@ class WatchlistIn(BaseModel):
     company_name: Optional[str] = None
     target_price: Optional[float] = None
 
+class WatchlistAlertIn(BaseModel):
+    symbol: str
+    target_price: float
+    direction: str = "above"
+
 class ImportConfirmIn(BaseModel):
     holdings: List[dict]
     merge_strategy: str = "skip"
@@ -236,7 +242,31 @@ def read_holdings(user_id: str = Depends(get_user_id)):
 
 @app.get("/portfolio")
 def read_portfolio_summary(user_id: str = Depends(get_user_id)):
-    return get_portfolio_summary(user_id)
+    base_rows = get_portfolio_summary(user_id)
+    holdings = get_holdings(user_id)
+
+    if not holdings:
+        return base_rows
+
+    symbols = [
+        {
+            "ticker": row.get("ticker"),
+            "exchange": row.get("exchange") or "NSE",
+            "currency": row.get("currency") or "INR",
+        }
+        for row in holdings
+        if row.get("ticker")
+    ]
+
+    if not symbols:
+        return base_rows
+
+    try:
+        quotes = live_market_engine.market_service.fetch_prices(symbols)
+        return live_market_engine._merge_quotes_into_holdings(base_rows, holdings, quotes)
+    except Exception as exc:
+        logger.warning(f"read_portfolio_summary live merge fallback: {exc}")
+        return base_rows
 
 
 # ── Portfolio History ────────────────────────────────────────────
@@ -364,6 +394,133 @@ def read_prices(tickers: str, user_id: str = Depends(get_user_id)):
     }
 
 
+@app.get("/api/market/batch", tags=["Market"])
+def market_batch(symbols: str, user_id: str = Depends(get_user_id)):
+    ticker_list = [t.strip() for t in symbols.split(",") if t.strip()]
+    quotes = live_market_engine.market_service.fetch_prices([
+        {"ticker": ticker, "exchange": "NSE", "currency": "INR"} for ticker in ticker_list
+    ])
+    return {
+        "prices": {
+            ticker: {
+                "ltp": quote.price_inr or quote.price,
+                "change": quote.change_abs,
+                "change_pct": quote.change_pct,
+                "week_52_high": quote.week_52_high,
+                "week_52_low": quote.week_52_low,
+                "market_cap": quote.market_cap,
+                "day_high": quote.day_high,
+                "day_low": quote.day_low,
+                "source": quote.source,
+                "fetched_at": quote.fetched_at,
+            }
+            for ticker, quote in quotes.items()
+        }
+    }
+
+
+@app.get("/api/market/search", tags=["Market"])
+def market_search(q: str, user_id: str = Depends(get_user_id)):
+    query = q.strip().upper()
+    watchlist = get_watchlist(user_id)
+    holdings = get_holdings(user_id)
+    universe = []
+    seen = set()
+
+    for row in [*watchlist, *holdings]:
+        ticker = (row.get("ticker") or row.get("symbol") or "").upper()
+        if not ticker or ticker in seen:
+            continue
+        seen.add(ticker)
+        universe.append({
+            "symbol": ticker,
+            "name": row.get("company_name") or row.get("name") or ticker,
+            "sector": row.get("sector") or "",
+        })
+
+    # Add a small hard-coded NSE universe for autocomplete if nothing local matches
+    demo_universe = [
+        {"symbol": "RELIANCE", "name": "Reliance Industries", "sector": "Energy"},
+        {"symbol": "TCS", "name": "Tata Consultancy Services", "sector": "IT"},
+        {"symbol": "INFY", "name": "Infosys", "sector": "IT"},
+        {"symbol": "HDFCBANK", "name": "HDFC Bank", "sector": "Banking"},
+        {"symbol": "ICICIBANK", "name": "ICICI Bank", "sector": "Banking"},
+        {"symbol": "SBIN", "name": "State Bank of India", "sector": "Banking"},
+        {"symbol": "LT", "name": "Larsen & Toubro", "sector": "Industrials"},
+        {"symbol": "ITC", "name": "ITC", "sector": "FMCG"},
+    ]
+
+    universe.extend([item for item in demo_universe if item["symbol"] not in seen])
+
+    results = [
+        item for item in universe
+        if not query or query in item["symbol"] or query in item["name"].upper() or query in item["sector"].upper()
+    ]
+    return {"results": results[:20]}
+
+
+@app.get("/api/market/history", tags=["Market"])
+def market_history(symbol: str, range: str = "1M", user_id: str = Depends(get_user_id)):
+    period_map = {"1D": "1d", "1W": "5d", "1M": "1mo", "3M": "3mo", "1Y": "1y", "ALL": "max"}
+    period = period_map.get(range.upper(), "1mo")
+    try:
+        from core.price_fetcher import fetch_history
+        hist = fetch_history(symbol, period=period)
+        if hist.empty:
+            return {"points": []}
+        points = [
+            {"date": idx.isoformat() if hasattr(idx, "isoformat") else str(idx), "value": float(row["Close"])}
+            for idx, row in hist.iterrows()
+        ]
+        return {"points": points}
+    except Exception as e:
+        logger.warning(f"market_history failed: {e}")
+        return {"points": []}
+
+
+@app.get("/api/news", tags=["News"])
+def market_news(sentiment: Optional[str] = None, user_id: str = Depends(get_user_id)):
+    try:
+        holdings = get_holdings(user_id)
+        watchlist = get_watchlist(user_id)
+        symbols = []
+        for row in [*holdings, *watchlist]:
+            ticker = (row.get("ticker") or row.get("symbol") or "").upper()
+            if ticker and ticker not in symbols:
+                symbols.append(ticker)
+
+        articles = fetch_news_for_symbols(tuple(symbols)) or []
+        normalized = []
+        for article in articles:
+            text = f"{article.get('title', '')} {article.get('description', '')}".lower()
+            article_sentiment = "neutral"
+            bullish_terms = ["beats", "growth", "surge", "rally", "upgrade", "profit", "buy", "record", "strong"]
+            bearish_terms = ["falls", "cuts", "downgrade", "loss", "slump", "weak", "drop", "concern", "slow"]
+            bullish_score = sum(1 for term in bullish_terms if term in text)
+            bearish_score = sum(1 for term in bearish_terms if term in text)
+            if bullish_score > bearish_score:
+                article_sentiment = "bullish"
+            elif bearish_score > bullish_score:
+                article_sentiment = "bearish"
+
+            if sentiment and sentiment != "all" and article_sentiment != sentiment:
+                continue
+
+            normalized.append({
+                "title": article.get("title"),
+                "description": article.get("description"),
+                "url": article.get("url"),
+                "source": (article.get("source") or {}).get("name") if isinstance(article.get("source"), dict) else article.get("source"),
+                "publishedAt": article.get("publishedAt"),
+                "sentiment": article_sentiment,
+            })
+
+        return {"articles": normalized[:20]}
+    except Exception as e:
+        logger.warning(f"market_news failed: {e}")
+        return {"articles": []}
+
+
 # ── Target Allocation ────────────────────────────────────────────
 @app.get("/target-allocation")
 def read_target(user_id: str = Depends(get_user_id)):
@@ -379,8 +536,18 @@ def write_target(body: TargetAllocationIn, user_id: str = Depends(get_user_id)):
 def read_watchlist(user_id: str = Depends(get_user_id)):
     return get_watchlist(user_id)
 
+
+@app.get("/api/watchlist", tags=["Watchlist"])
+def read_watchlist_api(user_id: str = Depends(get_user_id)):
+    return get_watchlist(user_id)
+
 @app.post("/watchlist")
 def add_watchlist(item: WatchlistIn, user_id: str = Depends(get_user_id)):
+    return add_to_watchlist(user_id, **item.model_dump())
+
+
+@app.post("/api/watchlist", tags=["Watchlist"])
+def add_watchlist_api(item: WatchlistIn, user_id: str = Depends(get_user_id)):
     return add_to_watchlist(user_id, **item.model_dump())
 
 @app.delete("/watchlist/{ticker}")
@@ -389,6 +556,36 @@ def delete_watchlist(ticker: str, user_id: str = Depends(get_user_id)):
     if not ok:
         raise HTTPException(status_code=404, detail="Ticker not in watchlist")
     return {"deleted": True}
+
+
+@app.delete("/api/watchlist/{ticker}", tags=["Watchlist"])
+def delete_watchlist_api(ticker: str, user_id: str = Depends(get_user_id)):
+    ok = remove_from_watchlist(user_id, ticker)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Ticker not in watchlist")
+    return {"deleted": True}
+
+
+@app.post("/api/watchlist/alerts", tags=["Watchlist"])
+def create_watchlist_alert(body: WatchlistAlertIn, user_id: str = Depends(get_user_id)):
+    try:
+        from database.supabase_client import get_supabase
+        sb = get_supabase()
+        payload = {
+            "user_id": user_id,
+            "symbol": body.symbol.upper(),
+            "target_price": body.target_price,
+            "direction": body.direction,
+            "triggered": False,
+        }
+        try:
+            res = sb.table("watchlist_alerts").insert(payload).execute()
+            return res.data[0] if res.data else {"saved": True, **payload}
+        except Exception:
+            return {"saved": True, **payload, "persistence": "deferred"}
+    except Exception as e:
+        logger.warning(f"create_watchlist_alert fallback: {e}")
+        return {"saved": True, "symbol": body.symbol.upper(), "target_price": body.target_price, "direction": body.direction}
 
 
 # ── Upload: CSV ────────────────────────────────────────────────

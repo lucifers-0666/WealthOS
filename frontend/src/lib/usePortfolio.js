@@ -25,6 +25,8 @@ const normalizeHolding = (row) => {
   const pnl = n(row.unrealised_pnl ?? row.unrealized_pnl ?? currentValue - invested);
   const pnlPct = invested ? (pnl / invested) * 100 : 0;
   const changePct = n(row.change_pct ?? row.price_change_pct ?? 0);
+  const dayChange = n(row.day_change ?? row.dayChange ?? (currentValue && changePct ? (currentValue * changePct) / 100 : 0));
+  const dayChangePct = n(row.day_change_pct ?? row.dayChangePct ?? changePct);
   return {
     id: row.holding_id ?? row.id ?? row.ticker,
     ticker: row.ticker,
@@ -40,8 +42,8 @@ const normalizeHolding = (row) => {
     invested_value: invested,
     unrealised_pnl: pnl,
     unrealised_pnl_pct: pnlPct,
-    day_change_pct: changePct,
-    day_change: currentValue && changePct ? (currentValue * changePct) / 100 : 0,
+    day_change_pct: dayChangePct,
+    day_change: dayChange,
     price_updated_at: row.price_updated_at,
     weight_pct: n(row.weight_pct),
     raw: row,
@@ -53,6 +55,12 @@ const buildSummary = (holdings) => {
   const value = holdings.reduce((sum, item) => sum + item.current_value, 0);
   const pnl = value - invested;
   const dayChange = holdings.reduce((sum, item) => sum + (item.day_change || 0), 0);
+  const fallbackDayChange = holdings.reduce((sum, item) => {
+    if (item.day_change) return sum + item.day_change;
+    if (item.current_value && item.day_change_pct) return sum + ((item.current_value * item.day_change_pct) / 100);
+    return sum;
+  }, 0);
+  const resolvedDayChange = dayChange || fallbackDayChange;
   const topWinner = holdings.reduce((best, item) => (item.unrealised_pnl_pct > (best?.unrealised_pnl_pct ?? -Infinity) ? item : best), null);
   const topLoser = holdings.reduce((worst, item) => (item.unrealised_pnl_pct < (worst?.unrealised_pnl_pct ?? Infinity) ? item : worst), null);
 
@@ -61,8 +69,8 @@ const buildSummary = (holdings) => {
     current_value: value,
     total_pnl: pnl,
     total_pnl_pct: invested ? (pnl / invested) * 100 : 0,
-    day_change: dayChange,
-    day_change_pct: value ? (dayChange / value) * 100 : 0,
+    day_change: resolvedDayChange,
+    day_change_pct: value ? (resolvedDayChange / value) * 100 : 0,
     num_holdings: holdings.length,
     num_winners: holdings.filter((h) => h.unrealised_pnl >= 0).length,
     num_losers: holdings.filter((h) => h.unrealised_pnl < 0).length,

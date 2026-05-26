@@ -40,7 +40,13 @@ apiClient.interceptors.request.use((config) => {
   if (authToken) {
     next.headers.Authorization = `Bearer ${authToken}`;
   }
-  next.headers['Content-Type'] = next.headers['Content-Type'] || 'application/json';
+  const isFormData = typeof FormData !== 'undefined' && next.data instanceof FormData;
+  if (isFormData) {
+    delete next.headers['Content-Type'];
+    delete next.headers['content-type'];
+  } else if (!next.headers['Content-Type'] && !next.headers['content-type']) {
+    next.headers['Content-Type'] = 'application/json';
+  }
   return next;
 });
 
@@ -59,12 +65,21 @@ export function normalizeApiError(error) {
 
   if (error.response) {
     const { status, data } = error.response;
-    const message =
-      data?.detail ||
-      data?.message ||
-      data?.error ||
-      error.message ||
-      `Request failed with status ${status}`;
+    let message = data?.message || data?.error;
+
+    if (!message && data?.detail) {
+      if (typeof data.detail === 'string') {
+        message = data.detail;
+      } else if (Array.isArray(data.detail)) {
+        message = data.detail
+          .map((item) => item?.msg || JSON.stringify(item))
+          .join('; ');
+      } else {
+        message = data.detail?.msg || JSON.stringify(data.detail);
+      }
+    }
+
+    message = message || error.message || `Request failed with status ${status}`;
 
     const normalized = new Error(message);
     normalized.status = status;

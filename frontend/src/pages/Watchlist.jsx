@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const LOCAL_KEY = 'wealthos:watchlist-local';
 
 const fmt = (n, d = 2) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmtPct = (n) => (Number(n || 0) >= 0 ? '+' : '') + fmt(n) + '%';
@@ -31,7 +32,14 @@ export default function Watchlist() {
       });
       if (res.ok) {
         const data = await res.json();
-        setItems(data.watchlist || data || []);
+        const remote = data.watchlist || data || [];
+        if (Array.isArray(remote) && remote.length) {
+          setItems(remote);
+          window.localStorage.setItem(LOCAL_KEY, JSON.stringify(remote));
+        } else {
+          const fallback = JSON.parse(window.localStorage.getItem(LOCAL_KEY) || '[]');
+          setItems(Array.isArray(fallback) ? fallback : []);
+        }
       }
     } catch (e) { console.warn('Watchlist fetch failed'); }
     finally { setLoading(false); }
@@ -70,13 +78,19 @@ export default function Watchlist() {
       const res = await fetch(`${API}/api/watchlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
-        body: JSON.stringify({ symbol }),
+        body: JSON.stringify({ ticker: symbol }),
       });
       if (res.ok) {
+        const created = await res.json().catch(() => ({}));
+        const nextItem = { symbol, name: created.company_name || created.name || symbol };
+        setItems(prev => {
+          const next = [{ ...nextItem }, ...prev.filter(item => item.symbol !== symbol)];
+          window.localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
+          return next;
+        });
         setSearch('');
         setSearchResults([]);
         setRecentSearches(prev => [symbol, ...prev.filter(s => s !== symbol)].slice(0, 5));
-        await fetchWatchlist();
       }
     } catch (e) { console.warn('Add watchlist failed'); }
   };
@@ -87,7 +101,11 @@ export default function Watchlist() {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
       });
-      await fetchWatchlist();
+      setItems(prev => {
+        const next = prev.filter(item => item.symbol !== symbol);
+        window.localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
+        return next;
+      });
     } catch (e) { console.warn('Remove watchlist failed'); }
   };
 

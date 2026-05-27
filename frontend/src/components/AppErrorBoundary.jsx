@@ -1,137 +1,119 @@
-/**
- * AppErrorBoundary — global React error boundary.
- * Catches render errors, logs structured info, shows clean recovery UI.
- * No stack traces exposed to user. Dev mode shows detail.
- */
 import { Component } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-export class AppErrorBoundary extends Component {
-  state = { hasError: false, errorId: null, message: '' };
+/**
+ * AppErrorBoundary — production-grade error boundary.
+ *
+ * Features:
+ * - Route-aware reset: clears error automatically on navigation change
+ * - key-based unmount strategy via `resetKey` prop (pass from parent)
+ * - `onReset` callback so parent can clear state on retry
+ * - componentStack capture for structured error reporting
+ * - Sentry-ready: calls window.__sentryReportError if available
+ * - No emojis, calm institutional styling
+ */
+class AppErrorBoundaryBase extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      componentStack: null,
+      errorId: null,
+    };
+    this.handleReset = this.handleReset.bind(this);
+  }
 
   static getDerivedStateFromError(error) {
-    const errorId = `ERR_${Date.now().toString(36).toUpperCase()}`;
-    return { hasError: true, errorId, message: error?.message || 'Unknown error' };
+    return {
+      hasError: true,
+      error,
+      errorId: Date.now().toString(36),
+    };
   }
 
   componentDidCatch(error, info) {
-    // Structured log — replace with Sentry.captureException in production
-    console.error('[WealthOS Error Boundary]', {
-      errorId: this.state.errorId,
+    const componentStack = info?.componentStack ?? null;
+    this.setState({ componentStack });
+
+    // Structured console error
+    console.error('[WealthOS ErrorBoundary]', {
       message: error?.message,
       stack: error?.stack,
-      component: info?.componentStack,
-      timestamp: new Date().toISOString(),
+      componentStack,
+      errorId: this.state.errorId,
     });
+
+    // Sentry-compatible hook
+    if (typeof window.__sentryReportError === 'function') {
+      window.__sentryReportError(error, { componentStack });
+    }
   }
 
-  handleReset = () => {
-    this.setState({ hasError: false, errorId: null, message: '' });
-  };
+  componentDidUpdate(prevProps) {
+    // Route-aware reset: when location pathname changes, clear error
+    if (
+      this.state.hasError &&
+      prevProps.locationKey !== this.props.locationKey
+    ) {
+      this.handleReset();
+    }
+    // resetKey-based reset (parent can increment to force clear)
+    if (
+      this.state.hasError &&
+      prevProps.resetKey !== this.props.resetKey
+    ) {
+      this.handleReset();
+    }
+  }
+
+  handleReset() {
+    this.setState({
+      hasError: false,
+      error: null,
+      componentStack: null,
+      errorId: null,
+    });
+    if (typeof this.props.onReset === 'function') {
+      this.props.onReset();
+    }
+  }
 
   render() {
-    if (!this.state.hasError) return this.props.children;
+    const { hasError, error, componentStack, errorId } = this.state;
+    const { children, fallback } = this.props;
 
-    const isDev = import.meta.env.DEV;
+    if (!hasError) return children;
+
+    // Custom fallback from parent
+    if (typeof fallback === 'function') {
+      return fallback({ error, componentStack, errorId, onReset: this.handleReset });
+    }
 
     return (
-      <div
-        role="alert"
-        style={{
-          minHeight: '100dvh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'var(--color-bg, #171614)',
-          fontFamily: 'inherit',
-          padding: '2rem',
-        }}
-      >
-        <div style={{ maxWidth: 480, width: '100%' }}>
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" aria-hidden>
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#dc2626', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Application Error</span>
-          </div>
-
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text, #cdccca)', marginBottom: '0.5rem', lineHeight: 1.3 }}>
-            Something went wrong
-          </h1>
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted, #797876)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-            WealthOS encountered an unexpected error. Your portfolio data is safe.
+      <div style={styles.overlay}>
+        <div style={styles.card}>
+          <div style={styles.indicator} />
+          <h2 style={styles.title}>Something went wrong</h2>
+          <p style={styles.message}>
+            {error?.message || 'An unexpected error occurred.'}
           </p>
-
-          {/* Error ID */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '0.625rem 0.875rem',
-            background: 'var(--color-surface, #1c1b19)',
-            border: '1px solid var(--color-border, #393836)',
-            borderRadius: '0.5rem',
-            marginBottom: '1.5rem',
-          }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Error ID</span>
-            <code style={{ fontSize: '0.75rem', color: 'var(--color-text-faint)', letterSpacing: '0.05em' }}>
-              {this.state.errorId}
-            </code>
-          </div>
-
-          {/* Dev detail */}
-          {isDev && this.state.message && (
-            <details style={{ marginBottom: '1.5rem' }}>
-              <summary style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', cursor: 'pointer', marginBottom: '0.5rem' }}>Technical detail</summary>
-              <code style={{
-                display: 'block',
-                padding: '0.75rem',
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '0.375rem',
-                fontSize: '0.75rem',
-                color: '#dc2626',
-                wordBreak: 'break-all',
-                lineHeight: 1.6,
-              }}>
-                {this.state.message}
-              </code>
+          {errorId && (
+            <p style={styles.errorId}>Error ID: {errorId}</p>
+          )}
+          {componentStack && (
+            <details style={styles.details}>
+              <summary style={styles.summary}>Component trace</summary>
+              <pre style={styles.pre}>{componentStack.trim()}</pre>
             </details>
           )}
-
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button
-              onClick={this.handleReset}
-              style={{
-                flex: 1,
-                padding: '0.625rem 1rem',
-                borderRadius: '0.5rem',
-                border: 'none',
-                background: 'var(--color-primary, #4f98a3)',
-                color: '#fff',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
+          <div style={styles.actions}>
+            <button style={styles.btnPrimary} onClick={this.handleReset}>
               Try again
             </button>
             <button
+              style={styles.btnSecondary}
               onClick={() => window.location.reload()}
-              style={{
-                flex: 1,
-                padding: '0.625rem 1rem',
-                borderRadius: '0.5rem',
-                border: '1px solid var(--color-border, #393836)',
-                background: 'transparent',
-                color: 'var(--color-text)',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
             >
               Reload page
             </button>
@@ -142,4 +124,121 @@ export class AppErrorBoundary extends Component {
   }
 }
 
-export default AppErrorBoundary;
+// Functional wrapper to inject router-aware props
+export default function AppErrorBoundary(props) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  return (
+    <AppErrorBoundaryBase
+      {...props}
+      locationKey={location.pathname + location.search}
+      navigate={navigate}
+    />
+  );
+}
+
+// Named export for contexts outside Router (e.g., root provider wraps)
+export { AppErrorBoundaryBase };
+
+const styles = {
+  overlay: {
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'var(--color-bg, #0d0d0f)',
+    padding: '24px',
+  },
+  card: {
+    maxWidth: 480,
+    width: '100%',
+    background: 'var(--color-surface, #141417)',
+    border: '1px solid var(--color-border, rgba(255,255,255,0.07))',
+    borderRadius: 12,
+    padding: '36px 32px',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  indicator: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    background: 'var(--color-error, #e05263)',
+    borderRadius: '12px 12px 0 0',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 600,
+    color: 'var(--color-text, #e2e2e4)',
+    marginBottom: 8,
+    letterSpacing: '-0.01em',
+  },
+  message: {
+    fontSize: 14,
+    color: 'var(--color-text-muted, #8b8b9a)',
+    lineHeight: 1.6,
+    marginBottom: 8,
+  },
+  errorId: {
+    fontSize: 11,
+    color: 'var(--color-text-faint, #4a4a57)',
+    fontFamily: 'monospace',
+    marginBottom: 16,
+    letterSpacing: '0.04em',
+  },
+  details: {
+    marginBottom: 20,
+  },
+  summary: {
+    fontSize: 12,
+    color: 'var(--color-text-muted, #8b8b9a)',
+    cursor: 'pointer',
+    userSelect: 'none',
+    marginBottom: 8,
+  },
+  pre: {
+    fontSize: 11,
+    color: 'var(--color-text-muted, #8b8b9a)',
+    background: 'var(--color-surface-offset, #1a1a1e)',
+    border: '1px solid var(--color-border, rgba(255,255,255,0.06))',
+    borderRadius: 6,
+    padding: '10px 12px',
+    overflowX: 'auto',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    lineHeight: 1.5,
+    maxHeight: 200,
+    overflowY: 'auto',
+  },
+  actions: {
+    display: 'flex',
+    gap: 10,
+    marginTop: 4,
+  },
+  btnPrimary: {
+    flex: 1,
+    padding: '10px 0',
+    background: 'var(--color-primary, #4f9cf9)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'opacity 150ms ease',
+  },
+  btnSecondary: {
+    flex: 1,
+    padding: '10px 0',
+    background: 'transparent',
+    color: 'var(--color-text-muted, #8b8b9a)',
+    border: '1px solid var(--color-border, rgba(255,255,255,0.1))',
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'border-color 150ms ease, color 150ms ease',
+  },
+};

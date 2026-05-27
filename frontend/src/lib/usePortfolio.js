@@ -1,323 +1,235 @@
 /**
- * WealthOS — usePortfolio hook
- * Single source of truth for portfolio data — wired to the centralized API client
- * and backed by React Query for caching, retries, and background refetches.
+ * usePortfolio — consumes ONLY MarketDataContext for live prices.
+ * No duplicate WebSocket. No own polling. Single source of truth.
  */
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { supabase } from './auth.js';
+import { useMarketData } from './MarketDataContext.jsx';
 
-import { useEffect, useMemo, useRef } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import * as api from './api.js';
-import { getPortfolioHoldings, removePortfolioHolding, savePortfolioHoldings, upsertPortfolioHolding } from './portfolioStore.js';
-import { createReconnectingSocket } from '../services/websocket.js';
-import { useAuth } from './useAuth.js';
+const API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
-const n = (value) => {
-  const num = Number(value);
-  return Number.isFinite(num) ? num : 0;
-};
+function normalizeSymbol(s) {
+  if (!s) return '';
+  return s.toUpperCase().replace(/\.NS$|\.BO$/, '');
+}
 
-const normalizeHolding = (row) => {
-  const quantity = n(row.quantity);
-  const avgBuyPrice = n(row.avg_buy_price ?? row.avg_price ?? row.avgCost);
-  const livePrice = n(row.current_price_inr ?? row.current_price ?? row.ltp ?? row.live_price);
-  const invested = n(row.invested_amount ?? quantity * avgBuyPrice);
-  const currentValue = n(row.current_value ?? quantity * livePrice);
-  const pnl = n(row.unrealised_pnl ?? row.unrealized_pnl ?? currentValue - invested);
-  const pnlPct = invested ? (pnl / invested) * 100 : 0;
-  const changePct = n(row.change_pct ?? row.price_change_pct ?? 0);
-  const dayChange = n(row.day_change ?? row.dayChange ?? (currentValue && changePct ? (currentValue * changePct) / 100 : 0));
-  const dayChangePct = n(row.day_change_pct ?? row.dayChangePct ?? changePct);
+function safeParse(v, fallback = 0) {
+  const n = parseFloat(v);
+  return isFinite(n) ? n : fallback;
+}
+
+function normalizeHolding(raw) {
   return {
-    id: row.holding_id ?? row.id ?? row.ticker,
-    ticker: row.ticker,
-    company_name: row.company_name,
-    quantity,
-    avg_buy_price: avgBuyPrice,
-    exchange: row.exchange,
-    asset_class: row.asset_class,
-    sector: row.sector,
-    currency: row.currency || 'INR',
-    current_price: livePrice || n(row.current_price),
-    current_value: currentValue || invested,
-    invested_value: invested,
-    unrealised_pnl: pnl,
-    unrealised_pnl_pct: pnlPct,
-    day_change_pct: dayChangePct,
+    id: raw.id,
+    symbol: normalizeSymbol(raw.symbol || raw.ticker),
+    name: raw.name || raw.company_name || raw.symbol || '',
+    quantity: safeParse(raw.quantity),
+    avg_price: safeParse(raw.avg_price || raw.average_price || raw.avg_buy_price),
+    exchange: raw.exchange || 'NSE',
+    sector: raw.sector || 'Unknown',
+    notes: raw.notes || '',
+    buy_date: raw.buy_date || raw.created_at || null,
+    // realtime fields — will be populated from MarketDataContext
+    ltp: null,
+    change: null,
+    change_pct: null,
+    previous_close: null,
+    stale_price: true,
+    source: null,
+    last_updated_at: null,
+  };
+}
+
+function mergeWithLivePrice(holding, priceData) {
+  if (!priceData) return holding;
+  const ltp = safeParse(priceData.ltp, holding.ltp ?? holding.avg_price);
+  const prevClose = safeParse(priceData.previous_close || priceData.close, ltp);
+  const invested = holding.quantity * holding.avg_price;
+  const currentValue = holding.quantity * ltp;
+  const unrealisedPnl = currentValue - invested;
+  const unrealisedPct = invested > 0 ? (unrealisedPnl / invested) * 100 : 0;
+  const dayChange = holding.quantity * (ltp - prevClose);
+  const dayChangePct = prevClose > 0 ? ((ltp - prevClose) / prevClose) * 100 : 0;
+
+  return {
+    ...holding,
+    ltp,
+    open: safeParse(priceData.open),
+    high: safeParse(priceData.high),
+    low: safeParse(priceData.low),
+    previous_close: prevClose,
+    change: safeParse(priceData.change),
+    change_pct: safeParse(priceData.change_pct),
+    volume: priceData.volume,
+    market_cap: priceData.market_cap,
+    week_52_high: priceData.week_52_high,
+    week_52_low: priceData.week_52_low,
+    source: priceData.source,
+    fetch_source: priceData.fetch_source,
+    last_updated_at: priceData.last_updated_at,
+    stale_price: priceData.stale_price ?? false,
+    confidence: priceData.confidence ?? 'medium',
+    latency_ms: priceData.latency_ms,
+    // calculated
+    invested,
+    current_value: currentValue,
+    unrealised_pnl: unrealisedPnl,
+    unrealised_pct: unrealisedPct,
     day_change: dayChange,
-    price_updated_at: row.price_updated_at,
-    weight_pct: n(row.weight_pct),
-    raw: row,
+    day_change_pct: dayChangePct,
   };
-};
+}
 
-const buildSummary = (holdings) => {
-  const invested = holdings.reduce((sum, item) => sum + item.invested_value, 0);
-  const value = holdings.reduce((sum, item) => sum + item.current_value, 0);
-  const pnl = value - invested;
-  const dayChange = holdings.reduce((sum, item) => sum + (item.day_change || 0), 0);
-  const fallbackDayChange = holdings.reduce((sum, item) => {
-    if (item.day_change) return sum + item.day_change;
-    if (item.current_value && item.day_change_pct) return sum + ((item.current_value * item.day_change_pct) / 100);
-    return sum;
-  }, 0);
-  const resolvedDayChange = dayChange || fallbackDayChange;
-  const topWinner = holdings.reduce((best, item) => (item.unrealised_pnl_pct > (best?.unrealised_pnl_pct ?? -Infinity) ? item : best), null);
-  const topLoser = holdings.reduce((worst, item) => (item.unrealised_pnl_pct < (worst?.unrealised_pnl_pct ?? Infinity) ? item : worst), null);
+function buildSummary(enrichedHoldings) {
+  const totalInvested = enrichedHoldings.reduce((s, h) => s + (h.invested || 0), 0);
+  const totalCurrent = enrichedHoldings.reduce((s, h) => s + (h.current_value || 0), 0);
+  const totalPnl = totalCurrent - totalInvested;
+  const totalPnlPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
+  const totalDayChange = enrichedHoldings.reduce((s, h) => s + (h.day_change || 0), 0);
+  const totalDayChangePct = totalCurrent > 0 ? (totalDayChange / totalCurrent) * 100 : 0;
+
+  // Sector allocation
+  const sectorMap = {};
+  for (const h of enrichedHoldings) {
+    const sec = h.sector || 'Unknown';
+    sectorMap[sec] = (sectorMap[sec] || 0) + (h.current_value || 0);
+  }
+  const sectorAllocation = Object.entries(sectorMap).map(([sector, value]) => ({
+    sector,
+    value,
+    pct: totalCurrent > 0 ? (value / totalCurrent) * 100 : 0,
+  })).sort((a, b) => b.value - a.value);
+
+  // Concentration risk: Herfindahl-Hirschman Index
+  const weights = enrichedHoldings.map(h => totalCurrent > 0 ? (h.current_value || 0) / totalCurrent : 0);
+  const hhi = weights.reduce((s, w) => s + w * w, 0);
+  const concentrationScore = Math.round((1 - hhi) * 100); // 0=fully concentrated, 100=perfectly diversified
+
+  // Top sector concentration
+  const maxSectorPct = sectorAllocation.length > 0 ? sectorAllocation[0].pct : 0;
+  const concentrationRisk = maxSectorPct > 40 ? 'high' : maxSectorPct > 25 ? 'medium' : 'low';
 
   return {
-    total_invested: invested,
-    current_value: value,
-    total_pnl: pnl,
-    total_pnl_pct: invested ? (pnl / invested) * 100 : 0,
-    day_change: resolvedDayChange,
-    day_change_pct: value ? (resolvedDayChange / value) * 100 : 0,
-    num_holdings: holdings.length,
-    num_winners: holdings.filter((h) => h.unrealised_pnl >= 0).length,
-    num_losers: holdings.filter((h) => h.unrealised_pnl < 0).length,
-    best_performer: topWinner?.ticker ?? null,
-    worst_performer: topLoser?.ticker ?? null,
+    totalInvested,
+    totalCurrent,
+    totalPnl,
+    totalPnlPct,
+    totalDayChange,
+    totalDayChangePct,
+    sectorAllocation,
+    concentrationScore,
+    concentrationRisk,
+    holdingCount: enrichedHoldings.length,
   };
-};
-
-const EMPTY_ARRAY = [];
-const EMPTY_OBJECT = {};
-
-const normalizeTransaction = (row) => ({
-  ...row,
-  action: row.action || row.transaction_type || row.txn_type || 'BUY',
-});
-
-async function fetchPortfolioBundle() {
-  try {
-    const [port, txns, target, watch] = await Promise.all([
-      api.getPortfolio(),
-      api.getTransactions(),
-      api.getTargetAllocation(),
-      api.getWatchlist(),
-    ]);
-
-    const apiHoldings = Array.isArray(port) ? port : [];
-    const sourceHoldings = apiHoldings.length ? apiHoldings : getPortfolioHoldings();
-    const normalizedHoldings = sourceHoldings.map(normalizeHolding);
-
-    return {
-      holdings: normalizedHoldings,
-      transactions: Array.isArray(txns) ? txns.map(normalizeTransaction) : [],
-      targetAllocation: Array.isArray(target) ? target : [],
-      watchlist: Array.isArray(watch) ? watch : [],
-      summary: buildSummary(normalizedHoldings),
-      source: apiHoldings.length ? 'api' : 'local',
-    };
-  } catch (error) {
-    const fallbackHoldings = getPortfolioHoldings().map(normalizeHolding);
-    return {
-      holdings: fallbackHoldings,
-      transactions: [],
-      targetAllocation: [],
-      watchlist: [],
-      summary: buildSummary(fallbackHoldings),
-      source: 'fallback',
-      error: error?.message || 'Unable to load portfolio from the server.',
-    };
-  }
 }
 
 export function usePortfolio() {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const liveSocketRef = useRef(null);
-  const previousPricesRef = useRef({});
+  const { prices, isConnected, isStale } = useMarketData();
+  const [rawHoldings, setRawHoldings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const mountedRef = useRef(true);
 
-  const bundleQuery = useQuery({
-    queryKey: ['portfolio-bundle'],
-    queryFn: fetchPortfolioBundle,
-    refetchInterval: 60_000,
-  });
+  // Fetch holdings from backend
+  const fetchHoldings = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { setRawHoldings([]); setLoading(false); return; }
 
-  const addHoldingMutation = useMutation({
-    mutationFn: api.createHolding,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
-    },
-    onError: (_error, data) => {
-      upsertPortfolioHolding({ ...data, id: data.ticker });
-      queryClient.setQueryData(['portfolio-bundle'], (current) => {
-        const existing = current || { holdings: [], transactions: [], targetAllocation: [], watchlist: [] };
-        const nextHoldings = [normalizeHolding({ ...data, id: data.ticker }), ...existing.holdings.filter((h) => h.ticker !== data.ticker)];
-        return { ...existing, holdings: nextHoldings, summary: buildSummary(nextHoldings), source: 'local' };
+      const res = await fetch(`${API}/portfolio`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-    },
-  });
-
-  const removeHoldingMutation = useMutation({
-    mutationFn: api.deleteHolding,
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ['portfolio-bundle'] });
-      const previous = queryClient.getQueryData(['portfolio-bundle']);
-      queryClient.setQueryData(['portfolio-bundle'], (current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          holdings: current.holdings.filter((holding) => String(holding.id) !== String(id)),
-          summary: buildSummary(current.holdings.filter((holding) => String(holding.id) !== String(id))),
-        };
-      });
-      return { previous };
-    },
-    onError: (_error, _id, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(['portfolio-bundle'], context.previous);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const items = (json.holdings ?? json.data ?? json ?? []).map(normalizeHolding);
+      if (mountedRef.current) {
+        setRawHoldings(items);
+        setError(null);
       }
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
-    },
-  });
-
-  const addTransactionMutation = useMutation({
-    mutationFn: api.createTransaction,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
-    },
-  });
-
-  const saveTargetMutation = useMutation({
-    mutationFn: api.setTargetAllocation,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
-    },
-  });
-
-  const addWatchMutation = useMutation({
-    mutationFn: api.addToWatchlist,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
-    },
-  });
-
-  const removeWatchMutation = useMutation({
-    mutationFn: api.removeFromWatchlist,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
-    },
-  });
-
-  const portfolio = useMemo(() => ({
-    holdings: bundleQuery.data?.holdings || [],
-    summary: bundleQuery.data?.summary || buildSummary([]),
-    history: [],
-    source: bundleQuery.data?.source || 'api',
-  }), [bundleQuery.data]);
-
-  const holdings = bundleQuery.data?.holdings || EMPTY_ARRAY;
-  const transactions = bundleQuery.data?.transactions || EMPTY_ARRAY;
-  const targetAllocation = bundleQuery.data?.targetAllocation || EMPTY_ARRAY;
-  const watchlist = bundleQuery.data?.watchlist || EMPTY_ARRAY;
-  const loading = bundleQuery.isLoading;
-  const error = bundleQuery.data?.source === 'fallback' ? null : (bundleQuery.error?.message || bundleQuery.data?.error || null);
-
-  const refresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['portfolio-bundle'] });
-  };
+    } catch (err) {
+      if (mountedRef.current) setError(err.message);
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const onLocalPortfolioUpdate = (event) => {
-      const localHoldings = (event.detail || getPortfolioHoldings()).map(normalizeHolding);
-      queryClient.setQueryData(['portfolio-bundle'], (current) => ({
-        ...(current || {}),
-        holdings: localHoldings,
-        summary: buildSummary(localHoldings),
-        source: 'local',
-      }));
-    };
-    window.addEventListener('wealthos:portfolio-updated', onLocalPortfolioUpdate);
-    return () => window.removeEventListener('wealthos:portfolio-updated', onLocalPortfolioUpdate);
-  }, [queryClient]);
+    mountedRef.current = true;
+    fetchHoldings();
+    return () => { mountedRef.current = false; };
+  }, [fetchHoldings]);
 
-  useEffect(() => {
-    const wsBase = (import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/^http/i, 'ws');
-    const wsRoot = wsBase.replace(/\/$/, '');
-    const wsUrl = user?.id ? `${wsRoot}/ws/market-updates?user_id=${encodeURIComponent(user.id)}` : `${wsRoot}/ws/market-updates`;
-
-    liveSocketRef.current = createReconnectingSocket(wsUrl, {
-      onMessage: (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          if (!payload || payload.type !== 'market_update') return;
-
-          queryClient.setQueryData(['portfolio-bundle'], (current) => {
-            if (!current) return current;
-            const incomingHoldings = Array.isArray(payload.holdings) && payload.holdings.length
-              ? payload.holdings.map(normalizeHolding)
-              : current.holdings;
-
-            const updatedHoldings = incomingHoldings.map((holding) => {
-              const prevPrice = previousPricesRef.current[holding.ticker];
-              const nextPrice = holding.current_price;
-              let flash = null;
-              if (Number.isFinite(prevPrice) && Number.isFinite(nextPrice) && prevPrice !== nextPrice) {
-                flash = nextPrice > prevPrice ? 'up' : 'down';
-              }
-              previousPricesRef.current[holding.ticker] = nextPrice;
-              return {
-                ...holding,
-                price_flash: flash,
-                price_source: payload.sources?.[holding.ticker],
-                price_stale: payload.stale_tickers?.includes(holding.ticker) || false,
-              };
-            });
-
-            return {
-              ...current,
-              holdings: updatedHoldings,
-              watchlist: Array.isArray(payload.watchlist) ? payload.watchlist : current.watchlist,
-              summary: buildSummary(updatedHoldings),
-              market_status: payload.market_status || current.market_status,
-              live_updated_at: payload.updated_at || Date.now(),
-            };
-          });
-
-          if (Array.isArray(payload.holdings) && payload.holdings.length) {
-            savePortfolioHoldings(payload.holdings);
-          }
-        } catch {
-          // Ignore malformed live updates; polling will keep data fresh.
-        }
-      },
+  // Merge live prices — recomputes whenever prices Map or rawHoldings changes
+  const holdings = useMemo(() => {
+    return rawHoldings.map(h => {
+      const priceData = prices.get(h.symbol);
+      return mergeWithLivePrice(h, priceData);
     });
+  }, [rawHoldings, prices]);
 
-    return () => liveSocketRef.current?.close();
-  }, [queryClient, user?.id]);
+  const summary = useMemo(() => buildSummary(holdings), [holdings]);
+
+  // CRUD operations
+  const addHolding = useCallback(async (payload) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`${API}/portfolio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await fetchHoldings();
+    return res.json();
+  }, [fetchHoldings]);
+
+  const updateHolding = useCallback(async (id, payload) => {
+    // Optimistic update
+    setRawHoldings(prev => prev.map(h => h.id === id ? { ...h, ...payload } : h));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${API}/portfolio/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      // Revert on failure
+      await fetchHoldings();
+      throw err;
+    }
+  }, [fetchHoldings]);
+
+  const deleteHolding = useCallback(async (id) => {
+    // Optimistic remove
+    setRawHoldings(prev => prev.filter(h => h.id !== id));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${API}/portfolio/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      await fetchHoldings();
+      throw err;
+    }
+  }, [fetchHoldings]);
 
   return {
-    portfolio,
     holdings,
-    transactions,
-    targetAllocation,
-    watchlist,
+    summary,
     loading,
     error,
-    marketStatus: bundleQuery.data?.market_status || null,
-    liveUpdatedAt: bundleQuery.data?.live_updated_at || null,
-    refresh,
-    addHolding: async (data) => {
-      try {
-        return await addHoldingMutation.mutateAsync(data);
-      } catch (error) {
-        return { ...data, id: data.ticker, persisted: false };
-      }
-    },
-    removeHolding: async (id) => {
-      removePortfolioHolding(id);
-      try {
-        return await removeHoldingMutation.mutateAsync(id);
-      } catch (error) {
-        return { deleted: true, persisted: false };
-      }
-    },
-    addTransaction: async (data) => addTransactionMutation.mutateAsync(data),
-    saveTargetAllocation: async (allocations) => saveTargetMutation.mutateAsync(allocations),
-    addWatch: async (data) => addWatchMutation.mutateAsync(data),
-    removeWatch: async (ticker) => removeWatchMutation.mutateAsync(ticker),
+    isConnected,
+    isStale,
+    refetch: fetchHoldings,
+    addHolding,
+    updateHolding,
+    deleteHolding,
   };
 }
+
+export { normalizeHolding, mergeWithLivePrice, buildSummary };
+export default usePortfolio;

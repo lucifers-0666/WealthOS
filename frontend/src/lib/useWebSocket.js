@@ -1,113 +1,86 @@
 /**
- * useWebSocket — low-level hook that manages a single WebSocket connection.
- * Handles connect, disconnect, auto-reconnect with exponential backoff,
- * and JSON message parsing.
- *
- * Usage:
- *   const { lastMessage, readyState, send } = useWebSocket(url, { onMessage });
+ * useWebSocket — lightweight hook for NON-market WS endpoints.
+ * Market data MUST use MarketDataContext, not this hook.
+ * This is for chat, notifications, portfolio-specific channels.
  */
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-const READY_STATES = { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 };
+const MAX_BACKOFF = 30_000;
 
-const DEFAULT_OPTIONS = {
-  reconnect: true,
-  reconnectBaseDelay: 1000,   // ms
-  reconnectMaxDelay: 30000,   // ms
-  reconnectMaxAttempts: 10,
-  onOpen: null,
-  onClose: null,
-  onError: null,
-  onMessage: null,            // (parsedData) => void
-};
-
-export function useWebSocket(url, options = {}) {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
+export function useWebSocket(url, { onMessage, enabled = true } = {}) {
   const wsRef = useRef(null);
-  const attemptsRef = useRef(0);
+  const onMessageRef = useRef(onMessage);
+  const backoffRef = useRef(1000);
   const timerRef = useRef(null);
-  const unmountedRef = useRef(false);
+  const mountedRef = useRef(true);
+  const [status, setStatus] = useState('disconnected');
 
-  const [readyState, setReadyState] = useState(READY_STATES.CLOSED);
-  const [lastMessage, setLastMessage] = useState(null);
-
-  // Stable refs so callbacks don't re-trigger the effect
-  const onMessageRef = useRef(opts.onMessage);
-  const onOpenRef    = useRef(opts.onOpen);
-  const onCloseRef   = useRef(opts.onClose);
-  const onErrorRef   = useRef(opts.onError);
-
-  useEffect(() => { onMessageRef.current = opts.onMessage; }, [opts.onMessage]);
-  useEffect(() => { onOpenRef.current    = opts.onOpen; },    [opts.onOpen]);
-  useEffect(() => { onCloseRef.current   = opts.onClose; },   [opts.onClose]);
-  useEffect(() => { onErrorRef.current   = opts.onError; },   [opts.onError]);
+  // Always keep callback ref current — prevents stale closures
+  useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
 
   const connect = useCallback(() => {
-    if (!url || unmountedRef.current) return;
+    if (!url || !enabled || !mountedRef.current) return;
+    if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) return;
 
-    const ws = new WebSocket(url);
+    let ws;
+    try { ws = new WebSocket(url); } catch { return; }
     wsRef.current = ws;
-    setReadyState(READY_STATES.CONNECTING);
+    setStatus('connecting');
 
-    ws.onopen = (evt) => {
-      if (unmountedRef.current) { ws.close(); return; }
-      attemptsRef.current = 0;
-      setReadyState(READY_STATES.OPEN);
-      onOpenRef.current?.(evt);
+    ws.onopen = () => {
+      if (!mountedRef.current) { ws.close(); return; }
+      backoffRef.current = 1000;
+      setStatus('connected');
     };
 
     ws.onmessage = (evt) => {
-      let data = evt.data;
-      try { data = JSON.parse(evt.data); } catch (_) { /* raw string */ }
-      setLastMessage(data);
-      onMessageRef.current?.(data);
+      if (!mountedRef.current) return;
+      try {
+        const data = JSON.parse(evt.data);
+        onMessageRef.current?.(data);
+      } catch {}
     };
 
-    ws.onerror = (evt) => {
-      onErrorRef.current?.(evt);
+    ws.onclose = () => {
+      wsRef.current = null;
+      if (!mountedRef.current) return;
+      setStatus('disconnected');
+      // Exponential backoff reconnect
+      timerRef.current = setTimeout(() => {
+        backoffRef.current = Math.min(backoffRef.current * 2, MAX_BACKOFF);
+        connect();
+      }, backoffRef.current);
     };
 
-    ws.onclose = (evt) => {
-      if (unmountedRef.current) return;
-      setReadyState(READY_STATES.CLOSED);
-      onCloseRef.current?.(evt);
-
-      if (
-        opts.reconnect &&
-        attemptsRef.current < opts.reconnectMaxAttempts
-      ) {
-        const delay = Math.min(
-          opts.reconnectBaseDelay * 2 ** attemptsRef.current,
-          opts.reconnectMaxDelay
-        );
-        attemptsRef.current += 1;
-        timerRef.current = setTimeout(connect, delay);
-      }
-    };
-  }, [url]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    unmountedRef.current = false;
-    connect();
-    return () => {
-      unmountedRef.current = true;
-      clearTimeout(timerRef.current);
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-    };
-  }, [connect]);
+    ws.onerror = () => {};
+  }, [url, enabled]);
 
   const send = useCallback((data) => {
-    if (wsRef.current?.readyState === READY_STATES.OPEN) {
-      wsRef.current.send(
-        typeof data === 'string' ? data : JSON.stringify(data)
-      );
-      return true;
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(typeof data === 'string' ? data : JSON.stringify(data));
     }
-    return false;
   }, []);
 
-  return { lastMessage, readyState, send, READY_STATES };
+  const disconnect = useCallback(() => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (wsRef.current) {
+      wsRef.current.onclose = null;
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    setStatus('disconnected');
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    if (enabled) connect();
+    return () => {
+      mountedRef.current = false;
+      disconnect();
+    };
+  }, [url, enabled, connect, disconnect]);
+
+  return { status, send, disconnect, reconnect: connect };
 }
+
+export default useWebSocket;

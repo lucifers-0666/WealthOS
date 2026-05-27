@@ -37,7 +37,7 @@ if ($pyver -match "3\.13") {
 # Activate venv and install requirements quietly
 Write-Host "[1/6] Activating virtualenv: $VenvPath" -ForegroundColor Yellow
 . $VenvActivate
-Write-Host "[2/6] Installing Python requirements (if needed)" -ForegroundColor Yellow
+Write-Host "[2/6] Installing Python requirements..." -ForegroundColor Yellow
 pip install -r requirements.txt --quiet
 Write-Host "[2/6] Python dependencies checked." -ForegroundColor Green
 

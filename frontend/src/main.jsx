@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import AppErrorBoundary from './components/AppErrorBoundary.jsx'
 import QueryProvider from './components/QueryProvider.jsx'
+import { MarketDataProvider } from './lib/MarketDataContext.jsx'
 import './index.css'
 import { Toaster } from 'react-hot-toast'
 
@@ -17,7 +18,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         }}
       >
         <AppErrorBoundary>
-          <App />
+          {/* MarketDataProvider lives inside BrowserRouter so useAuth works */}
+          <MarketDataProvider>
+            <App />
+          </MarketDataProvider>
         </AppErrorBoundary>
       </BrowserRouter>
       <Toaster

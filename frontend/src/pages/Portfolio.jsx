@@ -1,237 +1,396 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { usePortfolio } from '../lib/usePortfolio.js';
-import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
-import { Plus, Trash2, RefreshCw, AlertTriangle, X, Undo2 } from 'lucide-react';
+import { useMarketData } from '../lib/MarketDataContext.jsx';
+import { theme, panelStyle } from '../lib/theme.js';
+import { calcSummary, calcConcentration } from '../lib/usePortfolioCalc.js';
+import { useAnimatedNumber, flashClass } from '../lib/useAnimatedNumber.js';
 import { PageLoadingState, PageErrorState, EmptyState } from '../components/PageStates.jsx';
+import LiveIndicator from '../components/LiveIndicator.jsx';
+import EditHoldingModal from '../components/EditHoldingModal.jsx';
+import DeleteConfirmModal from '../components/DeleteConfirmModal.jsx';
+import {
+  RefreshCw, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
+  Pencil, Trash2, PlusCircle, WifiOff,
+} from 'lucide-react';
 
-const EXCHANGES = ['NSE', 'BSE', 'NYSE', 'NASDAQ', 'LSE'];
-const ASSET_CLASSES = ['equity', 'etf', 'gold', 'debt', 'crypto', 'reit'];
-
-const labelStyle = {
-  display: 'block',
-  fontSize: 11,
-  letterSpacing: '0.16em',
-  textTransform: 'uppercase',
-  color: theme.colors.textMuted,
-  marginBottom: 8,
-};
-
-const flashStyle = (flash) => {
-  if (flash === 'up') {
-    return { animation: 'price-flash-up 1.2s ease' };
-  }
-  if (flash === 'down') {
-    return { animation: 'price-flash-down 1.2s ease' };
-  }
-  return {};
-};
-
+// ---- formatters -------------------------------------------------------
 function fmt(n) {
-  if (n == null) return '—';
+  if (n == null || isNaN(n)) return '\u2014';
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 }
+function pct(n) {
+  if (n == null || isNaN(n)) return '\u2014';
+  return `${n >= 0 ? '+' : ''}${Number(n).toFixed(2)}%`;
+}
+function compact(n) {
+  if (n == null || isNaN(n)) return '\u2014';
+  const abs = Math.abs(n);
+  if (abs >= 1e7) return `${n < 0 ? '-' : ''}\u20B9${(abs / 1e7).toFixed(2)}Cr`;
+  if (abs >= 1e5) return `${n < 0 ? '-' : ''}\u20B9${(abs / 1e5).toFixed(2)}L`;
+  return fmt(n);
+}
 
-export default function Portfolio() {
-  const { holdings, loading, error, addHolding, removeHolding, refresh } = usePortfolio();
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ ticker: '', company_name: '', quantity: '', avg_buy_price: '', exchange: 'NSE', asset_class: 'equity' });
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState(null);
-  const [pendingDelete, setPendingDelete] = useState(null);
-  const [undoHolding, setUndoHolding] = useState(null);
+// ---- Animated KPI card ------------------------------------------------
+function KpiCard({ label, rawValue, sub, tone = 'neutral', live = false, prefix = '' }) {
+  const { value, direction } = useAnimatedNumber(rawValue || 0, 500);
+  const color = tone === 'positive' ? 'var(--color-success,#4ade80)'
+              : tone === 'negative' ? 'var(--color-error,#f87171)'
+              : theme.colors.text;
+  return (
+    <div style={{ ...panelStyle({ padding: 18, minHeight: 110 }) }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ fontSize: 11, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.colors.textMuted }}>
+          {label}
+        </div>
+        {live && (
+          <span style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase',
+            color: 'var(--color-success,#4ade80)', border: '1px solid var(--color-success,#4ade80)',
+            borderRadius: 999, padding: '1px 6px' }}>LIVE</span>
+        )}
+      </div>
+      <div
+        className={flashClass(direction)}
+        style={{ fontFamily: 'Space Grotesk,Inter,sans-serif', fontSize: 28, fontVariantNumeric: 'tabular-nums',
+          lineHeight: 1, color, marginBottom: 6 }}
+      >
+        {prefix}{compact(value)}
+      </div>
+      <div style={{ fontSize: 13, color: theme.colors.textSoft }}>{sub}</div>
+    </div>
+  );
+}
 
-  const stats = useMemo(() => {
-    const invested = holdings.reduce((sum, h) => sum + (h.invested_value || 0), 0);
-    const value = holdings.reduce((sum, h) => sum + (h.current_value || 0), 0);
-    return { invested, value, pnl: value - invested };
-  }, [holdings]);
+// ---- Single holding row -----------------------------------------------
+function HoldingRow({ holding, totalValue, onEdit, onDelete }) {
+  const prevPriceRef = useRef(holding.current_price);
+  const [flash, setFlash] = useState('');
+  const { value: livePrice } = useAnimatedNumber(holding.current_price || 0, 350);
+  const { value: liveValue } = useAnimatedNumber(holding.current_value || 0, 400);
+  const { value: livePnl   } = useAnimatedNumber(holding.unrealised_pnl != null ? holding.unrealised_pnl
+    : (holding.current_value || 0) - (holding.invested_amount || 0), 400);
 
   useEffect(() => {
-    if (!undoHolding) return undefined;
-    const timer = window.setTimeout(() => setUndoHolding(null), 6000);
-    return () => window.clearTimeout(timer);
-  }, [undoHolding]);
+    if (holding.current_price !== prevPriceRef.current) {
+      const dir = holding.current_price > prevPriceRef.current ? 'up' : 'down';
+      setFlash(dir);
+      prevPriceRef.current = holding.current_price;
+      const t = setTimeout(() => setFlash(''), 1400);
+      return () => clearTimeout(t);
+    }
+  }, [holding.current_price]);
 
-  function setField(k, v) {
-    setForm((p) => ({ ...p, [k]: v }));
+  const invested   = holding.invested_amount || 0;
+  const pnlVal     = (holding.current_value || 0) - invested;
+  const pnlPct     = invested > 0 ? (pnlVal / invested) * 100 : 0;
+  const weight     = totalValue > 0 ? ((holding.current_value || 0) / totalValue) * 100 : 0;
+  const dayChange  = holding.day_change || 0;
+  const dayPct     = holding.day_change_pct || 0;
+  const isPositive = pnlVal >= 0;
+  const isDayUp    = dayChange >= 0;
+
+  const cell = { padding: '14px 12px', fontSize: 13, verticalAlign: 'middle', borderBottom: `1px solid ${theme.colors.border}` };
+
+  return (
+    <tr style={{ transition: 'background 0.15s' }}
+      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
+      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+      {/* Ticker */}
+      <td style={{ ...cell, fontWeight: 700, paddingLeft: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span>{holding.ticker}</span>
+          <span style={{ fontSize: 11, color: theme.colors.textMuted, fontWeight: 400 }}>
+            {holding.exchange || 'NSE'} · {holding.asset_class || 'Equity'}
+          </span>
+        </div>
+      </td>
+      {/* Qty */}
+      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: theme.colors.textSoft }}>
+        {holding.quantity}
+      </td>
+      {/* Avg buy */}
+      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: theme.colors.textSoft }}>
+        {fmt(holding.avg_buy_price)}
+      </td>
+      {/* LTP */}
+      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+        <span className={flash === 'up' ? 'price-flash-up' : flash === 'down' ? 'price-flash-down' : ''}>
+          {fmt(livePrice)}
+        </span>
+        <div style={{ fontSize: 11, marginTop: 2, color: isDayUp ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)',
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
+          {isDayUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+          {pct(dayPct)}
+        </div>
+      </td>
+      {/* Current value */}
+      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+        {compact(liveValue)}
+        <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 2 }}>
+          {weight.toFixed(1)}% of portfolio
+        </div>
+      </td>
+      {/* P&L */}
+      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+        <div style={{ color: isPositive ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)',
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, fontWeight: 600 }}>
+          {isPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+          {compact(livePnl)}
+        </div>
+        <div style={{ fontSize: 11, color: isPositive ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)',
+          textAlign: 'right', marginTop: 2 }}>
+          {pct(pnlPct)}
+        </div>
+      </td>
+      {/* Actions */}
+      <td style={{ ...cell, textAlign: 'right', paddingRight: 16 }}>
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => onEdit(holding)}
+            style={{ padding: '6px 8px', borderRadius: 8, border: `1px solid ${theme.colors.border}`,
+              background: 'transparent', color: theme.colors.textMuted, cursor: 'pointer',
+              transition: 'color 0.15s, border-color 0.15s' }}
+            title="Edit holding" aria-label="Edit holding"
+            onMouseEnter={(e) => { e.currentTarget.style.color = theme.colors.text; e.currentTarget.style.borderColor = theme.colors.textMuted; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textMuted; e.currentTarget.style.borderColor = theme.colors.border; }}
+          ><Pencil size={13} /></button>
+          <button
+            onClick={() => onDelete(holding)}
+            style={{ padding: '6px 8px', borderRadius: 8, border: `1px solid ${theme.colors.border}`,
+              background: 'transparent', color: theme.colors.textMuted, cursor: 'pointer',
+              transition: 'color 0.15s, border-color 0.15s' }}
+            title="Delete holding" aria-label="Delete holding"
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-error,#f87171)'; e.currentTarget.style.borderColor = 'var(--color-error,#f87171)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textMuted; e.currentTarget.style.borderColor = theme.colors.border; }}
+          ><Trash2 size={13} /></button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+// ---- Main page --------------------------------------------------------
+export default function Portfolio() {
+  const { portfolio, transactions, loading, error, refresh, updateHolding, deleteHolding } = usePortfolio();
+  const { holdings: liveHoldings, wsStatus, updatedAt, isLive, forceRefresh } = useMarketData();
+
+  const [editTarget, setEditTarget]     = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [saving, setSaving]             = useState(false);
+  const [deleting, setDeleting]         = useState(false);
+  const [sortKey, setSortKey]           = useState('current_value');
+  const [sortDir, setSortDir]           = useState('desc');
+  const [filterClass, setFilterClass]   = useState('All');
+
+  // Prefer live holdings from WS; fall back to static
+  const rawHoldings = liveHoldings.length > 0 ? liveHoldings : (portfolio?.holdings || []);
+
+  const assetClasses = useMemo(() => {
+    const s = new Set(rawHoldings.map((h) => h.asset_class || 'Equity'));
+    return ['All', ...Array.from(s)];
+  }, [rawHoldings]);
+
+  const holdings = useMemo(() => {
+    let h = filterClass === 'All' ? rawHoldings : rawHoldings.filter((x) => (x.asset_class || 'Equity') === filterClass);
+    return [...h].sort((a, b) => {
+      const av = a[sortKey] ?? 0, bv = b[sortKey] ?? 0;
+      return sortDir === 'asc' ? av - bv : bv - av;
+    });
+  }, [rawHoldings, filterClass, sortKey, sortDir]);
+
+  const summary = useMemo(() => calcSummary(rawHoldings) || portfolio?.summary || {}, [rawHoldings, portfolio?.summary]);
+  const totalValue = summary.current_value || 0;
+
+  function toggleSort(key) {
+    if (sortKey === key) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('desc'); }
   }
 
-  async function handleAdd(e) {
-    e.preventDefault();
-    setFormError(null);
+  const handleSave = useCallback(async (data) => {
     setSaving(true);
     try {
-      await addHolding({ ...form, quantity: Number(form.quantity), avg_buy_price: Number(form.avg_buy_price) });
-      setForm({ ticker: '', company_name: '', quantity: '', avg_buy_price: '', exchange: 'NSE', asset_class: 'equity' });
-      setShowForm(false);
-    } catch (err) {
-      setFormError(err.message);
+      await updateHolding({ id: editTarget?.id, ...data });
+      setEditTarget(null);
+      refresh();
+      forceRefresh();
+    } catch (e) {
+      console.error('Save holding failed', e);
     } finally {
       setSaving(false);
     }
+  }, [editTarget, updateHolding, refresh, forceRefresh]);
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteHolding(deleteTarget.id);
+      setDeleteTarget(null);
+      refresh();
+      forceRefresh();
+    } catch (e) {
+      console.error('Delete holding failed', e);
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteTarget, deleteHolding, refresh, forceRefresh]);
+
+  const handleRefresh = () => { refresh(); forceRefresh(); };
+
+  const thStyle = (key) => ({
+    padding: '10px 12px', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
+    color: sortKey === key ? theme.colors.text : theme.colors.textMuted,
+    textAlign: key === 'ticker' ? 'left' : 'right',
+    paddingLeft: key === 'ticker' ? 20 : 12,
+    cursor: 'pointer', userSelect: 'none',
+    borderBottom: `1px solid ${theme.colors.border}`,
+    whiteSpace: 'nowrap',
+  });
+
+  if (loading && !liveHoldings.length) {
+    return <PageLoadingState title="Loading portfolio\u2026" subtitle="Resolving holdings and live prices." />;
+  }
+  if (error && !liveHoldings.length) {
+    return <PageErrorState title="Portfolio unavailable" message={error} />;
   }
 
-  async function confirmDelete() {
-    if (!pendingDelete) return;
-    const snapshot = pendingDelete;
-    setPendingDelete(null);
-    await removeHolding(snapshot.id);
-    setUndoHolding(snapshot);
-  }
-
-  async function handleUndo() {
-    if (!undoHolding) return;
-    const snapshot = undoHolding;
-    setUndoHolding(null);
-    await addHolding({
-      ticker: snapshot.ticker,
-      company_name: snapshot.company_name,
-      quantity: snapshot.quantity,
-      avg_buy_price: snapshot.avg_buy_price,
-      exchange: snapshot.exchange,
-      asset_class: snapshot.asset_class,
-      currency: snapshot.currency,
-      sector: snapshot.sector,
-    });
-  }
-
-  if (loading) {
-    return <PageLoadingState title="Loading portfolio matrix…" subtitle="Resolving live holdings, allocations, and activity." />;
-  }
+  const kpis = [
+    { label: 'Portfolio value',  rawValue: summary.current_value,  sub: 'Live valuation',        tone: 'neutral',  live: isLive },
+    { label: 'Total invested',   rawValue: summary.total_invested,  sub: 'Cost basis',            tone: 'neutral',  live: false  },
+    { label: 'Unrealised P&L',  rawValue: summary.total_pnl,       sub: pct(summary.total_pnl_pct),   tone: (summary.total_pnl  || 0) >= 0 ? 'positive' : 'negative', live: isLive },
+    { label: 'Day change',       rawValue: summary.day_change,      sub: pct(summary.day_change_pct),  tone: (summary.day_change || 0) >= 0 ? 'positive' : 'negative', live: isLive },
+  ];
 
   return (
     <div style={{ display: 'grid', gap: 18 }}>
-      <section style={{ ...panelStyle({ padding: 24 }) }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
-          <div>
-            <div className="section-label">Portfolio registry</div>
-            <h2 className="editorial-title" style={{ margin: '8px 0 0', fontSize: 'clamp(2rem, 3vw, 3rem)' }}>Holdings with institutional clarity.</h2>
-            <p style={{ margin: '10px 0 0', color: theme.colors.textSoft, maxWidth: 680 }}>Maintain positions manually, review live valuations, and keep your allocation table clean.</p>
+      {/* Header */}
+      <div style={{ ...panelStyle({ padding: '22px 26px' }), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
+        <div>
+          <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.colors.textMuted, marginBottom: 6 }}>
+            Holdings register
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={refresh} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px', background: 'transparent', color: theme.colors.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}><RefreshCw size={15} /> Refresh</button>
-            <button onClick={() => setShowForm((v) => !v)} style={{ border: '0', borderRadius: 12, padding: '10px 14px', background: theme.colors.text, color: '#0A201F', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>{showForm ? 'Close' : <><Plus size={15} /> Add holding</>}</button>
-          </div>
+          <h2 style={{ margin: 0, fontFamily: 'Space Grotesk,Inter,sans-serif', fontSize: 'clamp(1.6rem,2.5vw,2.4rem)', letterSpacing: '-0.04em', lineHeight: 1.05 }}>
+            Live portfolio
+          </h2>
         </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginTop: 18 }}>
-          <div style={panelStyle({ padding: 16 })}><div className="section-label">Positions</div><div style={{ fontSize: 30, fontFamily: 'Space Grotesk, Inter, sans-serif', marginTop: 8 }}>{holdings.length}</div></div>
-          <div style={panelStyle({ padding: 16 })}><div className="section-label">Invested</div><div style={{ fontSize: 30, fontFamily: 'Space Grotesk, Inter, sans-serif', marginTop: 8 }}>{fmt(stats.invested)}</div></div>
-          <div style={panelStyle({ padding: 16 })}><div className="section-label">Unrealised P&L</div><div style={{ fontSize: 30, fontFamily: 'Space Grotesk, Inter, sans-serif', marginTop: 8, color: stats.pnl >= 0 ? theme.colors.success : theme.colors.error }}>{fmt(stats.pnl)}</div></div>
-        </div>
-      </section>
-
-      {showForm && (
-        <form onSubmit={handleAdd} style={{ ...panelStyle({ padding: 22 }), display: 'grid', gap: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16 }}>
-            <div>
-              <div className="section-label">Add holding</div>
-              <h3 className="editorial-title" style={{ margin: '6px 0 0', fontSize: 18 }}>Manual position entry</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {wsStatus === 'disconnected' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-error,#f87171)', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--color-error,#f87171)' }}>
+              <WifiOff size={13} /> No live feed
             </div>
-            <div style={{ color: theme.colors.textMuted, fontSize: 12 }}>Required fields: ticker, quantity, average price</div>
-          </div>
+          )}
+          <LiveIndicator wsStatus={wsStatus} updatedAt={updatedAt} />
+          <button
+            onClick={() => setEditTarget({})}
+            style={{ background: 'var(--color-primary,#01696f)', color: '#fff', border: 'none', borderRadius: 12,
+              padding: '10px 16px', fontWeight: 700, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14 }}
+          ><PlusCircle size={15} /> Add holding</button>
+          <button
+            onClick={handleRefresh}
+            style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px',
+              background: 'transparent', color: theme.colors.text, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14 }}
+          ><RefreshCw size={15} /> Refresh</button>
+        </div>
+      </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
-            <div><label style={labelStyle}>Ticker</label><input value={form.ticker} onChange={(e) => setField('ticker', e.target.value.toUpperCase())} placeholder="RELIANCE.NS" required style={fieldStyle()} /></div>
-            <div><label style={labelStyle}>Company name</label><input value={form.company_name} onChange={(e) => setField('company_name', e.target.value)} placeholder="Reliance Industries" style={fieldStyle()} /></div>
-            <div><label style={labelStyle}>Quantity</label><input type="number" min={0.0001} step="any" value={form.quantity} onChange={(e) => setField('quantity', e.target.value)} required style={fieldStyle()} /></div>
-            <div><label style={labelStyle}>Average buy price</label><input type="number" min={0} step="any" value={form.avg_buy_price} onChange={(e) => setField('avg_buy_price', e.target.value)} required style={fieldStyle()} /></div>
-            <div><label style={labelStyle}>Exchange</label><select value={form.exchange} onChange={(e) => setField('exchange', e.target.value)} style={fieldStyle()}>{EXCHANGES.map((x) => <option key={x}>{x}</option>)}</select></div>
-            <div><label style={labelStyle}>Asset class</label><select value={form.asset_class} onChange={(e) => setField('asset_class', e.target.value)} style={fieldStyle()}>{ASSET_CLASSES.map((a) => <option key={a}>{a}</option>)}</select></div>
-          </div>
+      {/* KPI row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 14 }}>
+        {kpis.map((k) => <KpiCard key={k.label} {...k} />)}
+      </div>
 
-          {formError && <div style={{ color: theme.colors.error, fontSize: 13 }}>{formError}</div>}
-          <button type="submit" disabled={saving} style={{ border: '0', borderRadius: 12, padding: '12px 16px', background: theme.colors.text, color: '#0A201F', fontWeight: 700, cursor: 'pointer' }}>{saving ? 'Saving…' : 'Save holding'}</button>
-        </form>
-      )}
+      {/* Filter pills */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {assetClasses.map((ac) => (
+          <button
+            key={ac}
+            onClick={() => setFilterClass(ac)}
+            style={{
+              padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              border: `1px solid ${filterClass === ac ? 'var(--color-primary,#01696f)' : theme.colors.border}`,
+              background: filterClass === ac ? 'rgba(1,105,111,0.12)' : 'transparent',
+              color: filterClass === ac ? 'var(--color-primary,#01696f)' : theme.colors.textMuted,
+              transition: 'all 0.15s',
+            }}
+          >{ac}</button>
+        ))}
+      </div>
 
-      {error && <PageErrorState title="Portfolio data unavailable" message={error} />}
-
-      {holdings.length > 0 && (
-        <div style={{ ...panelStyle({ padding: 20 }) }}>
+      {/* Holdings table */}
+      <div style={{ ...panelStyle({ padding: 0, overflow: 'hidden' }) }}>
+        {holdings.length === 0 ? (
+          <EmptyState
+            title="No holdings yet"
+            message="Add your first holding or import a portfolio to get started."
+          />
+        ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table className="data-table">
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
               <thead>
-                <tr>
-                  <th>Ticker</th><th>Company</th><th>Exchange</th><th>Qty</th><th>Avg Price</th><th>LTP</th><th>Value</th><th>P&L</th><th>P&L%</th><th></th>
+                <tr style={{ background: 'rgba(255,255,255,0.01)' }}>
+                  {[['ticker','Stock'],['quantity','Qty'],['avg_buy_price','Avg buy'],
+                    ['current_price','LTP'],['current_value','Value'],
+                    ['unrealised_pnl','P&L']].map(([key, label]) => (
+                    <th key={key} style={thStyle(key)} onClick={() => toggleSort(key)}>
+                      {label} {sortKey === key ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
+                    </th>
+                  ))}
+                  <th style={{ ...thStyle('actions'), cursor: 'default' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {holdings.map((h) => (
-                  <tr key={h.id}>
-                    <td><span className="badge badge-gold">{h.ticker}</span></td>
-                    <td>{h.company_name || '—'}</td>
-                    <td>{h.exchange || '—'}</td>
-                    <td>{h.quantity}</td>
-                    <td>{fmt(h.avg_buy_price)}</td>
-                    <td style={flashStyle(h.price_flash)}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span>{fmt(h.current_price)}</span>
-                        {h.price_stale && <span style={{ fontSize: 10, color: theme.colors.textMuted }}>stale</span>}
-                      </div>
-                    </td>
-                    <td style={flashStyle(h.price_flash)}>{fmt(h.current_value)}</td>
-                    <td style={{ ...flashStyle(h.price_flash), color: h.unrealised_pnl >= 0 ? theme.colors.success : theme.colors.error }}>{fmt(h.unrealised_pnl)}</td>
-                    <td style={{ color: h.unrealised_pnl_pct >= 0 ? theme.colors.success : theme.colors.error }}>{h.unrealised_pnl_pct != null ? `${h.unrealised_pnl_pct >= 0 ? '+' : ''}${h.unrealised_pnl_pct.toFixed(2)}%` : '—'}</td>
-                    <td>
-                      <button onClick={() => setPendingDelete(h)} aria-label={`Remove ${h.ticker}`} style={{ border: '0', background: 'transparent', color: theme.colors.textMuted, cursor: 'pointer' }}>
-                        <Trash2 size={15} />
-                      </button>
-                    </td>
-                  </tr>
+                  <HoldingRow
+                    key={h.id || h.ticker}
+                    holding={h}
+                    totalValue={totalValue}
+                    onEdit={setEditTarget}
+                    onDelete={setDeleteTarget}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+
+      {/* Summary footer */}
+      {holdings.length > 0 && (
+        <div style={{ ...panelStyle({ padding: '14px 22px' }), display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <span style={{ fontSize: 13, color: theme.colors.textMuted }}>
+            {holdings.length} holding{holdings.length !== 1 ? 's' : ''}
+          </span>
+          <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
+            Invested: <strong>{compact(summary.total_invested)}</strong>
+          </span>
+          <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
+            Current: <strong>{compact(summary.current_value)}</strong>
+          </span>
+          <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums',
+            color: (summary.total_pnl || 0) >= 0 ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)' }}>
+            P&L: <strong>{compact(summary.total_pnl)} ({pct(summary.total_pnl_pct)})</strong>
+          </span>
         </div>
       )}
 
-      {holdings.length === 0 && <EmptyState title="No holdings yet" message="Upload a CSV or add positions manually to populate your portfolio matrix." />}
-
-      {pendingDelete && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,14,13,0.58)', display: 'grid', placeItems: 'center', zIndex: 80, padding: 18 }}>
-          <div style={{ ...panelStyle({ padding: 22, maxWidth: 520, width: '100%' }) }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: theme.colors.warning, marginBottom: 12 }}>
-              <AlertTriangle size={18} />
-              <strong>Delete holding?</strong>
-            </div>
-            <p style={{ margin: 0, color: theme.colors.textSoft, lineHeight: 1.7 }}>
-              Remove <strong style={{ color: theme.colors.text }}>{pendingDelete.ticker}</strong> from the portfolio registry.
-              You can undo this for a short time after confirmation.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
-              <button onClick={() => setPendingDelete(null)} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px', background: 'transparent', color: theme.colors.text, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <X size={14} /> Cancel
-              </button>
-              <button onClick={confirmDelete} style={{ border: '0', borderRadius: 12, padding: '10px 14px', background: theme.colors.error, color: '#0A201F', fontWeight: 800, cursor: 'pointer' }}>
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Modals */}
+      {editTarget !== null && (
+        <EditHoldingModal
+          holding={editTarget?.id ? editTarget : null}
+          onSave={handleSave}
+          onClose={() => setEditTarget(null)}
+          loading={saving}
+        />
       )}
-
-      {undoHolding && (
-        <div style={{ position: 'fixed', right: 18, bottom: 18, zIndex: 90, ...panelStyle({ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }) }}>
-          <div style={{ color: theme.colors.textSoft, fontSize: 13 }}>
-            Deleted <strong style={{ color: theme.colors.text }}>{undoHolding.ticker}</strong>
-          </div>
-          <button onClick={handleUndo} style={{ border: '0', borderRadius: 10, padding: '8px 12px', background: theme.colors.text, color: '#0A201F', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 800 }}>
-            <Undo2 size={14} /> Undo
-          </button>
-        </div>
+      {deleteTarget && (
+        <DeleteConfirmModal
+          title={`Delete ${deleteTarget.ticker}?`}
+          message={`This will permanently remove ${deleteTarget.ticker} from your portfolio. This cannot be undone.`}
+          onConfirm={handleDelete}
+          onClose={() => setDeleteTarget(null)}
+          loading={deleting}
+        />
       )}
-
-      <style>{`
-        @keyframes price-flash-up {
-          0% { background: rgba(111, 174, 141, 0.18); }
-          100% { background: transparent; }
-        }
-        @keyframes price-flash-down {
-          0% { background: rgba(244, 63, 94, 0.18); }
-          100% { background: transparent; }
-        }
-      `}</style>
     </div>
   );
 }

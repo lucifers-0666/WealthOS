@@ -16,6 +16,8 @@ const Profile = lazy(() => import('./pages/Profile.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const Analytics = lazy(() => import('./pages/Analytics.jsx'));
 const Watchlist = lazy(() => import('./pages/Watchlist.jsx'));
+const Signals = lazy(() => import('./pages/Signals.jsx'));
+const ImportPortfolio = lazy(() => import('./pages/ImportPortfolio.jsx'));
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -62,13 +64,16 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="portfolio" element={<Portfolio />} />
           <Route path="upload" element={<Upload />} />
+          <Route path="import" element={<ImportPortfolio />} />
           <Route path="advisor" element={<AIAdvisor />} />
           <Route path="news" element={<News />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="watchlist" element={<Watchlist />} />
+          <Route path="signals" element={<Signals />} />
           <Route path="profile" element={<Profile />} />
           <Route path="settings" element={<Settings />} />
         </Route>
+        {/* Legacy redirects */}
         <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
         <Route path="/portfolio" element={<Navigate to="/app/portfolio" replace />} />
         <Route path="/upload" element={<Navigate to="/app/upload" replace />} />
@@ -76,6 +81,7 @@ export default function App() {
         <Route path="/news" element={<Navigate to="/app/news" replace />} />
         <Route path="/analytics" element={<Navigate to="/app/analytics" replace />} />
         <Route path="/watchlist" element={<Navigate to="/app/watchlist" replace />} />
+        <Route path="/signals" element={<Navigate to="/app/signals" replace />} />
         <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
         <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

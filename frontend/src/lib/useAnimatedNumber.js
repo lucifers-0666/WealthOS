@@ -1,56 +1,71 @@
-import { useRef, useEffect, useState } from 'react';
-
 /**
- * Smoothly animates a numeric value over `duration` ms.
- * Returns { value, direction } where direction is 'up'|'down'|'neutral'.
+ * useAnimatedNumber — spring-interpolated number animation.
+ * Smooth 60fps counting transitions for KPI cards, P&L, LTP.
+ * Direction-aware: green flash for up, red for down.
  */
-export function useAnimatedNumber(target, duration = 400) {
-  const [value, setValue] = useState(target);
-  const [direction, setDirection] = useState('neutral');
+import { useState, useEffect, useRef } from 'react';
+
+export function useAnimatedNumber(target, { duration = 400, decimals = 2 } = {}) {
+  const [display, setDisplay] = useState(target);
+  const [direction, setDirection] = useState(null); // 'up' | 'down' | null
   const prevRef = useRef(target);
-  const rafRef = useRef(null);
+  const frameRef = useRef(null);
+  const startRef = useRef(null);
+  const startValueRef = useRef(target);
 
   useEffect(() => {
     const prev = prevRef.current;
-    if (prev === target) return;
-
-    setDirection(target > prev ? 'up' : target < prev ? 'down' : 'neutral');
-    prevRef.current = target;
-
-    const start = performance.now();
-    const from = prev;
-    const to = target;
-    const delta = to - from;
-
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-
-    function tick(now) {
-      const elapsed = now - start;
-      const progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic
-      const ease = 1 - Math.pow(1 - progress, 3);
-      setValue(from + delta * ease);
-      if (progress < 1) {
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        setValue(to);
-        // reset direction after flash
-        setTimeout(() => setDirection('neutral'), 1200);
-      }
+    if (prev === target || !isFinite(target)) {
+      setDisplay(target);
+      return;
     }
 
-    rafRef.current = requestAnimationFrame(tick);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [target, duration]);
+    setDirection(target > prev ? 'up' : 'down');
+    prevRef.current = target;
+    startValueRef.current = prev;
+    startRef.current = null;
 
-  return { value, direction };
+    const tick = (ts) => {
+      if (!startRef.current) startRef.current = ts;
+      const progress = Math.min((ts - startRef.current) / duration, 1);
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const value = startValueRef.current + (target - startValueRef.current) * eased;
+      setDisplay(parseFloat(value.toFixed(decimals + 2)));
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(tick);
+      } else {
+        setDisplay(target);
+        // Clear direction after flash
+        setTimeout(() => setDirection(null), 600);
+      }
+    };
+
+    if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    frameRef.current = requestAnimationFrame(tick);
+
+    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
+  }, [target, duration, decimals]);
+
+  return { value: display, direction };
 }
 
-/**
- * Returns a CSS class name for price flash animation based on direction.
- */
-export function flashClass(direction) {
-  if (direction === 'up') return 'price-flash-up';
-  if (direction === 'down') return 'price-flash-down';
-  return '';
+export function useFlashEffect(value) {
+  const prevRef = useRef(value);
+  const [flash, setFlash] = useState(null); // 'up' | 'down' | null
+
+  useEffect(() => {
+    if (value !== prevRef.current && isFinite(value)) {
+      const dir = value > prevRef.current ? 'up' : 'down';
+      setFlash(dir);
+      const t = setTimeout(() => setFlash(null), 700);
+      prevRef.current = value;
+      return () => clearTimeout(t);
+    }
+    prevRef.current = value;
+  }, [value]);
+
+  return flash;
 }
+
+export default useAnimatedNumber;

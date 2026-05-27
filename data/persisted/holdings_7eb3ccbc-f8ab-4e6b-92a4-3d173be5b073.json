@@ -1,0 +1,122 @@
+[
+  {
+    "ticker": "RELIANCENS",
+    "company_name": "Reliance Industries",
+    "quantity": 10.0,
+    "avg_buy_price": 2400.0,
+    "current_price": 2400.0,
+    "csv_market_price": null,
+    "exchange": "NSE",
+    "asset_class": "equity",
+    "currency": "INR",
+    "sector": "Energy"
+  },
+  {
+    "ticker": "INFYNS",
+    "company_name": "Infosys Ltd",
+    "quantity": 25.0,
+    "avg_buy_price": 1500.0,
+    "current_price": 1500.0,
+    "csv_market_price": null,
+    "exchange": "NSE",
+    "asset_class": "equity",
+    "currency": "INR",
+    "sector": "IT"
+  },
+  {
+    "ticker": "HDFCBANKNS",
+    "company_name": "HDFC Bank",
+    "quantity": 15.0,
+    "avg_buy_price": 1600.0,
+    "current_price": 1600.0,
+    "csv_market_price": null,
+    "exchange": "NSE",
+    "asset_class": "equity",
+    "currency": "INR",
+    "sector": "Banking"
+  },
+  {
+    "ticker": "TCSNS",
+    "company_name": "Tata Consultancy Services",
+    "quantity": 8.0,
+    "avg_buy_price": 3800.0,
+    "current_price": 3800.0,
+    "csv_market_price": null,
+    "exchange": "NSE",
+    "asset_class": "equity",
+    "currency": "INR",
+    "sector": "IT"
+  },
+  {
+    "ticker": "WIPRONS",
+    "company_name": "Wipro Ltd",
+    "quantity": 30.0,
+    "avg_buy_price": 480.0,
+    "current_price": 480.0,
+    "csv_market_price": null,
+    "exchange": "NSE",
+    "asset_class": "equity",
+    "currency": "INR",
+    "sector": "IT"
+  },
+  {
+    "ticker": "VTI",
+    "company_name": "Vanguard Total Market ETF",
+    "quantity": 5.0,
+    "avg_buy_price": 220.0,
+    "current_price": 220.0,
+    "csv_market_price": null,
+    "exchange": "NYSE",
+    "asset_class": "equity",
+    "currency": "INR",
+    "sector": "US Market"
+  },
+  {
+    "ticker": "QQQ",
+    "company_name": "Invesco QQQ Trust",
+    "quantity": 3.0,
+    "avg_buy_price": 430.0,
+    "current_price": 430.0,
+    "csv_market_price": null,
+    "exchange": "NASDAQ",
+    "asset_class": "equity",
+    "currency": "INR",
+    "sector": "US Tech"
+  },
+  {
+    "ticker": "INDA",
+    "company_name": "iShares MSCI India ETF",
+    "quantity": 20.0,
+    "avg_buy_price": 45.0,
+    "current_price": 45.0,
+    "csv_market_price": null,
+    "exchange": "NYSE",
+    "asset_class": "equity",
+    "currency": "INR",
+    "sector": "India Index"
+  },
+  {
+    "ticker": "GOLDBEESNS",
+    "company_name": "Nippon Gold BeES",
+    "quantity": 50.0,
+    "avg_buy_price": 58.0,
+    "current_price": 58.0,
+    "csv_market_price": null,
+    "exchange": "NSE",
+    "asset_class": "equity",
+    "currency": "INR",
+    "sector": "Gold"
+  },
+  {
+    "ticker": "LIQUIDBEESNS",
+    "company_name": "Nippon Liquid BeES",
+    "quantity": 100.0,
+    "avg_buy_price": 1000.0,
+    "current_price": 1000.0,
+    "csv_market_price": null,
+    "exchange": "NSE",
+    "asset_class": "equity",
+    "currency": "INR",
+    "sector": "Liquid"
+  }
+]

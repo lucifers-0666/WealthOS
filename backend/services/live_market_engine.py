@@ -157,9 +157,22 @@ class LiveMarketEngine:
         self._last_refresh[user_id] = now
 
     async def push_snapshot(self, user_id: str, websocket) -> None:
-        """Push an immediate snapshot to a freshly connected socket."""
-        await self.refresh_user(user_id, force=True)
-        await self._send_safe(websocket, {"type": "snapshot_ready"})
+        """Push an immediate snapshot to a freshly connected socket.
+
+        Use the safe refresh wrapper to ensure exceptions from per-user
+        refreshes (DB/network issues) are caught and logged — avoid
+        unhandled task exceptions bubbling out of background tasks.
+        """
+        # Use the safe wrapper which logs and swallows exceptions
+        await self._safe_refresh(user_id)
+
+        # Notify the socket that a snapshot is ready; _send_safe already
+        # handles send failures and returns False on error.
+        try:
+            await self._send_safe(websocket, {"type": "snapshot_ready"})
+        except Exception:
+            # Defensive: _send_safe shouldn't raise, but guard anyway.
+            logger.debug("push_snapshot: failed to send snapshot_ready to user=%s", user_id)
 
     # ── Broadcasting ────────────────────────────────────────────────
 

@@ -4,7 +4,9 @@ Singleton client for all Supabase operations (PostgreSQL + Auth + Storage + Real
 """
 
 import os
+import httpx
 from supabase import create_client, Client
+from supabase.lib.client_options import SyncClientOptions
 from functools import lru_cache
 
 _supabase_client: Client | None = None
@@ -26,7 +28,13 @@ def get_supabase() -> Client:
                 "⚠️  If you don't have a Supabase project, create one free at https://supabase.com"
             )
         try:
-            _supabase_client = create_client(url, key)
+            # Create an httpx client with HTTP/2 explicitly disabled to avoid
+            # httpcore/httpx HTTP/2 protocol issues observed when talking to
+            # local PostgREST/Supabase endpoints.
+            client_opts = SyncClientOptions()
+            client_opts.httpx_client = httpx.Client(http2=False)
+
+            _supabase_client = create_client(url, key, options=client_opts)
             # Test connection
             _supabase_client.auth.get_session()
         except Exception as e:
@@ -52,4 +60,8 @@ def get_supabase_service() -> Client:
             "❌ SUPABASE_SERVICE_ROLE_KEY must be set for admin operations.\n\n"
             "Get it from: https://supabase.com/dashboard/project/<your-project>/settings/api"
         )
-    return create_client(url, service_key)
+    # Use a service-role client with HTTP/2 disabled as well to avoid
+    # intermittent httpx/httpcore protocol errors in background tasks.
+    svc_opts = SyncClientOptions()
+    svc_opts.httpx_client = httpx.Client(http2=False)
+    return create_client(url, service_key, options=svc_opts)

@@ -602,8 +602,27 @@ async def upload_holdings_csv(file: UploadFile = File(...), user_id: str = Depen
         except Exception:
             persisted = False
             saved = holdings
+        # If remote persistence failed, fall back to a local JSON file so
+        # developers can continue end-to-end testing without Supabase.
+        persisted_to = None
+        if not persisted:
+            try:
+                base_dir = Path(__file__).resolve().parent
+                outdir = base_dir / "data" / "persisted"
+                outdir.mkdir(parents=True, exist_ok=True)
+                outpath = outdir / f"holdings_{user_id}.json"
+                with outpath.open("w", encoding="utf-8") as fh:
+                    json.dump(saved, fh, indent=2, ensure_ascii=False)
+                persisted = True
+                persisted_to = str(outpath)
+            except Exception as e:
+                logger.warning(f"Local fallback persist failed: {e}")
+                persisted_to = None
         update_upload_session(session_id, "completed", recognized_data={"count": len(saved)})
-        return {"imported": len(saved), "holdings": saved, "persisted": persisted}
+        resp = {"imported": len(saved), "holdings": saved, "persisted": persisted}
+        if not persisted_to is None:
+            resp["persisted_to"] = persisted_to
+        return resp
     except Exception as e:
         update_upload_session(session_id, "failed", error=str(e))
         raise HTTPException(status_code=422, detail=str(e))
@@ -654,8 +673,27 @@ async def upload_screenshot(file: UploadFile = File(...), user_id: str = Depends
             except Exception:
                 persisted = False
                 saved = holdings
+            # Local fallback when DB persistence is unavailable
+            persisted_to = None
+            if not persisted:
+                try:
+                    base_dir = Path(__file__).resolve().parent
+                    outdir = base_dir / "data" / "persisted"
+                    outdir.mkdir(parents=True, exist_ok=True)
+                    outpath = outdir / f"holdings_{user_id}.json"
+                    with outpath.open("w", encoding="utf-8") as fh:
+                        json.dump(saved, fh, indent=2, ensure_ascii=False)
+                    persisted = True
+                    persisted_to = str(outpath)
+                except Exception as e:
+                    logger.warning(f"Local fallback persist failed: {e}")
+                    persisted_to = None
+
             update_upload_session(session_id, "completed", recognized_data={"count": len(saved)})
-            return {"recognized": len(saved), "holdings": saved, "session_id": session_id, "persisted": persisted}
+            resp = {"recognized": len(saved), "holdings": saved, "session_id": session_id, "persisted": persisted}
+            if persisted_to:
+                resp["persisted_to"] = persisted_to
+            return resp
         else:
             update_upload_session(session_id, "failed", error="No holdings detected in image")
             raise HTTPException(status_code=422, detail="No holdings detected in image")

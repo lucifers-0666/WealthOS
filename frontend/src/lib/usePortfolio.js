@@ -3,8 +3,23 @@
  * No duplicate WebSocket. No own polling. Single source of truth.
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { supabase } from './auth.js';
 import { useMarketData } from './MarketDataContext.jsx';
+import { isDemoMode } from './auth.js';
+import { getPortfolioHoldings, savePortfolioHoldings, upsertPortfolioHolding, removePortfolioHolding } from './portfolioStore.js';
+import { HOLDINGS as DEMO_HOLDINGS } from './data.js';
+import {
+  getHoldings,
+  getPortfolio,
+  getTransactions,
+  getTargetAllocation,
+  getWatchlist,
+  createHolding as createHoldingApi,
+  deleteHolding as deleteHoldingApi,
+  addToWatchlist as addToWatchlistApi,
+  removeFromWatchlist as removeFromWatchlistApi,
+  setTargetAllocation as setTargetAllocationApi,
+} from '../services/portfolio.js';
+import { request } from '../services/api.js';
 
 const API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -23,8 +38,8 @@ function normalizeHolding(raw) {
     id: raw.id,
     symbol: normalizeSymbol(raw.symbol || raw.ticker),
     name: raw.name || raw.company_name || raw.symbol || '',
-    quantity: safeParse(raw.quantity),
-    avg_price: safeParse(raw.avg_price || raw.average_price || raw.avg_buy_price),
+    quantity: safeParse(raw.quantity ?? raw.qty),
+    avg_price: safeParse(raw.avg_price || raw.average_price || raw.avg_buy_price || raw.avg),
     exchange: raw.exchange || 'NSE',
     sector: raw.sector || 'Unknown',
     notes: raw.notes || '',
@@ -42,8 +57,10 @@ function normalizeHolding(raw) {
 
 function mergeWithLivePrice(holding, priceData) {
   if (!priceData) return holding;
-  const ltp = safeParse(priceData.ltp, holding.ltp ?? holding.avg_price);
-  const prevClose = safeParse(priceData.previous_close || priceData.close, ltp);
+  const rawLtp = priceData.ltp ?? priceData.price ?? priceData.c ?? priceData.last_price;
+  const ltp = Number(rawLtp) > 0 ? safeParse(rawLtp, holding.ltp ?? holding.avg_price) : (holding.ltp ?? holding.avg_price);
+  const rawPrevClose = priceData.previous_close ?? priceData.close ?? priceData.prev_close ?? priceData.pc;
+  const prevClose = Number(rawPrevClose) > 0 ? safeParse(rawPrevClose, ltp) : ltp;
   const invested = holding.quantity * holding.avg_price;
   const currentValue = holding.quantity * ltp;
   const unrealisedPnl = currentValue - invested;
@@ -126,25 +143,76 @@ function buildSummary(enrichedHoldings) {
 export function usePortfolio() {
   const { prices, isConnected, isStale } = useMarketData();
   const [rawHoldings, setRawHoldings] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [watchlist, setWatchlist] = useState([]);
+  const [targetAllocation, setTargetAllocationState] = useState([]);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const mountedRef = useRef(true);
 
-  // Fetch holdings from backend
-  const fetchHoldings = useCallback(async () => {
+  // Fetch all portfolio-related data from backend
+  const refresh = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) { setRawHoldings([]); setLoading(false); return; }
+      if (isDemoMode) {
+        const sourceHoldings = DEMO_HOLDINGS.map((item) => ({
+          ticker: item.symbol,
+          company_name: item.name,
+          quantity: item.qty,
+          avg_buy_price: item.avg,
+          exchange: item.exch,
+          sector: item.symbol === 'VTI' || item.symbol === 'QQQ' ? 'US Market' : item.symbol === 'WIPRO' ? 'IT' : item.symbol === 'HDFCBANK' ? 'Banking' : item.symbol === 'RELIANCE' ? 'Energy' : item.symbol === 'INFY' ? 'IT' : 'Equity',
+          asset_class: 'equity',
+          currency: 'INR',
+        }));
+        const localHoldings = sourceHoldings.map(normalizeHolding);
+        if (mountedRef.current) {
+          setRawHoldings(localHoldings);
+          setTransactions([]);
+          setWatchlist([]);
+          setTargetAllocationState([]);
+          setHistory([]);
+          setError(null);
+        }
+        return;
+      }
 
-      const res = await fetch(`${API}/portfolio`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      const items = (json.holdings ?? json.data ?? json ?? []).map(normalizeHolding);
+      const [holdingsRes, txnsRes, watchlistRes, targetRes, historyRes] = await Promise.allSettled([
+        getHoldings(),
+        getTransactions(),
+        getWatchlist(),
+        getTargetAllocation(),
+        request('GET', '/portfolio/history', null, { days: 90 }),
+      ]);
+
+      const holdingsRaw = holdingsRes.status === 'fulfilled'
+        ? (Array.isArray(holdingsRes.value) ? holdingsRes.value : (holdingsRes.value?.holdings ?? holdingsRes.value?.data ?? holdingsRes.value ?? []))
+        : [];
+      const transactionsRaw = txnsRes.status === 'fulfilled'
+        ? (Array.isArray(txnsRes.value) ? txnsRes.value : (txnsRes.value?.transactions ?? txnsRes.value?.data ?? txnsRes.value ?? []))
+        : [];
+      const watchlistRaw = watchlistRes.status === 'fulfilled'
+        ? (Array.isArray(watchlistRes.value) ? watchlistRes.value : (watchlistRes.value?.watchlist ?? watchlistRes.value?.data ?? watchlistRes.value ?? []))
+        : [];
+      const targetRaw = targetRes.status === 'fulfilled'
+        ? (Array.isArray(targetRes.value) ? targetRes.value : (targetRes.value?.allocations ?? targetRes.value?.data ?? targetRes.value ?? []))
+        : [];
+      const historyRaw = historyRes.status === 'fulfilled'
+        ? (historyRes.value?.history ?? historyRes.value?.points ?? historyRes.value ?? [])
+        : [];
+
+      const nextHoldings = holdingsRaw.map(normalizeHolding);
+      const nextTransactions = Array.isArray(transactionsRaw) ? transactionsRaw : [];
+      const nextWatchlist = Array.isArray(watchlistRaw) ? watchlistRaw : [];
+      const nextTargetAllocation = Array.isArray(targetRaw) ? targetRaw : [];
+      const nextHistory = Array.isArray(historyRaw) ? historyRaw : [];
+
       if (mountedRef.current) {
-        setRawHoldings(items);
+        setRawHoldings(nextHoldings);
+        setTransactions(nextTransactions);
+        setWatchlist(nextWatchlist);
+        setTargetAllocationState(nextTargetAllocation);
+        setHistory(nextHistory);
         setError(null);
       }
     } catch (err) {
@@ -156,9 +224,9 @@ export function usePortfolio() {
 
   useEffect(() => {
     mountedRef.current = true;
-    fetchHoldings();
+    refresh();
     return () => { mountedRef.current = false; };
-  }, [fetchHoldings]);
+  }, [refresh]);
 
   // Merge live prices — recomputes whenever prices Map or rawHoldings changes
   const holdings = useMemo(() => {
@@ -169,65 +237,106 @@ export function usePortfolio() {
   }, [rawHoldings, prices]);
 
   const summary = useMemo(() => buildSummary(holdings), [holdings]);
+  const portfolio = useMemo(() => ({
+    holdings,
+    summary,
+    transactions,
+    watchlist,
+    targetAllocation,
+    history,
+  }), [holdings, summary, transactions, watchlist, targetAllocation, history]);
 
   // CRUD operations
   const addHolding = useCallback(async (payload) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch(`${API}/portfolio`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    await fetchHoldings();
-    return res.json();
-  }, [fetchHoldings]);
+    if (isDemoMode) {
+      const next = upsertPortfolioHolding(payload);
+      setRawHoldings(next.map(normalizeHolding));
+      await refresh();
+      return payload;
+    }
+    const res = await createHoldingApi(payload);
+    await refresh();
+    return res;
+  }, [refresh]);
 
   const updateHolding = useCallback(async (id, payload) => {
     // Optimistic update
     setRawHoldings(prev => prev.map(h => h.id === id ? { ...h, ...payload } : h));
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${API}/portfolio/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (isDemoMode) {
+        const next = upsertPortfolioHolding({ id, ...payload });
+        setRawHoldings(next.map(normalizeHolding));
+        await refresh();
+        return { id, ...payload };
+      }
+      const res = await createHoldingApi({ id, ...payload });
+      await refresh();
+      return res;
     } catch (err) {
       // Revert on failure
-      await fetchHoldings();
+      await refresh();
       throw err;
     }
-  }, [fetchHoldings]);
+  }, [refresh]);
 
   const deleteHolding = useCallback(async (id) => {
     // Optimistic remove
     setRawHoldings(prev => prev.filter(h => h.id !== id));
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${API}/portfolio/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (isDemoMode) {
+        const next = removePortfolioHolding(id);
+        setRawHoldings(next.map(normalizeHolding));
+        await refresh();
+        return { deleted: true };
+      }
+      const res = await deleteHoldingApi(id);
+      await refresh();
+      return res;
     } catch (err) {
-      await fetchHoldings();
+      await refresh();
       throw err;
     }
-  }, [fetchHoldings]);
+  }, [refresh]);
+
+  const addToWatchlistFn = useCallback(async (tickerOrItem) => {
+    const payload = typeof tickerOrItem === 'string' ? { ticker: tickerOrItem } : tickerOrItem;
+    const res = await addToWatchlistApi(payload);
+    await refresh();
+    return res;
+  }, [refresh]);
+
+  const removeFromWatchlistFn = useCallback(async (ticker) => {
+    const res = await removeFromWatchlistApi(ticker);
+    await refresh();
+    return res;
+  }, [refresh]);
+
+  const saveTargetAllocationFn = useCallback(async (allocations) => {
+    const res = await setTargetAllocationApi(allocations);
+    await refresh();
+    return res;
+  }, [refresh]);
 
   return {
+    portfolio,
     holdings,
     summary,
+    transactions,
+    watchlist,
+    targetAllocation,
+    history,
     loading,
     error,
     isConnected,
     isStale,
-    refetch: fetchHoldings,
+    refresh,
+    refetch: refresh,
     addHolding,
     updateHolding,
     deleteHolding,
+    addToWatchlist: addToWatchlistFn,
+    removeFromWatchlist: removeFromWatchlistFn,
+    saveTargetAllocation: saveTargetAllocationFn,
   };
 }
 

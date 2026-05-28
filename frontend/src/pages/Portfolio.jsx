@@ -181,8 +181,10 @@ export default function Portfolio() {
   const [sortDir, setSortDir]           = useState('desc');
   const [filterClass, setFilterClass]   = useState('All');
 
-  // Prefer live holdings from WS; fall back to static
-  const rawHoldings = liveHoldings.length > 0 ? liveHoldings : (portfolio?.holdings || []);
+  const liveHoldingsHaveValue = liveHoldings.some((h) => Number(h?.current_value || h?.current_value_inr || 0) > 0 || Number(h?.ltp || 0) > 0);
+
+  // Prefer meaningful live holdings from WS; fall back to static
+  const rawHoldings = liveHoldingsHaveValue ? liveHoldings : (portfolio?.holdings || []);
 
   const assetClasses = useMemo(() => {
     const s = new Set(rawHoldings.map((h) => h.asset_class || 'Equity'));

@@ -68,4 +68,9 @@ export function useFlashEffect(value) {
   return flash;
 }
 
+export function flashClass(direction) {
+  if (!direction) return '';
+  return direction === 'up' ? 'flash-up' : direction === 'down' ? 'flash-down' : '';
+}
+
 export default useAnimatedNumber;

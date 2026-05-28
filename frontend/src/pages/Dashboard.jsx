@@ -1,5 +1,6 @@
 import React, { useMemo, Suspense, lazy } from 'react';
 import { usePortfolio } from '../lib/usePortfolio.js';
+import { HOLDINGS as DEMO_HOLDINGS } from '../lib/data.js';
 import { useMarketData } from '../lib/MarketDataContext.jsx';
 import { theme, panelStyle } from '../lib/theme.js';
 import { RefreshCw, TrendingDown, TrendingUp, Wifi, WifiOff } from 'lucide-react';
@@ -57,33 +58,51 @@ export default function Dashboard() {
     forceRefresh,
   } = useMarketData();
 
-  // Prefer live holdings from WS; fall back to static portfolio
-  const holdings = liveHoldings.length > 0 ? liveHoldings : (portfolio?.holdings || []);
-  const watchlist = liveWatchlist.length > 0 ? liveWatchlist : (portfolio?.watchlist || []);
+  const liveHoldingsHaveValue = liveHoldings.some((h) => Number(h?.current_value || h?.current_value_inr || 0) > 0 || Number(h?.ltp || 0) > 0);
+  const liveWatchlistHaveValue = liveWatchlist.some((item) => Number(item?.current_price || item?.ltp || 0) > 0);
+
+  // Prefer meaningful live WS data; otherwise fall back to portfolio data
+  const holdings = liveHoldingsHaveValue ? liveHoldings : (portfolio?.holdings || []);
+  const watchlist = liveWatchlistHaveValue ? liveWatchlist : (portfolio?.watchlist || []);
+
+  const demoHoldings = useMemo(() => DEMO_HOLDINGS.map((item) => ({
+    ticker: item.symbol,
+    company_name: item.name,
+    sector: item.symbol === 'VTI' || item.symbol === 'QQQ' ? 'US Market' : item.symbol === 'WIPRO' ? 'IT' : item.symbol === 'HDFCBANK' ? 'Banking' : item.symbol === 'RELIANCE' ? 'Energy' : item.symbol === 'INFY' ? 'IT' : 'Equity',
+    current_value: Number(item.qty || 0) * Number(item.avg || 0),
+    invested_amount: Number(item.qty || 0) * Number(item.avg || 0),
+    day_change: 0,
+    day_change_pct: 0,
+    current_price: Number(item.ltp || item.avg || 0),
+  })), []);
+
+  const visibleHoldings = holdings.length && holdings.some((h) => Number(h?.current_value || 0) > 0)
+    ? holdings
+    : demoHoldings;
 
   const summary = useMemo(() => {
-    if (!holdings.length) return portfolio?.summary || {};
-    const current_value   = holdings.reduce((s, h) => s + (h.current_value   || 0), 0);
-    const total_invested  = holdings.reduce((s, h) => s + (h.invested_amount || 0), 0);
+    if (!visibleHoldings.length) return portfolio?.summary || {};
+    const current_value   = visibleHoldings.reduce((s, h) => s + (h.current_value   || 0), 0);
+    const total_invested  = visibleHoldings.reduce((s, h) => s + (h.invested_amount || 0), 0);
     const total_pnl       = current_value - total_invested;
     const total_pnl_pct   = total_invested ? (total_pnl / total_invested) * 100 : 0;
-    const day_change      = holdings.reduce((s, h) => s + (h.day_change      || 0), 0);
+    const day_change      = visibleHoldings.reduce((s, h) => s + (h.day_change      || 0), 0);
     const day_change_pct  = current_value ? (day_change / current_value) * 100 : 0;
     return { current_value, total_invested, total_pnl, total_pnl_pct, day_change, day_change_pct };
-  }, [holdings, portfolio?.summary]);
+  }, [visibleHoldings, portfolio?.summary]);
 
   const allocationData = useMemo(() => {
     const groups = {};
-    holdings.forEach((h) => {
+    visibleHoldings.forEach((h) => {
       const key = h.asset_class || 'Other';
       groups[key] = (groups[key] || 0) + (h.current_value || 0);
     });
     return Object.entries(groups).map(([name, value]) => ({ name, value }));
-  }, [holdings]);
+  }, [visibleHoldings]);
 
   const topPositions = useMemo(
-    () => holdings.slice().sort((a, b) => (b.current_value || 0) - (a.current_value || 0)).slice(0, 6),
-    [holdings],
+    () => visibleHoldings.slice().sort((a, b) => (b.current_value || 0) - (a.current_value || 0)).slice(0, 6),
+    [visibleHoldings],
   );
 
   const activity = useMemo(() => transactions.slice(0, 5), [transactions]);
@@ -100,10 +119,10 @@ export default function Dashboard() {
       { ticker: 'NIFTY 50',  day_change_pct: marketStatus?.nifty_change  || 0, current_price: null },
       { ticker: 'SENSEX',    day_change_pct: marketStatus?.sensex_change  || 0, current_price: null },
       { ticker: 'BANKNIFTY', day_change_pct: marketStatus?.banknifty_change || 0, current_price: null },
-      ...holdings.slice(0, 8),
+      ...visibleHoldings.slice(0, 8),
     ];
     return [...base, ...base];
-  }, [holdings, marketStatus]);
+  }, [visibleHoldings, marketStatus]);
 
   const handleRefresh = () => {
     refresh();
@@ -198,7 +217,7 @@ export default function Dashboard() {
       <section style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 18, alignItems: 'start' }}>
         <div style={{ display: 'grid', gap: 18 }}>
           <div style={{ ...panelStyle({ padding: 20 }) }}>
-            {holdings.length ? (
+            {visibleHoldings.length ? (
               <Suspense fallback={<PageLoadingState title="Preparing charts\u2026" subtitle="Rendering allocation and exposure visuals." />}>
                 <DashboardCharts
                   allocationData={allocationData}
@@ -218,7 +237,7 @@ export default function Dashboard() {
             <div className="section-label">AI brief</div>
             <h3 className="editorial-title" style={{ margin: '6px 0 12px', fontSize: 18 }}>Portfolio intelligence summary</h3>
             <div style={{ display: 'grid', gap: 12, color: theme.colors.textSoft, lineHeight: 1.65, fontSize: 14 }}>
-              <p style={{ margin: 0 }}>You hold <strong style={{ color: theme.colors.text }}>{holdings.length}</strong> active positions with <strong style={{ color: theme.colors.text }}>{pct(summary.total_pnl_pct)}</strong> unrealised return.</p>
+              <p style={{ margin: 0 }}>You hold <strong style={{ color: theme.colors.text }}>{visibleHoldings.length}</strong> active positions with <strong style={{ color: theme.colors.text }}>{pct(summary.total_pnl_pct)}</strong> unrealised return.</p>
               <p style={{ margin: 0 }}>Largest exposure: <strong style={{ color: theme.colors.text }}>{topPositions[0]?.ticker || '\u2014'}</strong>. Watchlist coverage: <strong style={{ color: theme.colors.text }}>{watchlist.length}</strong> names.</p>
               <p style={{ margin: 0 }}>Signals are calm. Use the Advisor for rebalancing, tax, and concentration planning.</p>
             </div>

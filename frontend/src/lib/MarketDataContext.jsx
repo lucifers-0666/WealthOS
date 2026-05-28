@@ -18,8 +18,15 @@ import {
   useCallback,
   useMemo,
 } from 'react';
+import { isDemoMode } from './auth.js';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8000/ws/market';
+const WS_USER_ID = import.meta.env.VITE_DEV_USER_ID || (import.meta.env.VITE_DEMO_MODE === 'true' ? 'demo-user' : '');
+const WS_URL = (() => {
+  const base = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8000/ws/market-updates';
+  if (!WS_USER_ID) return base;
+  const joiner = base.includes('?') ? '&' : '?';
+  return `${base}${joiner}user_id=${encodeURIComponent(WS_USER_ID)}`;
+})();
 const MAX_BACKOFF_MS = 30_000;
 const BATCH_FLUSH_MS = 250; // max latency before UI update
 
@@ -35,6 +42,9 @@ function getOrCreateSingleton() {
       refCount: 0,
       listeners: new Set(),
       prices: new Map(),
+      holdings: [],
+      watchlist: [],
+      marketStatus: null,
       connectionState: 'disconnected', // 'connecting' | 'connected' | 'disconnected'
       reconnectTimer: null,
       backoffMs: 1000,
@@ -94,6 +104,18 @@ function connectSingleton(singleton) {
     singleton.lastPingAt = Date.now();
 
     if (payload.type === 'pong' || payload.type === 'heartbeat') return;
+
+    if (payload.type === 'snapshot_ready' || payload.type === 'market_update') {
+      if (Array.isArray(payload.holdings)) singleton.holdings = payload.holdings;
+      if (Array.isArray(payload.watchlist)) singleton.watchlist = payload.watchlist;
+      if (payload.market_status) singleton.marketStatus = payload.market_status;
+      singleton.listeners.forEach(fn => fn({
+        type: 'snapshot',
+        holdings: singleton.holdings,
+        watchlist: singleton.watchlist,
+        marketStatus: singleton.marketStatus,
+      }));
+    }
 
     // Normalise payload shapes from backend
     const quotes = payload.prices || payload.data || (payload.symbol ? { [payload.symbol]: payload } : null);
@@ -157,8 +179,17 @@ export function MarketDataProvider({ children }) {
   const [connectionStatus, setConnectionStatus] = useState(singleton.connectionState);
   const [prices, setPrices] = useState(new Map(singleton.prices));
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [holdings, setHoldings] = useState(singleton.holdings);
+  const [watchlist, setWatchlist] = useState(singleton.watchlist);
+  const [marketStatus, setMarketStatus] = useState(singleton.marketStatus);
 
   useEffect(() => {
+    if (isDemoMode) {
+      setConnectionStatus('connected');
+      setLastUpdated(Date.now());
+      return () => {};
+    }
+
     singleton.refCount++;
 
     const listener = (event) => {
@@ -168,6 +199,10 @@ export function MarketDataProvider({ children }) {
         // Shallow clone Map so React detects change
         setPrices(new Map(event.prices));
         setLastUpdated(Date.now());
+      } else if (event.type === 'snapshot') {
+        setHoldings(Array.isArray(event.holdings) ? event.holdings : []);
+        setWatchlist(Array.isArray(event.watchlist) ? event.watchlist : []);
+        setMarketStatus(event.marketStatus || null);
       }
     };
 
@@ -204,6 +239,11 @@ export function MarketDataProvider({ children }) {
     return age > 60_000 || p.stale_price === true;
   }, [prices]);
 
+  const forceRefresh = useCallback(() => {
+    if (isDemoMode) return;
+    connectSingleton(singleton);
+  }, [singleton]);
+
   const value = useMemo(() => ({
     prices,
     connectionStatus,
@@ -212,7 +252,15 @@ export function MarketDataProvider({ children }) {
     isStale,
     isConnected: connectionStatus === 'connected',
     isConnecting: connectionStatus === 'connecting',
-  }), [prices, connectionStatus, lastUpdated, getPrice, isStale]);
+    holdings,
+    watchlist,
+    marketStatus,
+    // Backward-compatible fields expected by existing UI components
+    wsStatus: connectionStatus,
+    updatedAt: lastUpdated,
+    isLive: connectionStatus === 'connected',
+    forceRefresh,
+  }), [prices, connectionStatus, lastUpdated, getPrice, isStale, holdings, watchlist, marketStatus, forceRefresh]);
 
   return (
     <MarketDataContext.Provider value={value}>

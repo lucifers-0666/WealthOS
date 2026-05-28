@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getMarketStatus } from './api.js';
 import { createReconnectingSocket } from '../services/websocket.js';
+import { isDemoMode } from './auth.js';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 const POLL_INTERVAL_MS = 30_000;
@@ -104,6 +105,10 @@ export function useMarketStatus() {
   }, [fetchStatus]);
 
   useEffect(() => {
+    if (isDemoMode) {
+      return undefined;
+    }
+
     const wsBase = (import.meta.env.VITE_WS_URL || API_BASE).replace(/^http/i, 'ws');
     const wsUrl = `${wsBase.replace(/\/$/, '')}/ws/market-status`;
 

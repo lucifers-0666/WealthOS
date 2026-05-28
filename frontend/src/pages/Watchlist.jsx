@@ -155,7 +155,8 @@ export default function Watchlist() {
 
   // Merge live WS watchlist with static portfolio watchlist
   const rawWatchlist = useMemo(() => {
-    if (liveWatchlist.length > 0) return liveWatchlist;
+    const liveWatchlistHaveValue = liveWatchlist.some((item) => Number(item?.current_price || item?.ltp || 0) > 0);
+    if (liveWatchlistHaveValue) return liveWatchlist;
     return portfolio?.watchlist || [];
   }, [liveWatchlist, portfolio?.watchlist]);
 

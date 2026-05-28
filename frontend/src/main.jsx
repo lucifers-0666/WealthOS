@@ -1,8 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { QueryProvider } from './components/QueryProvider.jsx';
+import QueryProvider from './components/QueryProvider.jsx';
 import { AppErrorBoundaryBase } from './components/AppErrorBoundary.jsx';
+import { MarketDataProvider } from './lib/MarketDataContext.jsx';
 import App from './App.jsx';
 import './index.css';
 
@@ -45,9 +46,11 @@ createRoot(document.getElementById('root')).render(
         </div>
       )}
     >
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <QueryProvider>
-          <App />
+          <MarketDataProvider>
+            <App />
+          </MarketDataProvider>
         </QueryProvider>
       </BrowserRouter>
     </AppErrorBoundaryBase>

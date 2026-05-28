@@ -23,11 +23,7 @@ router = APIRouter(prefix="/api/import", tags=["Import"])
 
 # Reuse auth helper from main api.py
 def _get_user_id(authorization: str = Header(None)) -> str:
-    import os
-    dev_id = os.getenv("DEV_USER_ID")
     if not authorization:
-        if dev_id:
-            return dev_id
         raise HTTPException(status_code=401, detail="Missing Authorization header")
     try:
         from database.supabase_client import get_supabase
@@ -35,8 +31,6 @@ def _get_user_id(authorization: str = Header(None)) -> str:
         user = sb.auth.get_user(authorization.replace("Bearer ", ""))
         return user.user.id
     except Exception:
-        if dev_id:
-            return dev_id
         raise HTTPException(status_code=401, detail="Invalid token")
 
 

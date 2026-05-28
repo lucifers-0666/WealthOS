@@ -41,6 +41,8 @@ from database import (
     get_watchlist, add_to_watchlist, remove_from_watchlist,
     create_upload_session, update_upload_session,
     get_or_create_profile, update_profile,
+    get_profile_preferences, update_profile_preferences,
+    create_user_activity, get_user_activity, get_profile_metrics,
 )
 from core.price_fetcher import fetch_prices
 from core.data_loader import parse_holdings_csv, parse_transactions_csv
@@ -104,21 +106,34 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # ── Auth helper ────────────────────────────────────────────────
-def get_user_id(authorization: str = Header(None)) -> str:
-    dev_id = os.getenv("DEV_USER_ID")
+def get_current_user(authorization: str = Header(None)) -> dict:
     if not authorization:
-        if dev_id:
-            return dev_id
         raise HTTPException(status_code=401, detail="Missing Authorization header")
+    token = authorization.replace("Bearer ", "").strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Invalid Authorization header")
     try:
         from database.supabase_client import get_supabase
         sb = get_supabase()
-        user = sb.auth.get_user(authorization.replace("Bearer ", ""))
-        return user.user.id
+        auth_res = sb.auth.get_user(token)
+        auth_user = getattr(auth_res, "user", None)
+        if not auth_user or not getattr(auth_user, "id", None):
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user_meta = getattr(auth_user, "user_metadata", None) or {}
+        full_name = user_meta.get("full_name") or user_meta.get("name")
+        return {
+            "id": auth_user.id,
+            "email": getattr(auth_user, "email", None),
+            "full_name": full_name,
+        }
+    except HTTPException:
+        raise
     except Exception:
-        if dev_id:
-            return dev_id
         raise HTTPException(status_code=401, detail="Invalid token")
+
+
+def get_user_id(current_user: dict = Depends(get_current_user)) -> str:
+    return current_user["id"]
 
 
 # ── Pydantic Models ─────────────────────────────────────────────
@@ -170,6 +185,29 @@ class ImportConfirmIn(BaseModel):
     broker: Optional[str] = None
 
 
+class UserProfileUpdateIn(BaseModel):
+    full_name: Optional[str] = None
+    username: Optional[str] = None
+    email: Optional[str] = None
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    risk_profile: Optional[str] = None
+    investment_horizon: Optional[str] = None
+    preferred_sectors: Optional[List[str]] = None
+    rebalance_frequency: Optional[str] = None
+    investment_goal: Optional[str] = None
+    target_corpus: Optional[float] = None
+    notification_settings: Optional[dict] = None
+    ui_preferences: Optional[dict] = None
+    investment_profile: Optional[dict] = None
+
+
+class UserPreferencesIn(BaseModel):
+    notification_settings: Optional[dict] = None
+    ui_preferences: Optional[dict] = None
+    investment_profile: Optional[dict] = None
+
+
 # ── Health ─────────────────────────────────────────────────────────
 @app.get("/health")
 def health():
@@ -204,7 +242,7 @@ async def websocket_market_status(websocket: WebSocket):
 
 
 def _get_ws_user_id(websocket: WebSocket) -> str | None:
-    return websocket.query_params.get("user_id") or os.getenv("DEV_USER_ID")
+    return websocket.query_params.get("user_id")
 
 
 @app.websocket("/ws/market-updates")
@@ -227,12 +265,68 @@ async def websocket_market_updates(websocket: WebSocket):
 
 # ── Profile ─────────────────────────────────────────────────────
 @app.get("/profile")
-def read_profile(user_id: str = Depends(get_user_id)):
-    return get_or_create_profile(user_id)
+def read_profile(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    profile = get_or_create_profile(user_id, full_name=current_user.get("full_name"), email=current_user.get("email"))
+    if current_user.get("email") and profile.get("email") != current_user.get("email"):
+        profile = update_profile(user_id, {"email": current_user.get("email")})
+    return profile
 
 @app.patch("/profile")
-def patch_profile(updates: dict, user_id: str = Depends(get_user_id)):
-    return update_profile(user_id, updates)
+def patch_profile(updates: dict, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    result = update_profile(user_id, updates)
+    try:
+        create_user_activity(user_id, "profile_updated", "Profile updated", {"fields": list((updates or {}).keys())})
+    except Exception as exc:
+        logger.warning(f"Failed to write profile activity: {exc}")
+    return result
+
+
+@app.get("/api/user/profile")
+def read_user_profile(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    profile = get_or_create_profile(user_id, full_name=current_user.get("full_name"), email=current_user.get("email"))
+    if current_user.get("email") and profile.get("email") != current_user.get("email"):
+        profile = update_profile(user_id, {"email": current_user.get("email")})
+    metrics = get_profile_metrics(user_id)
+    return {"profile": profile, "metrics": metrics}
+
+
+@app.put("/api/user/profile")
+def put_user_profile(body: UserProfileUpdateIn, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    payload = body.model_dump(exclude_none=True)
+    if "email" in payload:
+        payload.pop("email", None)
+    updated = update_profile(user_id, payload)
+    try:
+        create_user_activity(user_id, "profile_updated", "Profile updated", {"fields": list(payload.keys())})
+    except Exception as exc:
+        logger.warning(f"Failed to write profile activity: {exc}")
+    return {"profile": updated, "metrics": get_profile_metrics(user_id)}
+
+
+@app.get("/api/user/preferences")
+def read_user_preferences(current_user: dict = Depends(get_current_user)):
+    return get_profile_preferences(current_user["id"])
+
+
+@app.put("/api/user/preferences")
+def put_user_preferences(body: UserPreferencesIn, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    updated = update_profile_preferences(user_id, body.model_dump(exclude_none=True))
+    try:
+        create_user_activity(user_id, "preferences_updated", "Preferences updated", {"fields": list(body.model_dump(exclude_none=True).keys())})
+    except Exception as exc:
+        logger.warning(f"Failed to write preferences activity: {exc}")
+    return updated
+
+
+@app.get("/api/user/activity")
+def read_user_activity(limit: int = 50, current_user: dict = Depends(get_current_user)):
+    data = get_user_activity(current_user["id"], limit=max(1, min(limit, 200)))
+    return {"activity": data}
 
 
 # ── Holdings ─────────────────────────────────────────────────────
@@ -349,13 +443,32 @@ def portfolio_history(
 
 @app.post("/holdings")
 def create_holding(holding: HoldingIn, user_id: str = Depends(get_user_id)):
-    return upsert_holding(user_id, holding.model_dump())
+    payload = holding.model_dump()
+    existing = get_holdings(user_id)
+    symbol = (payload.get("ticker") or "").upper()
+    exchange = (payload.get("exchange") or "NSE").upper()
+    existed = any(((h.get("ticker") or "").upper() == symbol and (h.get("exchange") or "NSE").upper() == exchange) for h in existing)
+    result = upsert_holding(user_id, payload)
+    try:
+        create_user_activity(
+            user_id,
+            "holding_edited" if existed else "holding_added",
+            f"{'Edited' if existed else 'Added'} holding {symbol}",
+            {"ticker": symbol, "exchange": exchange, "quantity": payload.get("quantity")},
+        )
+    except Exception as exc:
+        logger.warning(f"Failed to write holding activity: {exc}")
+    return result
 
 @app.delete("/holdings/{holding_id}")
 def remove_holding(holding_id: str, user_id: str = Depends(get_user_id)):
     ok = delete_holding(user_id, holding_id)
     if not ok:
         return {"deleted": True, "persisted": False, "message": "Holding was not present in the remote store; local state may still be cleared."}
+    try:
+        create_user_activity(user_id, "holding_edited", "Removed holding", {"holding_id": holding_id})
+    except Exception as exc:
+        logger.warning(f"Failed to write holding removal activity: {exc}")
     return {"deleted": True, "persisted": True}
 
 
@@ -543,18 +656,32 @@ def read_watchlist_api(user_id: str = Depends(get_user_id)):
 
 @app.post("/watchlist")
 def add_watchlist(item: WatchlistIn, user_id: str = Depends(get_user_id)):
-    return add_to_watchlist(user_id, **item.model_dump())
+    result = add_to_watchlist(user_id, **item.model_dump())
+    try:
+        create_user_activity(user_id, "watchlist_changed", f"Added {item.ticker.upper()} to watchlist", {"ticker": item.ticker.upper()})
+    except Exception as exc:
+        logger.warning(f"Failed to write watchlist activity: {exc}")
+    return result
 
 
 @app.post("/api/watchlist", tags=["Watchlist"])
 def add_watchlist_api(item: WatchlistIn, user_id: str = Depends(get_user_id)):
-    return add_to_watchlist(user_id, **item.model_dump())
+    result = add_to_watchlist(user_id, **item.model_dump())
+    try:
+        create_user_activity(user_id, "watchlist_changed", f"Added {item.ticker.upper()} to watchlist", {"ticker": item.ticker.upper()})
+    except Exception as exc:
+        logger.warning(f"Failed to write watchlist activity: {exc}")
+    return result
 
 @app.delete("/watchlist/{ticker}")
 def delete_watchlist(ticker: str, user_id: str = Depends(get_user_id)):
     ok = remove_from_watchlist(user_id, ticker)
     if not ok:
         raise HTTPException(status_code=404, detail="Ticker not in watchlist")
+    try:
+        create_user_activity(user_id, "watchlist_changed", f"Removed {ticker.upper()} from watchlist", {"ticker": ticker.upper()})
+    except Exception as exc:
+        logger.warning(f"Failed to write watchlist activity: {exc}")
     return {"deleted": True}
 
 
@@ -563,6 +690,10 @@ def delete_watchlist_api(ticker: str, user_id: str = Depends(get_user_id)):
     ok = remove_from_watchlist(user_id, ticker)
     if not ok:
         raise HTTPException(status_code=404, detail="Ticker not in watchlist")
+    try:
+        create_user_activity(user_id, "watchlist_changed", f"Removed {ticker.upper()} from watchlist", {"ticker": ticker.upper()})
+    except Exception as exc:
+        logger.warning(f"Failed to write watchlist activity: {exc}")
     return {"deleted": True}
 
 
@@ -619,6 +750,10 @@ async def upload_holdings_csv(file: UploadFile = File(...), user_id: str = Depen
                 logger.warning(f"Local fallback persist failed: {e}")
                 persisted_to = None
         update_upload_session(session_id, "completed", recognized_data={"count": len(saved)})
+        try:
+            create_user_activity(user_id, "portfolio_imported", "Imported holdings CSV", {"count": len(saved), "filename": file.filename})
+        except Exception as exc:
+            logger.warning(f"Failed to write import activity: {exc}")
         resp = {"imported": len(saved), "holdings": saved, "persisted": persisted}
         if not persisted_to is None:
             resp["persisted_to"] = persisted_to
@@ -642,6 +777,10 @@ async def upload_transactions_csv(file: UploadFile = File(...), user_id: str = D
             persisted = False
             saved = txns
         update_upload_session(session_id, "completed", recognized_data={"count": len(saved)})
+        try:
+            create_user_activity(user_id, "portfolio_imported", "Imported transactions CSV", {"count": len(saved), "filename": file.filename})
+        except Exception as exc:
+            logger.warning(f"Failed to write import activity: {exc}")
         return {"imported": len(saved), "transactions": saved, "persisted": persisted}
     except Exception as e:
         update_upload_session(session_id, "failed", error=str(e))
@@ -690,6 +829,10 @@ async def upload_screenshot(file: UploadFile = File(...), user_id: str = Depends
                     persisted_to = None
 
             update_upload_session(session_id, "completed", recognized_data={"count": len(saved)})
+            try:
+                create_user_activity(user_id, "portfolio_imported", "Imported holdings from image", {"count": len(saved), "filename": file.filename})
+            except Exception as exc:
+                logger.warning(f"Failed to write OCR import activity: {exc}")
             resp = {"recognized": len(saved), "holdings": saved, "session_id": session_id, "persisted": persisted}
             if persisted_to:
                 resp["persisted_to"] = persisted_to
@@ -732,7 +875,7 @@ def import_confirm(body: ImportConfirmIn, user_id: str = Depends(get_user_id)):
     if not body.holdings:
         raise HTTPException(status_code=422, detail="No holdings provided.")
     try:
-        return apply_confirm(
+        result = apply_confirm(
             user_id=user_id,
             holdings=body.holdings,
             merge_strategy=body.merge_strategy,
@@ -741,6 +884,11 @@ def import_confirm(body: ImportConfirmIn, user_id: str = Depends(get_user_id)):
             get_holdings_fn=get_holdings,
             upsert_holding_fn=upsert_holding,
         )
+        try:
+            create_user_activity(user_id, "portfolio_imported", "Confirmed portfolio import", {"count": len(body.holdings), "merge_strategy": body.merge_strategy})
+        except Exception as exc:
+            logger.warning(f"Failed to write confirm import activity: {exc}")
+        return result
     except Exception as e:
         logger.error(f"import_confirm error: {e}", exc_info=e)
         raise HTTPException(status_code=500, detail=f"Confirm failed: {e}")

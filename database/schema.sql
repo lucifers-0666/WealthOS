@@ -11,8 +11,10 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name TEXT,
     username TEXT,
+    email TEXT,
     avatar_url TEXT,
     bio TEXT,
     currency TEXT DEFAULT 'INR' CHECK (currency IN ('INR', 'USD', 'EUR', 'GBP')),
@@ -28,6 +30,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
+
+UPDATE public.profiles SET user_id = id WHERE user_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_user_id_unique ON public.profiles(user_id);
 
 -- ============================================================
 -- HOLDINGS
@@ -165,6 +173,20 @@ CREATE TABLE IF NOT EXISTS public.watchlist (
 );
 
 -- ============================================================
+-- USER ACTIVITY
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.user_activity (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    details JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_activity_user_created ON public.user_activity(user_id, created_at DESC);
+
+-- ============================================================
 -- AUTO-UPDATE updated_at TRIGGER
 -- ============================================================
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -197,6 +219,7 @@ ALTER TABLE public.target_allocations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.upload_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.watchlist ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_activity ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: users can only see/edit their own
 CREATE POLICY "profiles_self" ON public.profiles
@@ -224,6 +247,9 @@ CREATE POLICY "ai_conv_self" ON public.ai_conversations
 
 -- Watchlist: users own data
 CREATE POLICY "watchlist_self" ON public.watchlist
+    USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "user_activity_self" ON public.user_activity
     USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- Price cache: readable by all authenticated users, writable by service role only

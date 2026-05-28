@@ -5,8 +5,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useMarketData } from './MarketDataContext.jsx';
 import { isDemoMode } from './auth.js';
-import { getPortfolioHoldings, savePortfolioHoldings, upsertPortfolioHolding, removePortfolioHolding } from './portfolioStore.js';
-import { HOLDINGS as DEMO_HOLDINGS } from './data.js';
 import {
   getHoldings,
   getPortfolio,
@@ -155,26 +153,7 @@ export function usePortfolio() {
   const refresh = useCallback(async () => {
     try {
       if (isDemoMode) {
-        const sourceHoldings = DEMO_HOLDINGS.map((item) => ({
-          ticker: item.symbol,
-          company_name: item.name,
-          quantity: item.qty,
-          avg_buy_price: item.avg,
-          exchange: item.exch,
-          sector: item.symbol === 'VTI' || item.symbol === 'QQQ' ? 'US Market' : item.symbol === 'WIPRO' ? 'IT' : item.symbol === 'HDFCBANK' ? 'Banking' : item.symbol === 'RELIANCE' ? 'Energy' : item.symbol === 'INFY' ? 'IT' : 'Equity',
-          asset_class: 'equity',
-          currency: 'INR',
-        }));
-        const localHoldings = sourceHoldings.map(normalizeHolding);
-        if (mountedRef.current) {
-          setRawHoldings(localHoldings);
-          setTransactions([]);
-          setWatchlist([]);
-          setTargetAllocationState([]);
-          setHistory([]);
-          setError(null);
-        }
-        return;
+        throw new Error('Demo mode is disabled for authenticated portfolio/profile data. Please sign in.');
       }
 
       const [holdingsRes, txnsRes, watchlistRes, targetRes, historyRes] = await Promise.allSettled([
@@ -248,12 +227,7 @@ export function usePortfolio() {
 
   // CRUD operations
   const addHolding = useCallback(async (payload) => {
-    if (isDemoMode) {
-      const next = upsertPortfolioHolding(payload);
-      setRawHoldings(next.map(normalizeHolding));
-      await refresh();
-      return payload;
-    }
+    if (isDemoMode) throw new Error('Demo mode is disabled for authenticated portfolio/profile data.');
     const res = await createHoldingApi(payload);
     await refresh();
     return res;
@@ -263,12 +237,7 @@ export function usePortfolio() {
     // Optimistic update
     setRawHoldings(prev => prev.map(h => h.id === id ? { ...h, ...payload } : h));
     try {
-      if (isDemoMode) {
-        const next = upsertPortfolioHolding({ id, ...payload });
-        setRawHoldings(next.map(normalizeHolding));
-        await refresh();
-        return { id, ...payload };
-      }
+      if (isDemoMode) throw new Error('Demo mode is disabled for authenticated portfolio/profile data.');
       const res = await createHoldingApi({ id, ...payload });
       await refresh();
       return res;
@@ -283,12 +252,7 @@ export function usePortfolio() {
     // Optimistic remove
     setRawHoldings(prev => prev.filter(h => h.id !== id));
     try {
-      if (isDemoMode) {
-        const next = removePortfolioHolding(id);
-        setRawHoldings(next.map(normalizeHolding));
-        await refresh();
-        return { deleted: true };
-      }
+      if (isDemoMode) throw new Error('Demo mode is disabled for authenticated portfolio/profile data.');
       const res = await deleteHoldingApi(id);
       await refresh();
       return res;

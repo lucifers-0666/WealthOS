@@ -37,6 +37,11 @@ from database.crud import (
     # Profiles
     get_or_create_profile,
     update_profile,
+    get_profile_preferences,
+    update_profile_preferences,
+    create_user_activity,
+    get_user_activity,
+    get_profile_metrics,
 )
 
 __all__ = [
@@ -50,4 +55,6 @@ __all__ = [
     "get_watchlist", "add_to_watchlist", "remove_from_watchlist",
     "create_upload_session", "update_upload_session",
     "get_or_create_profile", "update_profile",
+    "get_profile_preferences", "update_profile_preferences",
+    "create_user_activity", "get_user_activity", "get_profile_metrics",
 ]

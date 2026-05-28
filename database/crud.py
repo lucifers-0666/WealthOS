@@ -9,6 +9,7 @@ from typing import Optional
 from datetime import datetime, date
 from uuid import UUID
 import re
+import math
 import pandas as pd
 
 from database.supabase_client import get_supabase, get_supabase_service
@@ -53,61 +54,185 @@ def ensure_profile_exists(user_id: str) -> None:
     existing = sb.table("profiles").select("id").eq("id", user_id).limit(1).execute()
     if existing.data:
         return
-    payload = {"id": user_id, "full_name": "Development User"}
+    payload = {"id": user_id, "user_id": user_id}
     _execute_with_missing_column_retry(
         lambda clean_payload: sb.table("profiles").insert(clean_payload),
         payload,
     )
 
 
+def _coerce_iso_date(value: Optional[str]) -> Optional[date]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value)[:10]).date()
+    except Exception:
+        return None
+
+
+def _days_since(iso_ts: Optional[str]) -> int:
+    if not iso_ts:
+        return 0
+    try:
+        dt = datetime.fromisoformat(str(iso_ts).replace("Z", "+00:00"))
+        return max((datetime.utcnow() - dt.replace(tzinfo=None)).days, 0)
+    except Exception:
+        return 0
+
+
 # ============================================================
 # PROFILES
 # ============================================================
 
-def get_or_create_profile(user_id: str, full_name: str = None) -> dict:
+def get_or_create_profile(user_id: str, full_name: str = None, email: str = None) -> dict:
     if not _is_uuid(user_id):
-        return {
-            "id": user_id,
-            "full_name": full_name or "Development User",
-            "currency": "INR",
-            "risk_profile": "moderate",
-            "created_at": datetime.utcnow().isoformat(),
-            "persistence": "local_fallback",
-        }
+        raise ValueError("Invalid user_id for profile access")
     sb = get_supabase()
-    try:
-        res = sb.table("profiles").select("*").eq("id", user_id).maybe_single().execute()
-        if res.data:
-            return res.data
-        new_profile = {"id": user_id, "full_name": full_name or "Development User"}
-        ins = _execute_with_missing_column_retry(
-            lambda clean_payload: sb.table("profiles").insert(clean_payload),
-            new_profile,
-        )
-        return ins.data[0] if ins.data else new_profile
-    except Exception:
-        return {
-            "id": user_id,
-            "full_name": full_name or "Development User",
-            "currency": "INR",
-            "risk_profile": "moderate",
-            "created_at": datetime.utcnow().isoformat(),
-            "persistence": "local_fallback",
-        }
+    res = sb.table("profiles").select("*").eq("id", user_id).maybe_single().execute()
+    if res.data:
+        profile = dict(res.data)
+        profile.setdefault("user_id", user_id)
+        if email and not profile.get("email"):
+            profile["email"] = email
+        return profile
+
+    payload = {
+        "id": user_id,
+        "user_id": user_id,
+        "full_name": full_name,
+        "email": email,
+    }
+    ins = _execute_with_missing_column_retry(
+        lambda clean_payload: sb.table("profiles").insert(clean_payload),
+        payload,
+    )
+    created = (ins.data[0] if ins.data else payload) or payload
+    created.setdefault("user_id", user_id)
+    created.setdefault("email", email)
+    return created
 
 
 def update_profile(user_id: str, updates: dict) -> dict:
     if not _is_uuid(user_id):
-        return {**updates, "id": user_id, "persistence": "local_fallback"}
+        raise ValueError("Invalid user_id for profile update")
     sb = get_supabase()
-    try:
-        res = _execute_with_missing_column_retry(
-            lambda clean_payload: sb.table("profiles").update(clean_payload).eq("id", user_id),
-            updates,
-        )
-        return res.data[0] if res.data else {**updates, "id": user_id, "persistence": "not_returned"}
-    except Exception:
-        return {**updates, "id": user_id, "persistence": "local_fallback"}
+    sanitized = dict(updates)
+    sanitized["updated_at"] = datetime.utcnow().isoformat()
+    res = _execute_with_missing_column_retry(
+        lambda clean_payload: sb.table("profiles").update(clean_payload).eq("id", user_id),
+        sanitized,
+    )
+    if res.data:
+        row = dict(res.data[0])
+        row.setdefault("user_id", user_id)
+        return row
+    return get_or_create_profile(user_id)
+
+
+def get_profile_preferences(user_id: str) -> dict:
+    profile = get_or_create_profile(user_id)
+    return {
+        "notification_settings": profile.get("notification_settings") or {},
+        "ui_preferences": profile.get("ui_preferences") or {},
+        "investment_profile": profile.get("investment_profile") or {},
+        "updated_at": profile.get("updated_at"),
+    }
+
+
+def update_profile_preferences(user_id: str, preferences: dict) -> dict:
+    allowed = {
+        "notification_settings": preferences.get("notification_settings") if isinstance(preferences, dict) else None,
+        "ui_preferences": preferences.get("ui_preferences") if isinstance(preferences, dict) else None,
+        "investment_profile": preferences.get("investment_profile") if isinstance(preferences, dict) else None,
+    }
+    payload = {k: v for k, v in allowed.items() if v is not None}
+    if not payload:
+        return get_profile_preferences(user_id)
+    updated = update_profile(user_id, payload)
+    return {
+        "notification_settings": updated.get("notification_settings") or {},
+        "ui_preferences": updated.get("ui_preferences") or {},
+        "investment_profile": updated.get("investment_profile") or {},
+        "updated_at": updated.get("updated_at"),
+    }
+
+
+def create_user_activity(user_id: str, event_type: str, title: str, details: Optional[dict] = None) -> dict:
+    if not _is_uuid(user_id):
+        raise ValueError("Invalid user_id for activity")
+    sb = get_supabase()
+    payload = {
+        "user_id": user_id,
+        "event_type": event_type,
+        "title": title,
+        "details": details or {},
+    }
+    res = sb.table("user_activity").insert(payload).execute()
+    return (res.data or [{}])[0]
+
+
+def get_user_activity(user_id: str, limit: int = 50) -> list[dict]:
+    if not _is_uuid(user_id):
+        raise ValueError("Invalid user_id for activity")
+    sb = get_supabase()
+    res = (
+        sb.table("user_activity")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return res.data or []
+
+
+def get_profile_metrics(user_id: str) -> dict:
+    if not _is_uuid(user_id):
+        raise ValueError("Invalid user_id for metrics")
+
+    profile = get_or_create_profile(user_id)
+    holdings = get_holdings(user_id)
+    watchlist = get_watchlist(user_id)
+    summary_rows = get_portfolio_summary(user_id)
+
+    total_invested = 0.0
+    portfolio_value = 0.0
+    total_unrealized = 0.0
+
+    for row in summary_rows:
+        qty = float(row.get("quantity") or 0)
+        avg = float(row.get("avg_buy_price") or 0)
+        invested = float(row.get("invested_amount") or (qty * avg))
+
+        current_price = row.get("current_price_inr")
+        if current_price in (None, ""):
+            current_price = row.get("current_price")
+
+        current_value = qty * float(current_price or 0)
+        unrealized = float(row.get("unrealized_pnl") or (current_value - invested))
+
+        total_invested += invested
+        portfolio_value += current_value
+        total_unrealized += unrealized
+
+    # fallback computation when no summary rows but holdings exist
+    if not summary_rows and holdings:
+        for row in holdings:
+            qty = float(row.get("quantity") or 0)
+            avg = float(row.get("avg_buy_price") or 0)
+            total_invested += qty * avg
+
+    account_age_days = _days_since(profile.get("created_at"))
+
+    return {
+        "portfolio_value": round(portfolio_value, 2),
+        "total_invested": round(total_invested, 2),
+        "unrealized_pnl": round(total_unrealized, 2),
+        "holdings_count": len(holdings),
+        "watchlist_count": len(watchlist),
+        "account_age_days": account_age_days,
+        "account_age_years": round(account_age_days / 365.25, 2) if account_age_days else 0,
+    }
 
 
 # ============================================================
@@ -146,7 +271,7 @@ def upsert_holding(user_id: str, holding: dict) -> dict:
     """
     ensure_profile_exists(user_id)
     if not _is_uuid(user_id):
-        return {**holding, "user_id": user_id, "persistence": "local_fallback"}
+        raise ValueError("Invalid user_id for holdings")
     sb = get_supabase()
     payload = {**holding, "user_id": user_id}
     try:
@@ -259,7 +384,7 @@ def get_transactions(
 def add_transaction(user_id: str, txn: dict) -> dict:
     ensure_profile_exists(user_id)
     if not _is_uuid(user_id):
-        return {**txn, "user_id": user_id, "persistence": "local_fallback"}
+        raise ValueError("Invalid user_id for transactions")
     sb = get_supabase()
     payload = {**txn, "user_id": user_id}
     if "action" in payload and "transaction_type" not in payload:
@@ -274,7 +399,7 @@ def add_transaction(user_id: str, txn: dict) -> dict:
 def bulk_add_transactions(user_id: str, txns: list[dict]) -> list[dict]:
     ensure_profile_exists(user_id)
     if not _is_uuid(user_id):
-        return [{**txn, "user_id": user_id, "persistence": "local_fallback"} for txn in txns]
+        raise ValueError("Invalid user_id for transactions")
     sb = get_supabase()
     payloads = []
     for txn in txns:
@@ -362,7 +487,7 @@ def save_message(user_id: str, session_id: str, role: str, content: str,
     try:
         ensure_profile_exists(user_id)
         if not _is_uuid(user_id):
-            return {"user_id": user_id, "session_id": session_id, "role": role, "content": content, "persistence": "local_fallback"}
+            raise ValueError("Invalid user_id for ai conversation")
         sb = get_supabase()
         payload = {
             "user_id": user_id,
@@ -416,14 +541,7 @@ def get_watchlist(user_id: str) -> list[dict]:
 def add_to_watchlist(user_id: str, ticker: str, exchange: str = "NSE",
                      company_name: str = None, target_price: float = None) -> dict:
     if not _is_uuid(user_id):
-        return {
-            "user_id": user_id,
-            "ticker": ticker,
-            "exchange": exchange,
-            "company_name": company_name,
-            "target_price": target_price,
-            "persistence": "local_fallback",
-        }
+        raise ValueError("Invalid user_id for watchlist")
     sb = get_supabase()
     payload = {
         "user_id": user_id,
@@ -438,7 +556,7 @@ def add_to_watchlist(user_id: str, ticker: str, exchange: str = "NSE",
             payload,
         )
     except Exception:
-        return {**payload, "persistence": "local_fallback"}
+        raise
     return res.data[0] if res.data else {}
 
 
@@ -458,7 +576,7 @@ def create_upload_session(user_id: str, file_name: str, file_type: str) -> dict:
     try:
         ensure_profile_exists(user_id)
         if not _is_uuid(user_id):
-            return {"id": f"local-{file_name}", "user_id": user_id, "filename": file_name, "file_type": file_type, "status": "pending", "persistence": "local_fallback"}
+            raise ValueError("Invalid user_id for upload session")
         sb = get_supabase()
         payload = {"user_id": user_id, "filename": file_name, "file_type": file_type, "status": "pending"}
         res = _execute_with_missing_column_retry(
@@ -467,7 +585,7 @@ def create_upload_session(user_id: str, file_name: str, file_type: str) -> dict:
         )
         return res.data[0] if res.data else {}
     except Exception:
-        return {}
+        raise
 
 
 def update_upload_session(session_id: str, status: str,

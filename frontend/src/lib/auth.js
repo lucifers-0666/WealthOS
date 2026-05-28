@@ -39,11 +39,11 @@ function ensureSupabaseConfigured() {
 
 function getDemoSession() {
   return {
-    access_token: 'demo-session-token',
+    access_token: '',
     user: {
-      id: 'demo-user',
-      email: 'demo@wealthos.local',
-      user_metadata: { full_name: 'Demo User' },
+      id: '',
+      email: '',
+      user_metadata: {},
     },
   };
 }

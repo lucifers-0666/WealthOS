@@ -20,7 +20,7 @@ import {
 } from 'react';
 import { isDemoMode } from './auth.js';
 
-const WS_USER_ID = import.meta.env.VITE_DEV_USER_ID || (import.meta.env.VITE_DEMO_MODE === 'true' ? 'demo-user' : '');
+const WS_USER_ID = import.meta.env.VITE_DEV_USER_ID || '';
 const WS_URL = (() => {
   const base = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8000/ws/market-updates';
   if (!WS_USER_ID) return base;

@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useMarketData } from './MarketDataContext.jsx';
 import { isDemoMode } from './auth.js';
+import { getPortfolioHoldings, savePortfolioHoldings, upsertPortfolioHolding, removePortfolioHolding } from './portfolioStore.js';
 import {
   getHoldings,
   getPortfolio,
@@ -32,24 +33,44 @@ function safeParse(v, fallback = 0) {
 }
 
 function normalizeHolding(raw) {
+  const quantity = safeParse(raw.quantity ?? raw.qty ?? raw.shares ?? raw.units);
+  const avgPrice = safeParse(raw.avg_price || raw.average_price || raw.avg_buy_price || raw.avg);
+  const ltp = raw.ltp != null ? safeParse(raw.ltp, avgPrice) : (raw.current_price != null ? safeParse(raw.current_price, avgPrice) : avgPrice);
+  const invested = raw.invested_amount != null ? safeParse(raw.invested_amount) : quantity * avgPrice;
+  const currentValue = raw.current_value != null ? safeParse(raw.current_value) : quantity * ltp;
+  const unrealisedPnl = raw.unrealised_pnl != null ? safeParse(raw.unrealised_pnl) : (currentValue - invested);
+  const unrealisedPct = raw.unrealised_pct != null ? safeParse(raw.unrealised_pct) : (invested > 0 ? (unrealisedPnl / invested) * 100 : 0);
+  const dayChange = raw.day_change != null ? safeParse(raw.day_change) : safeParse(raw.change, 0);
+  const dayChangePct = raw.day_change_pct != null ? safeParse(raw.day_change_pct) : safeParse(raw.change_pct, 0);
+
   return {
     id: raw.id,
-    symbol: normalizeSymbol(raw.symbol || raw.ticker),
+    symbol: normalizeSymbol(raw.symbol || raw.ticker || raw.stock || raw.scrip || raw.instrument),
     name: raw.name || raw.company_name || raw.symbol || '',
-    quantity: safeParse(raw.quantity ?? raw.qty),
-    avg_price: safeParse(raw.avg_price || raw.average_price || raw.avg_buy_price || raw.avg),
-    exchange: raw.exchange || 'NSE',
+    quantity,
+    avg_price: avgPrice,
+    avg_buy_price: avgPrice,
+    exchange: raw.exchange || raw.exch || 'NSE',
     sector: raw.sector || 'Unknown',
     notes: raw.notes || '',
     buy_date: raw.buy_date || raw.created_at || null,
     // realtime fields — will be populated from MarketDataContext
-    ltp: null,
-    change: null,
-    change_pct: null,
-    previous_close: null,
-    stale_price: true,
-    source: null,
+    ltp,
+    change: raw.change != null ? safeParse(raw.change) : dayChange,
+    change_pct: raw.change_pct != null ? safeParse(raw.change_pct) : dayChangePct,
+    previous_close: raw.previous_close != null ? safeParse(raw.previous_close) : ltp,
+    stale_price: raw.stale_price ?? true,
+    source: raw.source ?? 'local',
     last_updated_at: null,
+    invested,
+    invested_amount: invested,
+    current_value: currentValue,
+    current_value_inr: currentValue,
+    current_price: ltp,
+    unrealised_pnl: unrealisedPnl,
+    unrealised_pct: unrealisedPct,
+    day_change: dayChange,
+    day_change_pct: dayChangePct,
   };
 }
 
@@ -69,6 +90,7 @@ function mergeWithLivePrice(holding, priceData) {
   return {
     ...holding,
     ltp,
+    current_price: ltp,
     open: safeParse(priceData.open),
     high: safeParse(priceData.high),
     low: safeParse(priceData.low),
@@ -87,7 +109,9 @@ function mergeWithLivePrice(holding, priceData) {
     latency_ms: priceData.latency_ms,
     // calculated
     invested,
+    invested_amount: invested,
     current_value: currentValue,
+    current_value_inr: currentValue,
     unrealised_pnl: unrealisedPnl,
     unrealised_pct: unrealisedPct,
     day_change: dayChange,
@@ -153,7 +177,17 @@ export function usePortfolio() {
   const refresh = useCallback(async () => {
     try {
       if (isDemoMode) {
-        throw new Error('Demo mode is disabled for authenticated portfolio/profile data. Please sign in.');
+        const demoHoldings = getPortfolioHoldings();
+        const nextHoldings = demoHoldings.map(normalizeHolding);
+        if (mountedRef.current) {
+          setRawHoldings(nextHoldings);
+          setTransactions([]);
+          setWatchlist([]);
+          setTargetAllocationState([]);
+          setHistory([]);
+          setError(null);
+        }
+        return;
       }
 
       const [holdingsRes, txnsRes, watchlistRes, targetRes, historyRes] = await Promise.allSettled([
@@ -227,7 +261,11 @@ export function usePortfolio() {
 
   // CRUD operations
   const addHolding = useCallback(async (payload) => {
-    if (isDemoMode) throw new Error('Demo mode is disabled for authenticated portfolio/profile data.');
+    if (isDemoMode) {
+      const next = upsertPortfolioHolding(payload);
+      if (mountedRef.current) setRawHoldings(next.map(normalizeHolding));
+      return payload;
+    }
     const res = await createHoldingApi(payload);
     await refresh();
     return res;
@@ -237,7 +275,17 @@ export function usePortfolio() {
     // Optimistic update
     setRawHoldings(prev => prev.map(h => h.id === id ? { ...h, ...payload } : h));
     try {
-      if (isDemoMode) throw new Error('Demo mode is disabled for authenticated portfolio/profile data.');
+      if (isDemoMode) {
+        const current = getPortfolioHoldings();
+        const next = current.map((holding) => {
+          const key = String(holding.id ?? holding.holding_id ?? holding.ticker ?? holding.symbol);
+          if (key !== String(id)) return holding;
+          return { ...holding, ...payload };
+        });
+        savePortfolioHoldings(next);
+        if (mountedRef.current) setRawHoldings(next.map(normalizeHolding));
+        return { id, ...payload };
+      }
       const res = await createHoldingApi({ id, ...payload });
       await refresh();
       return res;
@@ -252,7 +300,11 @@ export function usePortfolio() {
     // Optimistic remove
     setRawHoldings(prev => prev.filter(h => h.id !== id));
     try {
-      if (isDemoMode) throw new Error('Demo mode is disabled for authenticated portfolio/profile data.');
+      if (isDemoMode) {
+        const next = removePortfolioHolding(id);
+        if (mountedRef.current) setRawHoldings(next.map(normalizeHolding));
+        return { id };
+      }
       const res = await deleteHoldingApi(id);
       await refresh();
       return res;

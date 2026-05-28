@@ -99,6 +99,12 @@ export function useMarketStatus() {
   }, []);
 
   useEffect(() => {
+    if (isDemoMode) {
+      setStatus(computeStatusLocally());
+      setLoading(false);
+      return undefined;
+    }
+
     fetchStatus();
     const id = setInterval(fetchStatus, POLL_INTERVAL_MS);
     return () => clearInterval(id);

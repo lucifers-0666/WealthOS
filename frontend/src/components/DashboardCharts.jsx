@@ -66,8 +66,8 @@ export default function DashboardCharts({ allocationData = [], topPositions = []
                 strokeWidth={1}
                 animationDuration={650}
               >
-                {data.map((item) => (
-                  <Cell key={item.name} fill={item.color} className="allocation-slice" />
+                {data.map((item, index) => (
+                  <Cell key={`${item.name}-${index}`} fill={item.color} className="allocation-slice" />
                 ))}
               </Pie>
               <Tooltip
@@ -82,8 +82,8 @@ export default function DashboardCharts({ allocationData = [], topPositions = []
           </div>
         </div>
         <div className="allocation-legend">
-          {data.map((item) => (
-            <div key={item.name} className="allocation-legend-row">
+          {data.map((item, index) => (
+            <div key={`${item.name}-${index}`} className="allocation-legend-row">
               <span style={{ background: item.color }} />
               <p>{item.name}</p>
               <strong>{item.pct.toFixed(1)}%</strong>
@@ -98,8 +98,8 @@ export default function DashboardCharts({ allocationData = [], topPositions = []
           <strong>{ranked.length} tracked</strong>
         </div>
         <div className="position-bars">
-          {ranked.map((item) => (
-            <div key={item.ticker} className="position-bar-row">
+          {ranked.map((item, index) => (
+            <div key={`${item.ticker || item.name || 'position'}-${index}`} className="position-bar-row">
               <div className="position-bar-meta">
                 <span>{item.ticker}</span>
                 <strong>{item.pct.toFixed(1)}%</strong>

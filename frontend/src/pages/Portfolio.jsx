@@ -341,9 +341,9 @@ export default function Portfolio() {
                 </tr>
               </thead>
               <tbody>
-                {holdings.map((h) => (
+                {holdings.map((h, idx) => (
                   <HoldingRow
-                    key={h.id || h.ticker}
+                    key={`${h.id || h.ticker || 'holding'}-${idx}`}
                     holding={h}
                     totalValue={totalValue}
                     onEdit={setEditTarget}

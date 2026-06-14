@@ -11,6 +11,14 @@ const features = [
   { title: 'Market intelligence', icon: Newspaper, text: 'Editorial news feeds linked to holdings and sentiment.' },
 ];
 
+const stack = [
+  { name: 'React + Vite', detail: 'Frontend' },
+  { name: 'FastAPI + Supabase', detail: 'Backend / DB' },
+  { name: 'Framer Motion', detail: 'Animations' },
+  { name: 'Lucide Icons', detail: 'Icon system' },
+  { name: 'Dark editorial system', detail: 'Design language' },
+];
+
 export default function Landing() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -18,6 +26,7 @@ export default function Landing() {
   return (
     <div style={{ minHeight: '100dvh', color: theme.colors.text, background: 'linear-gradient(180deg, #081817 0%, #0A201F 48%, #081716 100%)' }}>
       <div style={{ maxWidth: 1360, margin: '0 auto', padding: '28px 22px 42px' }}>
+        {/* ── Nav ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 34 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: 13, display: 'grid', placeItems: 'center', ...panelStyle({ padding: 0 }) }}>
@@ -47,16 +56,32 @@ export default function Landing() {
           </div>
         </div>
 
+        {/* ── Hero grid ── */}
         <section style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 18, alignItems: 'stretch' }}>
           <div style={{ ...panelStyle({ padding: 34, minHeight: 560, position: 'relative', overflow: 'hidden' }) }}>
             <div style={{ maxWidth: 720, position: 'relative', zIndex: 1 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 999, border: `1px solid ${theme.colors.border}`, color: theme.colors.gold, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 22 }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 10px',
+                borderRadius: 999, border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.gold, fontSize: 11, letterSpacing: '0.16em',
+                textTransform: 'uppercase', marginBottom: 22,
+              }}>
                 <Shield size={12} /> Secure. Calm. Institutional.
               </div>
-              <h1 style={{ fontFamily: 'Space Grotesk, Inter, sans-serif', fontSize: 'clamp(3rem, 6vw, 5.6rem)', lineHeight: 0.95, letterSpacing: '-0.06em', margin: '0 0 20px', maxWidth: 12 }}>
+
+              {/* BUG FIX: was maxWidth: 12 (number = 12px), now correctly '12ch' */}
+              <h1 style={{
+                fontFamily: 'Space Grotesk, Inter, sans-serif',
+                fontSize: 'clamp(2.4rem, 5vw, 5rem)',
+                lineHeight: 1.0,
+                letterSpacing: '-0.04em',
+                margin: '0 0 20px',
+                maxWidth: '14ch',
+              }}>
                 Financial intelligence with terminal-grade clarity.
               </h1>
-              <p style={{ fontSize: 18, lineHeight: 1.7, color: theme.colors.textSoft, maxWidth: 640, marginBottom: 24 }}>
+
+              <p style={{ fontSize: 17, lineHeight: 1.7, color: theme.colors.textSoft, maxWidth: 560, marginBottom: 24 }}>
                 WealthOS turns broker exports, live market data, and AI reasoning into a premium operating system for serious investors.
               </p>
 
@@ -72,6 +97,7 @@ export default function Landing() {
                 </Link>
               </div>
 
+              {/* KPI chips */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, maxWidth: 760 }}>
                 {[
                   ['Live portfolio value', '₹24.8L', '+12.4%'],
@@ -88,6 +114,7 @@ export default function Landing() {
             </div>
           </div>
 
+          {/* Right column */}
           <div style={{ display: 'grid', gap: 18 }}>
             <div style={{ ...panelStyle({ padding: 22 }) }}>
               <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.colors.textMuted, marginBottom: 10 }}>What it does</div>
@@ -109,10 +136,10 @@ export default function Landing() {
             <div style={{ ...panelStyle({ padding: 22 }) }}>
               <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.colors.textMuted, marginBottom: 10 }}>Operational stack</div>
               <div style={{ display: 'grid', gap: 10 }}>
-                {['React + Vite', 'FastAPI + Supabase', 'Framer Motion', 'Lucide Icons', 'Dark editorial system'].map((item) => (
-                  <div key={item} style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 12px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, color: theme.colors.textSoft }}>
-                    <span>{item}</span>
-                    <span style={{ color: theme.colors.gold }}>Ready</span>
+                {stack.map(({ name, detail }) => (
+                  <div key={name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 12px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, color: theme.colors.textSoft }}>
+                    <span>{name}</span>
+                    <span style={{ fontSize: 11, color: theme.colors.gold, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{detail}</span>
                   </div>
                 ))}
               </div>

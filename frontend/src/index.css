@@ -771,8 +771,14 @@
 @keyframes blink { 0%, 100% { opacity: 0.28; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
 @keyframes spin-slow { to { transform: rotate(360deg); } }
 @keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
 .animate-spin-slow { animation: spin-slow 1s linear infinite; }
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #111611 25%, #161c16 50%, #111611 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease infinite;
+}
 
 @media (max-width: 980px) {
   .hide-tablet { display: none !important; }
@@ -799,7 +805,7 @@
   .login-card { padding: 20px !important; border-radius: 12px !important; }
 }
 
-/* WealthOS v2 overrides */
+/* WealthOS v2 — forest green terminal palette */
 :root {
   --bg: #0A201F;
   --surface: #172923;
@@ -816,6 +822,25 @@
   --glow: rgba(200,179,142,0.08);
   --shadow: 0 24px 90px rgba(0,0,0,0.38);
   --radius: 14px;
+
+  /* WealthOS green terminal tokens */
+  --color-bg:            #0a0e0a;
+  --color-surface:       #111611;
+  --color-surface-2:     #161c16;
+  --color-border:        #1e281e;
+  --color-border-subtle: #182018;
+  --color-text:          #e8ede8;
+  --color-text-muted:    #6b7f6b;
+  --color-text-faint:    #3d4d3d;
+  --color-accent:        #4ade80;
+  --color-accent-2:      #22c55e;
+  --color-red:           #f87171;
+  --color-yellow:        #fbbf24;
+  --color-blue:          #60a5fa;
+  --color-teal:          #2dd4bf;
+  --color-success:       #4ade80;
+  --color-error:         #f87171;
+  --color-warning:       #fbbf24;
 }
 
 body {

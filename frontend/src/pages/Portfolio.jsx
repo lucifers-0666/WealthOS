@@ -94,12 +94,12 @@ function HoldingRow({ holding, totalValue, onEdit, onDelete }) {
     <tr style={{ transition: 'background 0.15s' }}
       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-      {/* Ticker */}
+      {/* Ticker + Company name */}
       <td style={{ ...cell, fontWeight: 700, paddingLeft: 20 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span>{holding.ticker}</span>
+          <span style={{ color: theme.colors.text }}>{holding.company_name || holding.name || holding.ticker}</span>
           <span style={{ fontSize: 11, color: theme.colors.textMuted, fontWeight: 400 }}>
-            {holding.exchange || 'NSE'} · {holding.asset_class || 'Equity'}
+            {holding.ticker} · {holding.exchange || 'NSE'} · {holding.asset_class || 'Equity'}
           </span>
         </div>
       </td>
@@ -116,9 +116,13 @@ function HoldingRow({ holding, totalValue, onEdit, onDelete }) {
         <span className={flash === 'up' ? 'price-flash-up' : flash === 'down' ? 'price-flash-down' : ''}>
           {fmt(livePrice)}
         </span>
-        <div style={{ fontSize: 11, marginTop: 2, color: isDayUp ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)',
+        <div style={{
+          fontSize: 11, marginTop: 2,
+          color: Math.abs(dayPct) > 0.01
+            ? (isDayUp ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)')
+            : 'var(--text-faint,#3a4a3a)',
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
-          {isDayUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+          {Math.abs(dayPct) > 0.01 ? (isDayUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />) : null}
           {pct(dayPct)}
         </div>
       </td>

@@ -1,51 +1,49 @@
 import React, { useMemo } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
-// ── palette tokens ──────────────────────────────────────────────
+// -- palette ----------------------------------------------------
 const C = {
-  surface:     '#111611',
-  surface2:    '#161c16',
-  border:      '#1e281e',
-  borderSubtle:'#182018',
-  text:        '#e8ede8',
-  textMuted:   '#6b7f6b',
-  textFaint:   '#3d4d3d',
-  green:       '#4ade80',
-  red:         '#f87171',
-  yellow:      '#fbbf24',
-  blue:        '#60a5fa',
-  teal:        '#2dd4bf',
+  card:     '#111811',
+  cardHov:  '#162016',
+  border:   '#1f2b1f',
+  borderSub:'#192319',
+  text:     '#dceadc',
+  muted:    '#6b806b',
+  faint:    '#3a4a3a',
+  green:    '#4ade80',
+  red:      '#f87171',
+  yellow:   '#fbbf24',
+  blue:     '#60a5fa',
+  teal:     '#2dd4bf',
 };
 
-// Slice colors — teal-forward to match forest-green terminal
-const COLORS = [
-  '#2dd4bf', '#4ade80', '#60a5fa', '#fbbf24',
-  '#f87171', '#a3e635', '#818cf8', '#34d399',
-];
+// Donut slice colors � teal-forward green terminal
+const COLORS = ['#2dd4bf', '#4ade80', '#60a5fa', '#fbbf24', '#f87171', '#a3e635', '#818cf8', '#34d399'];
 
-const money = (value) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value || 0);
+const money = v => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v || 0);
 
 function safePct(val) {
   const n = Number(val);
-  return Number.isFinite(n) ? `${n >= 0 ? '+' : ''}${n.toFixed(2)}%` : '—';
+  return Number.isFinite(n) ? `${n >= 0 ? '+' : ''}${n.toFixed(2)}%` : '�';
 }
 
 function Insight({ label, value, sub, tone }) {
+  // Diversification: green if >70, yellow if 40-70, red if <40
+  const displayTone = tone || C.text;
   return (
-    <div style={{ background: C.surface2, border: `1px solid ${C.borderSubtle}`, borderRadius: 6, padding: '12px 14px' }}>
-      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.textMuted, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: tone || C.text }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>{sub}</div>}
+    <div style={{ background: C.cardHov, border: `1px solid ${C.borderSub}`, borderRadius: 6, padding: '12px 14px' }}>
+      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: displayTone }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{sub}</div>}
     </div>
   );
 }
 
-export default function DashboardCharts({ allocationData = [], topPositions = [] }) {
+export default function DashboardCharts({ allocationData = [], topPositions = [], portfolioValue }) {
   const data = useMemo(() => {
     const total = allocationData.reduce((sum, item) => sum + Number(item.value || 0), 0) || 1;
     return allocationData
-      .filter((item) => Number(item.value || 0) > 0)
+      .filter(item => Number(item.value || 0) > 0)
       .map((item, index) => ({
         ...item,
         value: Number(item.value || 0),
@@ -63,37 +61,37 @@ export default function DashboardCharts({ allocationData = [], topPositions = []
     }));
   }, [topPositions]);
 
-  // ── derived insights ──
+  // Derived insights
   const topGainer = topPositions.slice().sort((a, b) => (b.unrealised_pnl_pct || b.change_pct || 0) - (a.unrealised_pnl_pct || a.change_pct || 0))[0];
   const topLoser  = topPositions.slice().sort((a, b) => (a.unrealised_pnl_pct || a.change_pct || 0) - (b.unrealised_pnl_pct || b.change_pct || 0))[0];
   const topConc   = ranked.slice().sort((a, b) => b.pct - a.pct)[0];
-  const sectorCount = new Set(topPositions.map((item) => item.sector).filter(Boolean)).size;
-  const diversificationScore = Math.max(0, Math.min(100, Math.round((sectorCount / Math.max(topPositions.length || 1, 1)) * 100)));
+  const sectorCount = new Set(topPositions.map(item => item.sector).filter(Boolean)).size;
+  const divScore = Math.max(0, Math.min(100, Math.round((sectorCount / Math.max(topPositions.length || 1, 1)) * 100)));
 
-  // Safe display helpers — avoids "undefined%"
+  // Safe display
   const gainerPct = topGainer?.unrealised_pnl_pct ?? topGainer?.change_pct;
   const loserPct  = topLoser?.unrealised_pnl_pct  ?? topLoser?.change_pct;
-  const gainerLabel = topGainer?.ticker || topGainer?.symbol || '—';
-  const loserLabel  = topLoser?.ticker  || topLoser?.symbol  || '—';
-  const gainerSub = gainerPct != null ? safePct(gainerPct) : null;
-  const loserSub  = loserPct  != null ? safePct(loserPct)  : null;
-
-  const concLabel = topConc ? `${topConc.ticker || topConc.symbol || '—'}` : '—';
+  const gainerLabel = topGainer?.ticker || topGainer?.symbol || '�';
+  const loserLabel  = topLoser?.ticker  || topLoser?.symbol  || '�';
+  const gainerSub = gainerPct != null && Number.isFinite(Number(gainerPct)) ? safePct(gainerPct) : null;
+  const loserSub  = loserPct  != null && Number.isFinite(Number(loserPct))  ? safePct(loserPct)  : null;
+  const concLabel = topConc ? `${topConc.ticker || topConc.symbol || '�'}` : '�';
   const concSub   = topConc ? `${topConc.pct.toFixed(1)}% of portfolio` : null;
-  const concTone  = topConc && topConc.pct > 30 ? C.yellow : C.text;
+  const concTone  = topConc?.pct > 30 ? C.yellow : C.text;
 
-  const totalValue = ranked.reduce((s, item) => s + (item.current_value || 0), 0);
+  // Diversification color
+  const divTone = divScore > 70 ? C.green : divScore > 40 ? C.text : C.yellow;
+
+  // Center value � use passed portfolioValue if available, else sum ranked
+  const centerValue = portfolioValue ?? ranked.reduce((s, item) => s + (item.current_value || 0), 0);
 
   if (!data.length) {
     return (
-      <div style={{ minHeight: 280, display: 'grid', placeItems: 'center', textAlign: 'center', color: C.textMuted }}>
+      <div style={{ minHeight: 240, display: 'grid', placeItems: 'center', textAlign: 'center', color: C.muted }}>
         <div>
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 14, opacity: 0.4, display: 'inline-block', color: C.teal }}>
-            <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path>
-          </svg>
           <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>No holdings yet</div>
-          <div style={{ fontSize: 13, marginBottom: 16 }}>Import or add holdings to see allocation</div>
-          <a href="/app/portfolio" style={{ padding: '7px 16px', borderRadius: 6, fontSize: 12, background: C.surface2, color: C.text, border: `1px solid ${C.border}`, textDecoration: 'none' }}>Add Holdings</a>
+          <div style={{ fontSize: 13, marginBottom: 14 }}>Import or add holdings to see allocation</div>
+          <a href="/app/upload" style={{ padding: '7px 16px', borderRadius: 6, fontSize: 12, background: C.cardHov, color: C.text, border: `1px solid ${C.border}`, textDecoration: 'none' }}>Import Holdings</a>
         </div>
       </div>
     );
@@ -101,49 +99,44 @@ export default function DashboardCharts({ allocationData = [], topPositions = []
 
   return (
     <div className="allocation-module">
-      {/* Donut + legend */}
+      {/* Left: donut + legend */}
       <section className="allocation-donut-panel">
         <div className="allocation-chart-wrap">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={data}
-                dataKey="value"
-                nameKey="name"
-                innerRadius="62%"
-                outerRadius="88%"
-                paddingAngle={3}
-                stroke="rgba(0,0,0,0.2)"
-                strokeWidth={1}
+                data={data} dataKey="value" nameKey="name"
+                innerRadius="62%" outerRadius="88%"
+                paddingAngle={3} stroke="rgba(0,0,0,0.2)" strokeWidth={1}
                 animationDuration={650}
               >
-                {data.map((item, index) => (
-                  <Cell key={`${item.name}-${index}`} fill={item.color} className="allocation-slice" />
-                ))}
+                {data.map((item, index) => <Cell key={`${item.name}-${index}`} fill={item.color} className="allocation-slice" />)}
               </Pie>
               <Tooltip
                 contentStyle={{ background: '#0d170d', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontSize: 12 }}
-                formatter={(value, _name, payload) => [`${money(value)} · ${payload?.payload?.pct.toFixed(1)}%`, payload?.payload?.name]}
+                formatter={(value, _name, payload) => [`${money(value)} � ${payload?.payload?.pct.toFixed(1)}%`, payload?.payload?.name]}
               />
             </PieChart>
           </ResponsiveContainer>
           <div className="allocation-center" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <strong style={{ fontSize: 18, margin: 0, color: C.text, fontVariantNumeric: 'tabular-nums' }}>{money(totalValue)}</strong>
-            <span style={{ fontSize: 10, color: C.textMuted, marginTop: 3, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Portfolio</span>
+            <strong style={{ fontSize: 16, margin: 0, color: C.text, fontVariantNumeric: 'tabular-nums' }}>{money(centerValue)}</strong>
+            <span style={{ fontSize: 10, color: C.muted, marginTop: 3, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Portfolio</span>
           </div>
         </div>
+        {/* Legend � show ticker/name NOT exchange */}
         <div className="allocation-legend">
           {data.map((item, index) => (
             <div key={`${item.name}-${index}`} className="allocation-legend-row">
               <span style={{ background: item.color }} />
-              <p>{item.name}</p>
+              {/* Show the stock name or ticker, NOT exchange */}
+              <p title={item.name}>{item.name || item.ticker || '�'}</p>
               <strong>{item.pct.toFixed(1)}%</strong>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Position weight bars */}
+      {/* Right: position weight bars */}
       <section className="allocation-bars-panel">
         <div className="allocation-section-head">
           <span>Position Weights</span>
@@ -151,9 +144,10 @@ export default function DashboardCharts({ allocationData = [], topPositions = []
         </div>
         <div className="position-bars">
           {ranked.map((item, index) => (
-            <div key={`${item.ticker || item.name || 'position'}-${index}`} className="position-bar-row">
+            <div key={`${item.ticker || item.name || 'pos'}-${index}`} className="position-bar-row">
               <div className="position-bar-meta">
-                <span>{item.ticker || item.name}</span>
+                {/* Show company name as primary label */}
+                <span title={item.company_name || item.name}>{item.company_name || item.name || item.ticker}</span>
                 <strong>{item.pct.toFixed(1)}%</strong>
               </div>
               <div className="position-bar-track">
@@ -164,33 +158,14 @@ export default function DashboardCharts({ allocationData = [], topPositions = []
         </div>
       </section>
 
-      {/* Insights chips — 3-column grid */}
+      {/* Insights chips � 3 columns, full width below */}
       <section className="allocation-insights-panel">
-        <Insight
-          label="Top Gainer"
-          value={gainerLabel}
-          sub={gainerSub}
-          tone={topGainer ? C.green : C.textFaint}
-        />
-        <Insight
-          label="Top Loser"
-          value={loserLabel}
-          sub={loserSub}
-          tone={topLoser ? C.red : C.textFaint}
-        />
-        <Insight
-          label="Concentration"
-          value={concLabel}
-          sub={concSub}
-          tone={concTone}
-        />
-        <Insight label="Diversification" value={`${diversificationScore}/100`} tone={diversificationScore > 50 ? C.green : C.yellow} />
-        <Insight label="Sector Exposure" value={`${sectorCount || 0} sectors`} tone={C.text} />
-        <Insight
-          label="Alloc. Drift"
-          value={topConc && topConc.pct > 35 ? 'Concentrated' : 'Normal'}
-          tone={topConc && topConc.pct > 35 ? C.yellow : C.textMuted}
-        />
+        <Insight label="Top Gainer"    value={gainerLabel} sub={gainerSub}  tone={topGainer ? C.green : C.faint} />
+        <Insight label="Top Loser"     value={loserLabel}  sub={loserSub}   tone={topLoser  ? C.red   : C.faint} />
+        <Insight label="Concentration" value={concLabel}   sub={concSub}    tone={concTone} />
+        <Insight label="Diversification" value={`${divScore}/100`} tone={divTone} />
+        <Insight label="Sector Exposure" value={`${sectorCount || 0} sector${sectorCount !== 1 ? 's' : ''}`} tone={C.text} />
+        <Insight label="Alloc. Drift"    value={topConc?.pct > 35 ? 'Concentrated' : 'Normal'} tone={topConc?.pct > 35 ? C.yellow : C.muted} />
       </section>
     </div>
   );

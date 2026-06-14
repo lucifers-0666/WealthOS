@@ -45,13 +45,23 @@ function getOrCreateSingleton() {
       holdings: [],
       watchlist: [],
       marketStatus: null,
-      connectionState: 'disconnected', // 'connecting' | 'connected' | 'disconnected'
+      connectionState: 'connecting', // 'connecting' | 'connected' | 'disconnected' | 'error'
       reconnectTimer: null,
-      backoffMs: 1000,
+      backoffMs: 2000,
       lastPingAt: null,
     };
   }
   return _singleton;
+}
+
+function isMarketClosed() {
+  const now = new Date();
+  const utcMillis = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const istTime = new Date(utcMillis + (5.5 * 3600000));
+  const day = istTime.getDay();
+  if (day === 0 || day === 6) return true;
+  const time = istTime.getHours() * 100 + istTime.getMinutes();
+  return time < 915 || time >= 1530;
 }
 
 function connectSingleton(singleton) {
@@ -92,7 +102,7 @@ function connectSingleton(singleton) {
 
   ws.onopen = () => {
     singleton.connectionState = 'connected';
-    singleton.backoffMs = 1000;
+    singleton.backoffMs = 2000;
     singleton.lastPingAt = Date.now();
     singleton.listeners.forEach(fn => fn({ type: 'status', status: 'connected' }));
   };
@@ -153,14 +163,17 @@ function connectSingleton(singleton) {
   };
 
   ws.onerror = () => {
-    // onclose will fire next, handle reconnect there
+    singleton.connectionState = 'error';
+    singleton.listeners.forEach(fn => fn({ type: 'status', status: 'error' }));
   };
 
   ws.onclose = () => {
     if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
     singleton.ws = null;
-    singleton.connectionState = 'disconnected';
-    singleton.listeners.forEach(fn => fn({ type: 'status', status: 'disconnected' }));
+    if (singleton.connectionState !== 'error') {
+      singleton.connectionState = 'disconnected';
+      singleton.listeners.forEach(fn => fn({ type: 'status', status: 'disconnected' }));
+    }
     if (singleton.refCount > 0) scheduleReconnect(singleton);
   };
 }
@@ -248,6 +261,7 @@ export function MarketDataProvider({ children }) {
     prices,
     connectionStatus,
     lastUpdated,
+    isMarketClosed: isMarketClosed(),
     getPrice,
     isStale,
     isConnected: connectionStatus === 'connected',
@@ -259,8 +273,9 @@ export function MarketDataProvider({ children }) {
     wsStatus: connectionStatus,
     updatedAt: lastUpdated,
     isLive: connectionStatus === 'connected',
+    backoffMs: singleton.backoffMs,
     forceRefresh,
-  }), [prices, connectionStatus, lastUpdated, getPrice, isStale, holdings, watchlist, marketStatus, forceRefresh]);
+  }), [prices, connectionStatus, lastUpdated, getPrice, isStale, holdings, watchlist, marketStatus, forceRefresh, singleton.backoffMs]);
 
   return (
     <MarketDataContext.Provider value={value}>

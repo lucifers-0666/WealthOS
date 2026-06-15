@@ -314,9 +314,10 @@
 
   .allocation-module {
     display: grid;
-    grid-template-columns: minmax(280px, 0.9fr) minmax(280px, 1fr);
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
     gap: 16px;
-    align-items: stretch;
+    align-items: start;
   }
 
   .allocation-donut-panel,
@@ -330,17 +331,35 @@
   }
 
   .allocation-donut-panel {
-    display: grid;
-    grid-template-columns: minmax(210px, 1fr) minmax(180px, 0.9fr);
+    display: flex;
+    flex-direction: column;
     gap: 12px;
+    align-items: stretch;
+  }
+
+  .allocation-donut-inner {
+    display: flex;
+    gap: 14px;
     align-items: center;
+  }
+
+  .allocation-donut-inner .allocation-chart-wrap {
+    flex: 0 0 180px;
+    width: 180px;
+    height: 180px;
+    aspect-ratio: 1;
+  }
+
+  .allocation-donut-inner .allocation-legend {
+    flex: 1;
+    min-width: 0;
   }
 
   .allocation-chart-wrap {
     position: relative;
-    width: min(320px, 100%);
-    aspect-ratio: 1;
-    margin: 0 auto;
+    width: 180px;
+    height: 180px;
+    flex-shrink: 0;
   }
 
   .allocation-slice {
@@ -373,10 +392,12 @@
 
   .allocation-center strong {
     display: block;
-    margin-top: 4px;
+    margin-top: 2px;
     color: var(--text);
     font-family: Space Grotesk, Inter, sans-serif;
-    font-size: 28px;
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
 
   .allocation-legend,
@@ -436,7 +457,12 @@
 
   .allocation-insights-panel {
     grid-column: 1 / -1;
+    display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    background: none;
+    border: none;
+    padding: 0;
   }
 
   .allocation-insights-panel .allocation-section-head {

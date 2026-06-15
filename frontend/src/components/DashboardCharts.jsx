@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 const C = {
@@ -16,7 +16,18 @@ const C = {
   teal:     '#2dd4bf',
 };
 
-const COLORS = ['#2dd4bf', '#4ade80', '#60a5fa', '#fbbf24', '#f87171', '#a3e635', '#818cf8', '#34d399'];
+const COLORS = [
+  '#f5a623',  // Phosphor Amber  — primary
+  '#e8920f',  // Burnt Amber     — secondary
+  '#fcd34d',  // Warm Yellow     — tertiary
+  '#f0e6c8',  // Parchment       — fourth
+  '#7dd3fc',  // Sky Blue        — fifth (contrast)
+  '#5eead4',  // Teal            — sixth
+  '#c4b5fd',  // Soft Violet     — seventh
+  '#f87171',  // Coral Red       — eighth
+  '#86efac',  // Mint Green      — ninth
+  '#fb923c',  // Orange          — tenth
+];
 const money = v => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v || 0);
 
 function safePct(val) {
@@ -38,7 +49,7 @@ export function PositionWeightsCard({ topPositions = [] }) {
           const isTop = i === 0;
           return (
             <div key={`b${i}`} className="position-bar-row" style={{
-              background: isTop ? 'rgba(74,222,128,0.04)' : 'transparent',
+              background: isTop ? 'rgba(245,166,35,0.04)' : 'transparent',
               borderLeft: isTop ? '2px solid var(--accent-green)' : '2px solid transparent',
               paddingLeft: 4, marginLeft: -6, paddingRight: 4
             }}>
@@ -47,7 +58,7 @@ export function PositionWeightsCard({ topPositions = [] }) {
                 <strong>{item.pct.toFixed(1)}%</strong>
               </div>
               <div className="position-bar-track">
-                <div className="position-bar-fill" style={{ width: `${Math.max(item.pct, 2)}%`, background: `linear-gradient(90deg, ${item.color}, rgba(74,222,128,0.25))` }} />
+                <div className="position-bar-fill" style={{ width: `${Math.max(item.pct, 2)}%`, background: `linear-gradient(90deg, ${item.color}, rgba(245,166,35,0.25))` }} />
               </div>
             </div>
           );

@@ -8,11 +8,11 @@ import { request } from "../services/api.js";
 import { DonutCard, InsightsCard, PositionWeightsCard } from "../components/DashboardCharts.jsx";
 
 const C = {
-  bg: "#0b0f0b", card: "#111811", cardHov: "#162016",
-  border: "#1f2b1f", borderSub: "#192319",
-  text: "#dceadc", muted: "#6b806b", faint: "#3a4a3a",
-  green: "#4ade80", green2: "#22c55e", red: "#f87171",
-  yellow: "#fbbf24", blue: "#60a5fa", teal: "#2dd4bf",
+  bg: "#0e0c09", card: "#141108", cardHov: "#1c1810",
+  border: "#2a2416", borderSub: "#1f1b10",
+  text: "#f0e6c8", muted: "#8a7a52", faint: "#3d3520",
+  green: "#6ee7a0", green2: "#86efac", red: "#f87171",
+  yellow: "#fcd34d", blue: "#7dd3fc", teal: "#5eead4",
 };
 
 function fmt(n) {
@@ -37,7 +37,7 @@ function StatCard({ label, value, sub, tone = "neutral", isLoading = false, tren
         ? <div style={{ height: 13, width: "40%", borderRadius: 4, background: C.cardHov }} />
         : <div style={{ fontSize: 12, color: subColor }}>{sub}</div>}
       {trend !== undefined && (
-        <div style={{ marginTop: 6, fontSize: 10, color: trend >= 0 ? 'var(--accent-green, #4ade80)' : 'var(--accent-red, #f87171)', display: 'flex', alignItems: 'center', gap: 3 }}>
+        <div style={{ marginTop: 6, fontSize: 10, color: trend >= 0 ? 'var(--accent-green, #f5a623)' : 'var(--accent-red, #f87171)', display: 'flex', alignItems: 'center', gap: 3 }}>
           <span>{trend >= 0 ? '▲' : '▼'}</span>
           <span style={{ fontFamily: 'var(--font-mono, monospace)' }}>{Math.abs(trend).toFixed(2)}% vs yesterday</span>
         </div>
@@ -138,10 +138,10 @@ export default function Dashboard() {
   const trend = yesterdayVal && todayVal ? ((todayVal - yesterdayVal) / yesterdayVal) * 100 : undefined;
 
   const kpis = [
-    { label: "Portfolio Value", value: fmt(summary.current_value),  sub: "Live portfolio valuation",           tone: "neutral",  isLoading: showSkeleton, trend: trend, borderLeftColor: "var(--accent-green, #4ade80)" },
-    { label: "Total Invested",  value: fmt(summary.total_invested),  sub: "Cost basis across active positions", tone: "neutral",  isLoading: showSkeleton, trend: trend, borderLeftColor: "var(--text-faint, #3a4a3a)" },
-    { label: "Unrealised P&L",  value: fmt(summary.total_pnl),       sub: pct(summary.total_pnl_pct),          tone: (summary.total_pnl  || 0) >= 0 ? "positive" : "negative", isLoading: showSkeleton, trend: trend, borderLeftColor: (summary.total_pnl  || 0) >= 0 ? "var(--accent-green, #4ade80)" : "var(--accent-red, #f87171)" },
-    { label: "Day Change",      value: fmt(summary.day_change),      sub: pct(summary.day_change_pct),         tone: (summary.day_change || 0) >= 0 ? "positive" : "negative", isLoading: showSkeleton, trend: trend, borderLeftColor: (summary.day_change || 0) >= 0 ? "var(--accent-green, #4ade80)" : "var(--accent-red, #f87171)" },
+    { label: "Portfolio Value", value: fmt(summary.current_value),  sub: "Live portfolio valuation",           tone: "neutral",  isLoading: showSkeleton, trend: trend, borderLeftColor: "var(--accent-green, #f5a623)" },
+    { label: "Total Invested",  value: fmt(summary.total_invested),  sub: "Cost basis across active positions", tone: "neutral",  isLoading: showSkeleton, trend: trend, borderLeftColor: "var(--text-faint, #3d3520)" },
+    { label: "Unrealised P&L",  value: fmt(summary.total_pnl),       sub: pct(summary.total_pnl_pct),          tone: (summary.total_pnl  || 0) >= 0 ? "positive" : "negative", isLoading: showSkeleton, trend: trend, borderLeftColor: (summary.total_pnl  || 0) >= 0 ? "var(--accent-green, #f5a623)" : "var(--accent-red, #f87171)" },
+    { label: "Day Change",      value: fmt(summary.day_change),      sub: pct(summary.day_change_pct),         tone: (summary.day_change || 0) >= 0 ? "positive" : "negative", isLoading: showSkeleton, trend: trend, borderLeftColor: (summary.day_change || 0) >= 0 ? "var(--accent-green, #f5a623)" : "var(--accent-red, #f87171)" },
   ];
 
   let connColor = C.yellow, connLabel = "Connecting...";
@@ -171,15 +171,15 @@ export default function Dashboard() {
 
       {topHolding?.weight > 20 && !dismissed && (
         <div style={{ margin: '8px 24px 0', padding: '8px 14px', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
-          <span style={{ color: 'var(--accent-yellow, #fbbf24)', fontSize: 13 }}>⚠</span>
-          <span style={{ color: 'var(--text-secondary, #6b806b)' }}>
+          <span style={{ color: 'var(--accent-yellow, #fcd34d)', fontSize: 13 }}>⚠</span>
+          <span style={{ color: 'var(--text-secondary, #8a7a52)' }}>
             Concentration alert:
-            <strong style={{ color: 'var(--accent-yellow, #fbbf24)', marginLeft: 4 }}>{topHolding.name || topHolding.symbol || topHolding.ticker}</strong>
+            <strong style={{ color: 'var(--accent-yellow, #fcd34d)', marginLeft: 4 }}>{topHolding.name || topHolding.symbol || topHolding.ticker}</strong>
             {' '}represents{' '}
-            <strong style={{ color: 'var(--accent-yellow, #fbbf24)' }}>{topHolding.weight.toFixed(1)}%</strong>
+            <strong style={{ color: 'var(--accent-yellow, #fcd34d)' }}>{topHolding.weight.toFixed(1)}%</strong>
             {' '}of your portfolio. Consider rebalancing.
           </span>
-          <button onClick={() => setDismissed(true)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-faint, #3a4a3a)', cursor: 'pointer', fontSize: 14 }}>×</button>
+          <button onClick={() => setDismissed(true)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-faint, #3d3520)', cursor: 'pointer', fontSize: 14 }}>×</button>
         </div>
       )}
 
@@ -210,11 +210,11 @@ export default function Dashboard() {
                   <p style={{ margin: 0 }}>You hold <strong style={{ color: C.text }}>{holdings.length}</strong> active positions. Unrealised P&amp;L stands at <strong style={{ color: (summary.total_pnl || 0) >= 0 ? C.green : C.red }}>{fmt(summary.total_pnl)} ({pct(summary.total_pnl_pct)})</strong>. Your largest exposure is <strong style={{ color: C.text }}>{topPositions[0]?.ticker || topPositions[0]?.symbol || "-"}</strong> at <strong style={{ color: C.text }}>{((topPositions[0]?.current_value || 0) / (summary.current_value || 1) * 100).toFixed(1)}%</strong> of the portfolio.</p>
                   
                   <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 9, color: 'var(--text-faint, #3a4a3a)', letterSpacing: '0.1em', marginBottom: 6 }}>7-DAY PERFORMANCE</div>
+                    <div style={{ fontSize: 9, color: 'var(--text-faint, #3d3520)', letterSpacing: '0.1em', marginBottom: 6 }}>7-DAY PERFORMANCE</div>
                     <ResponsiveContainer width="100%" height={56}>
                       <LineChart data={sparkData}>
-                        <Line type="monotone" dataKey="value" stroke="var(--accent-green, #4ade80)" strokeWidth={1.5} dot={false} />
-                        <RechartsTooltip contentStyle={{ background: 'var(--bg-card, #111811)', border: '1px solid var(--border, #1f2b1f)', fontSize: 10, borderRadius: 4 }} formatter={v => [`₹${v.toLocaleString('en-IN')}`, 'Value']} labelStyle={{ color: 'var(--text-secondary, #6b806b)' }} />
+                        <Line type="monotone" dataKey="value" stroke="var(--accent-green, #f5a623)" strokeWidth={1.5} dot={false} />
+                        <RechartsTooltip contentStyle={{ background: 'var(--bg-card, #141108)', border: '1px solid var(--border, #2a2416)', fontSize: 10, borderRadius: 4 }} formatter={v => [`₹${v.toLocaleString('en-IN')}`, 'Value']} labelStyle={{ color: 'var(--text-secondary, #8a7a52)' }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -231,9 +231,9 @@ export default function Dashboard() {
                           { label: 'WORST DAY', value: worst, },
                           { label: 'AVG DAILY', value: avg,   },
                         ].map(({ label, value }) => (
-                          <div key={label} style={{ background: 'var(--bg-base, #0b0f0b)', borderRadius: 4, padding: '6px 8px', border: '1px solid var(--border-subtle, #192319)' }}>
-                            <div style={{ fontSize: 9, color: 'var(--text-faint, #3a4a3a)', letterSpacing: '0.08em' }}>{label}</div>
-                            <div style={{ fontSize: 12, fontFamily: 'var(--font-mono, monospace)', color: value >= 0 ? 'var(--accent-green, #4ade80)' : 'var(--accent-red, #f87171)', marginTop: 2 }}>
+                          <div key={label} style={{ background: 'var(--bg-base, #0e0c09)', borderRadius: 4, padding: '6px 8px', border: '1px solid var(--border-subtle, #1f1b10)' }}>
+                            <div style={{ fontSize: 9, color: 'var(--text-faint, #3d3520)', letterSpacing: '0.08em' }}>{label}</div>
+                            <div style={{ fontSize: 12, fontFamily: 'var(--font-mono, monospace)', color: value >= 0 ? 'var(--accent-green, #f5a623)' : 'var(--accent-red, #f87171)', marginTop: 2 }}>
                               {value >= 0 ? '+' : ''}{value.toFixed(2)}%
                             </div>
                           </div>
@@ -282,7 +282,7 @@ export default function Dashboard() {
                 <div key={tx.id || i} style={{ padding: "9px 12px", borderRadius: 6, border: "1px solid " + C.borderSub, background: C.cardHov }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: tx.action === "BUY" ? "rgba(74,222,128,0.15)" : "rgba(248,113,113,0.15)", color: tx.action === "BUY" ? C.green : C.red, border: "1px solid " + (tx.action === "BUY" ? "rgba(74,222,128,0.3)" : "rgba(248,113,113,0.3)") }}>{tx.action}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: tx.action === "BUY" ? "rgba(110,231,160,0.15)" : "rgba(248,113,113,0.15)", color: tx.action === "BUY" ? C.green : C.red, border: "1px solid " + (tx.action === "BUY" ? "rgba(110,231,160,0.3)" : "rgba(248,113,113,0.3)") }}>{tx.action}</span>
                       <div>
                         <div style={{ fontWeight: 600, color: C.text, fontSize: 13 }}>{tx.ticker}</div>
                         <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{tx.quantity} @ {fmt(tx.price)}</div>

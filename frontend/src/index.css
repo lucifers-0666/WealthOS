@@ -8,64 +8,82 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    /* WealthOS forest-green terminal — canonical color system */
-    --bg-base:         #0b0f0b;
-    --bg-card:         #111811;
-    --bg-card-hover:   #162016;
-    --bg-sidebar:      #0d120d;
-    --border:          #1f2b1f;
-    --border-subtle:   #192319;
-    --text-primary:    #dceadc;
-    --text-secondary:  #6b806b;
-    --text-faint:      #3a4a3a;
-    --accent-green:    #4ade80;
-    --accent-green-2:  #22c55e;
-    --accent-red:      #f87171;
-    --accent-yellow:   #fbbf24;
-    --accent-blue:     #60a5fa;
-    --accent-teal:     #2dd4bf;
-    --font-mono:       'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
-    --font-sans:       'Inter', system-ui, sans-serif;
+  /* ═══════════════════════════════════════════════
+     WEALTHOS PHOSPHOR AMBER — warm oscilloscope terminal
+     Concept: vintage instrument panel + aged gold + parchment
+     Nobody in Indian fintech is using this. It's yours.
+     ═══════════════════════════════════════════════ */
 
-    /* Legacy aliases used by non-dashboard pages */
-    --bg: #0b0f0b;
-    --surface: #0d120d;
-    --card: #111811;
-    --panel: #162016;
-    --text: #dceadc;
-    --text-2: #6b806b;
-    --text-3: #3a4a3a;
-    --cyan: #60a5fa;
-    --violet: #818cf8;
-    --gold: #fbbf24;
-    --soft-cyan: #2dd4bf;
-    --border-color: rgba(31,43,31,0.95);
-    --glow: rgba(74,222,128,0.06);
-    --shadow: 0 24px 80px rgba(0,0,0,0.52);
-    --radius: 14px;
-    --ease: cubic-bezier(0.16,1,0.3,1);
-    --t: 240ms;
+  /* Base surfaces — deep warm charcoal, slight brown undertone */
+  --bg-base:         #0e0c09;
+  --bg-card:         #141108;
+  --bg-card-hover:   #1c1810;
+  --bg-sidebar:      #100e08;
+  --border:          #2a2416;
+  --border-subtle:   #1f1b10;
 
-    /* Token aliases used by Dashboard/Charts */
-    --color-bg:            #0b0f0b;
-    --color-surface:       #111811;
-    --color-surface-2:     #162016;
-    --color-border:        #1f2b1f;
-    --color-border-subtle: #192319;
-    --color-text:          #dceadc;
-    --color-text-muted:    #6b806b;
-    --color-text-faint:    #3a4a3a;
-    --color-accent:        #4ade80;
-    --color-accent-2:      #22c55e;
-    --color-red:           #f87171;
-    --color-yellow:        #fbbf24;
-    --color-blue:          #60a5fa;
-    --color-teal:          #2dd4bf;
-    --color-success:       #4ade80;
-    --color-error:         #f87171;
-    --color-warning:       #fbbf24;
-    --color-primary:       #2dd4bf;
-  }
+  /* Text — warm ivory/parchment, NOT cold white */
+  --text-primary:    #f0e6c8;
+  --text-secondary:  #8a7a52;
+  --text-faint:      #3d3520;
+
+  /* PRIMARY ACCENT — Phosphor Amber (replaces #4ade80 green) */
+  --accent-green:    #f5a623;   /* amber — the signature color */
+  --accent-green-2:  #e8920f;   /* darker amber for bars/fills */
+
+  /* Semantic stays the same logic, just warmer tones */
+  --accent-red:      #f87171;   /* kept — universal loss color */
+  --accent-yellow:   #fcd34d;   /* kept — warning */
+  --accent-blue:     #7dd3fc;   /* kept — links/info */
+  --accent-teal:     #5eead4;   /* kept — secondary accent */
+
+  /* Fonts — unchanged */
+  --font-mono:       'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
+  --font-sans:       'Inter', system-ui, sans-serif;
+
+  /* ───────────────────────────────────────────────
+     LEGACY ALIASES (used by non-dashboard pages)
+     ─────────────────────────────────────────────── */
+  --bg:              #0e0c09;
+  --surface:         #100e08;
+  --card:            #141108;
+  --panel:           #1c1810;
+  --text:            #f0e6c8;
+  --text-2:          #8a7a52;
+  --text-3:          #3d3520;
+  --cyan:            #7dd3fc;
+  --violet:          #c4b5fd;
+  --gold:            #f5a623;   /* gold IS the primary now */
+  --soft-cyan:       #5eead4;
+  --border-color:    rgba(42,36,22,0.95);
+  --glow:            rgba(245,166,35,0.07);  /* amber glow */
+  --shadow:          0 24px 80px rgba(0,0,0,0.60);
+  --radius:          14px;
+  --ease:            cubic-bezier(0.16,1,0.3,1);
+  --t:               240ms;
+
+  /* ───────────────────────────────────────────────
+     DASHBOARD / CHART TOKENS
+     ─────────────────────────────────────────────── */
+  --color-bg:            #0e0c09;
+  --color-surface:       #141108;
+  --color-surface-2:     #1c1810;
+  --color-border:        #2a2416;
+  --color-border-subtle: #1f1b10;
+  --color-text:          #f0e6c8;
+  --color-text-muted:    #8a7a52;
+  --color-text-faint:    #3d3520;
+  --color-accent:        #f5a623;   /* amber primary */
+  --color-accent-2:      #e8920f;
+  --color-red:           #f87171;
+  --color-yellow:        #fcd34d;
+  --color-blue:          #7dd3fc;
+  --color-teal:          #5eead4;
+  --color-success:       #6ee7a0;   /* soft green for GAINS (not amber) */
+  --color-error:         #f87171;
+  --color-warning:       #fcd34d;
+  --color-primary:       #f5a623;   /* amber */
+}
 
   html { scroll-behavior: smooth; background: var(--bg); }
 
@@ -91,7 +109,7 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
   ::-webkit-scrollbar-track { background: var(--bg-base); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  ::selection { background: rgba(125,211,252,0.22); color: var(--text); }
+  ::selection { background: rgba(245,166,35,0.20); color: var(--text); }
 }
 
 @layer components {
@@ -104,7 +122,7 @@
     overflow: hidden;
     background:
       linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008)),
-      linear-gradient(135deg, rgba(11,23,40,0.92), rgba(7,17,31,0.76));
+      linear-gradient(135deg, rgba(20,17,8,0.92), rgba(14,12,9,0.76));
     border: 1px solid var(--border);
     border-radius: var(--radius);
     box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, var(--shadow);
@@ -121,7 +139,7 @@
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(circle at 16% 0%, rgba(125,211,252,0.08), transparent 20rem),
+      radial-gradient(circle at 16% 0%, rgba(245,166,35,0.08), transparent 20rem),
       linear-gradient(90deg, rgba(255,255,255,0.025), transparent 34%);
     opacity: 0.9;
   }
@@ -133,8 +151,8 @@
   .lux-card:hover,
   .card:hover {
     transform: translateY(-2px);
-    border-color: rgba(125,211,252,0.28);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 26px 90px rgba(0,0,0,0.54), 0 0 34px rgba(125,211,252,0.055);
+    border-color: rgba(245,166,35,0.28);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 26px 90px rgba(0,0,0,0.54), 0 0 34px rgba(245,166,35,0.06);
   }
 
   .section-label {
@@ -172,24 +190,23 @@
 
   .btn:hover:not(:disabled) {
     transform: translateY(-1px);
-    border-color: rgba(125,211,252,0.34);
-    background: rgba(125,211,252,0.09);
+    border-color: rgba(245,166,35,0.28);
+    background: rgba(245,166,35,0.09);
     box-shadow: 0 0 20px rgba(125,211,252,0.06);
   }
 
   .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
   .btn-primary {
-    color: #04111f;
-    background: linear-gradient(180deg, #A7E8FF, #7DD3FC);
-    border-color: rgba(125,211,252,0.42);
+    background: linear-gradient(180deg, #fcd99c, #f5a623) !important;
+    color: #0e0c09 !important;
+    border: 1px solid rgba(245,166,35,0.42) !important;
     font-weight: 800;
-    box-shadow: 0 10px 30px rgba(125,211,252,0.11);
+    box-shadow: 0 10px 30px rgba(245,166,35,0.14) !important;
   }
-
   .btn-primary:hover:not(:disabled) {
-    color: #020617;
-    background: linear-gradient(180deg, #C7F2FF, #7DD3FC);
+    background: linear-gradient(180deg, #fce0b0, #f5a623) !important;
+    color: #0e0c09 !important;
   }
 
   .btn-ghost {
@@ -212,7 +229,11 @@
     transition: all 180ms var(--ease);
   }
 
-  .btn-icon:hover { color: var(--text); border-color: rgba(125,211,252,0.28); background: rgba(125,211,252,0.08); }
+  .btn-icon:hover {
+    background: rgba(245,166,35,0.08) !important;
+    color: var(--text) !important;
+    border-color: rgba(245,166,35,0.28) !important;
+  }
 
   .input {
     width: 100%;
@@ -221,16 +242,16 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     color: var(--text);
-    background: rgba(2,6,23,0.58);
+    background: rgba(14,12,9,0.58);
     outline: none;
     transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease), background 180ms var(--ease);
   }
 
   .input::placeholder { color: rgba(100,116,139,0.9); }
   .input:focus {
-    border-color: rgba(125,211,252,0.42);
-    background: rgba(2,6,23,0.72);
-    box-shadow: 0 0 0 3px rgba(125,211,252,0.07);
+    border-color: rgba(245,166,35,0.36);
+    background: rgba(14,12,9,0.72);
+    box-shadow: 0 0 0 3px rgba(245,166,35,0.07);
   }
 
   .badge {
@@ -249,7 +270,7 @@
     text-transform: uppercase;
   }
 
-  .badge-blue { color: var(--cyan); border-color: rgba(125,211,252,0.24); background: rgba(125,211,252,0.07); }
+  .badge-blue { color: var(--cyan); border-color: rgba(125,211,252,0.24); background: rgba(245,166,35,0.07); }
   .badge-cyan { color: var(--soft-cyan); border-color: rgba(103,232,249,0.22); background: rgba(103,232,249,0.055); }
   .badge-violet { color: var(--violet); border-color: rgba(167,139,250,0.24); background: rgba(167,139,250,0.065); }
   .badge-green { color: #86EFAC; border-color: rgba(134,239,172,0.22); background: rgba(34,197,94,0.07); }
@@ -285,7 +306,7 @@
     transition: all 180ms var(--ease);
   }
 
-  .tab.active { color: var(--text); background: rgba(125,211,252,0.10); box-shadow: inset 0 0 0 1px rgba(125,211,252,0.18); }
+  .tab.active { color: var(--text); background: rgba(125,211,252,0.10); box-shadow: inset 0 0 0 1px rgba(245,166,35,0.18); }
   .tab:hover:not(.active) { color: var(--text); background: rgba(148,163,184,0.07); }
 
   .pos { color: #86EFAC; }
@@ -310,7 +331,7 @@
     white-space: nowrap;
   }
   .data-table tr { transition: background 160ms var(--ease); }
-  .data-table tbody tr:hover { background: rgba(125,211,252,0.035); }
+  .data-table tbody tr:hover { background: rgba(245,166,35,0.04); }
 
   .allocation-module {
     display: grid;
@@ -324,9 +345,9 @@
   .allocation-bars-panel,
   .allocation-insights-panel {
     min-width: 0;
-    border: 1px solid rgba(45,60,55,0.78);
+    border: 1px solid rgba(42,36,22,0.78);
     border-radius: 14px;
-    background: rgba(10,32,31,0.38);
+    background: rgba(20,17,8,0.38);
     padding: 14px;
   }
 
@@ -418,7 +439,7 @@
 
   .allocation-legend-row {
     padding: 9px 10px;
-    border: 1px solid rgba(45,60,55,0.58);
+    border: 1px solid rgba(42,36,22,0.58);
     border-radius: 12px;
     background: rgba(255,255,255,0.012);
   }
@@ -511,7 +532,7 @@
 
   .allocation-insight {
     padding: 11px 12px;
-    border: 1px solid rgba(45,60,55,0.58);
+    border: 1px solid rgba(42,36,22,0.58);
     border-radius: 12px;
     background: rgba(255,255,255,0.012);
     min-width: 0;
@@ -539,9 +560,9 @@
 
   .ticker-ribbon {
     overflow: hidden;
-    border: 1px solid rgba(45,60,55,0.72);
+    border: 1px solid rgba(42,36,22,0.72);
     border-radius: 12px;
-    background: rgba(10,32,31,0.42);
+    background: rgba(20,17,8,0.42);
     mask-image: linear-gradient(90deg, transparent, black 7%, black 93%, transparent);
   }
 
@@ -562,7 +583,7 @@
     align-items: center;
     gap: 8px;
     padding: 7px 10px;
-    border: 1px solid rgba(45,60,55,0.58);
+    border: 1px solid rgba(42,36,22,0.58);
     border-radius: 999px;
     color: var(--text-2);
     font-size: 12px;
@@ -580,7 +601,7 @@
     font-weight: 800;
   }
 
-  .ticker-ribbon .ticker-up em { color: #6FAE8D; }
+  .ticker-ribbon .ticker-up em { color: #f5a623; }
   .ticker-ribbon .ticker-down em { color: #B66A6A; }
 
   .stagger > * { opacity: 0; animation: fadeUp 420ms var(--ease) forwards; }
@@ -603,10 +624,10 @@
     justify-content: center;
     padding: 20px;
     background:
-      radial-gradient(circle at 18% -10%, rgba(125,211,252,0.12), transparent 34rem),
-      radial-gradient(circle at 86% 2%, rgba(214,199,161,0.08), transparent 30rem),
-      radial-gradient(circle at 58% 92%, rgba(167,139,250,0.07), transparent 34rem),
-      linear-gradient(145deg, #020617 0%, #06101d 48%, #020617 100%);
+      radial-gradient(circle at 18% -10%, rgba(245,166,35,0.10), transparent 34rem),
+      radial-gradient(circle at 86% 2%,   rgba(240,230,200,0.06), transparent 30rem),
+      radial-gradient(circle at 58% 92%,  rgba(196,181,253,0.05), transparent 34rem),
+      linear-gradient(145deg, #0e0c09 0%, #141108 48%, #0e0c09 100%);
   }
 
   .login-ambient {
@@ -615,8 +636,8 @@
     pointer-events: none;
     z-index: 0;
     background-image:
-      radial-gradient(circle at 16% 0%, rgba(125,211,252,0.08), transparent 20rem),
-      linear-gradient(90deg, rgba(255,255,255,0.025), transparent 34%);
+      radial-gradient(circle at 16% 0%, rgba(245,166,35,0.07), transparent 20rem),
+      linear-gradient(90deg, rgba(255,255,255,0.018), transparent 34%);
   }
 
   .login-card {
@@ -628,7 +649,7 @@
     border-radius: 24px;
     background:
       linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008)),
-      linear-gradient(135deg, rgba(11,23,40,0.92), rgba(7,17,31,0.76));
+      linear-gradient(135deg, rgba(20,17,8,0.92), rgba(14,12,9,0.76));
     border: 1px solid var(--border);
     box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, var(--shadow);
     backdrop-filter: blur(24px);
@@ -648,7 +669,7 @@
     font-family: 'Space Grotesk', 'Inter', sans-serif;
     font-size: 22px;
     font-weight: 700;
-    background: linear-gradient(90deg, #7DD3FC 0%, #A78BFA 50%, #D6C7A1 100%);
+    background: linear-gradient(90deg, #f5a623 0%, #A78BFA 50%, #D6C7A1 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -718,7 +739,7 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     color: var(--text);
-    background: rgba(2,6,23,0.58);
+    background: rgba(14,12,9,0.58);
     outline: none;
     font-size: 14px;
     transition: all 180ms var(--ease);
@@ -729,9 +750,9 @@
   }
 
   .form-field input:focus {
-    border-color: rgba(125,211,252,0.42);
-    background: rgba(2,6,23,0.72);
-    box-shadow: 0 0 0 3px rgba(125,211,252,0.07);
+    border-color: rgba(245,166,35,0.36);
+    background: rgba(14,12,9,0.72);
+    box-shadow: 0 0 0 3px rgba(245,166,35,0.07);
   }
 
   .form-error {
@@ -816,7 +837,7 @@
 
 .animate-spin-slow { animation: spin-slow 1s linear infinite; }
 .skeleton-shimmer {
-  background: linear-gradient(90deg, #111811 25%, #162016 50%, #111811 75%);
+  background: linear-gradient(90deg, #141108 25%, #1c1810 50%, #141108 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease infinite;
 }
@@ -848,49 +869,96 @@
 
 /* WealthOS v2 — confirmed palette (green terminal) */
 :root {
-  --bg: #0b0f0b;
-  --surface: #0d120d;
-  --card: #111811;
-  --panel: #162016;
-  --text: #dceadc;
-  --text-2: #6b806b;
-  --text-3: #3a4a3a;
-  --cyan: #60a5fa;
-  --violet: #818cf8;
-  --gold: #fbbf24;
-  --soft-cyan: #2dd4bf;
-  --border: rgba(31,43,31,0.95);
-  --glow: rgba(74,222,128,0.06);
-  --shadow: 0 24px 90px rgba(0,0,0,0.52);
-  --radius: 14px;
+  /* ═══════════════════════════════════════════════
+     WEALTHOS PHOSPHOR AMBER — warm oscilloscope terminal
+     Concept: vintage instrument panel + aged gold + parchment
+     Nobody in Indian fintech is using this. It's yours.
+     ═══════════════════════════════════════════════ */
 
-  /* Dashboard tokens */
-  --color-bg:            #0b0f0b;
-  --color-surface:       #111811;
-  --color-surface-2:     #162016;
-  --color-border:        #1f2b1f;
-  --color-border-subtle: #192319;
-  --color-text:          #dceadc;
-  --color-text-muted:    #6b806b;
-  --color-text-faint:    #3a4a3a;
-  --color-accent:        #4ade80;
-  --color-accent-2:      #22c55e;
+  /* Base surfaces — deep warm charcoal, slight brown undertone */
+  --bg-base:         #0e0c09;
+  --bg-card:         #141108;
+  --bg-card-hover:   #1c1810;
+  --bg-sidebar:      #100e08;
+  --border:          #2a2416;
+  --border-subtle:   #1f1b10;
+
+  /* Text — warm ivory/parchment, NOT cold white */
+  --text-primary:    #f0e6c8;
+  --text-secondary:  #8a7a52;
+  --text-faint:      #3d3520;
+
+  /* PRIMARY ACCENT — Phosphor Amber (replaces #4ade80 green) */
+  --accent-green:    #f5a623;   /* amber — the signature color */
+  --accent-green-2:  #e8920f;   /* darker amber for bars/fills */
+
+  /* Semantic stays the same logic, just warmer tones */
+  --accent-red:      #f87171;   /* kept — universal loss color */
+  --accent-yellow:   #fcd34d;   /* kept — warning */
+  --accent-blue:     #7dd3fc;   /* kept — links/info */
+  --accent-teal:     #5eead4;   /* kept — secondary accent */
+
+  /* Fonts — unchanged */
+  --font-mono:       'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
+  --font-sans:       'Inter', system-ui, sans-serif;
+
+  /* ───────────────────────────────────────────────
+     LEGACY ALIASES (used by non-dashboard pages)
+     ─────────────────────────────────────────────── */
+  --bg:              #0e0c09;
+  --surface:         #100e08;
+  --card:            #141108;
+  --panel:           #1c1810;
+  --text:            #f0e6c8;
+  --text-2:          #8a7a52;
+  --text-3:          #3d3520;
+  --cyan:            #7dd3fc;
+  --violet:          #c4b5fd;
+  --gold:            #f5a623;   /* gold IS the primary now */
+  --soft-cyan:       #5eead4;
+  --border-color:    rgba(42,36,22,0.95);
+  --glow:            rgba(245,166,35,0.07);  /* amber glow */
+  --shadow:          0 24px 80px rgba(0,0,0,0.60);
+  --radius:          14px;
+  --ease:            cubic-bezier(0.16,1,0.3,1);
+  --t:               240ms;
+
+  /* ───────────────────────────────────────────────
+     DASHBOARD / CHART TOKENS
+     ─────────────────────────────────────────────── */
+  --color-bg:            #0e0c09;
+  --color-surface:       #141108;
+  --color-surface-2:     #1c1810;
+  --color-border:        #2a2416;
+  --color-border-subtle: #1f1b10;
+  --color-text:          #f0e6c8;
+  --color-text-muted:    #8a7a52;
+  --color-text-faint:    #3d3520;
+  --color-accent:        #f5a623;   /* amber primary */
+  --color-accent-2:      #e8920f;
   --color-red:           #f87171;
-  --color-yellow:        #fbbf24;
-  --color-blue:          #60a5fa;
-  --color-teal:          #2dd4bf;
-  --color-success:       #4ade80;
+  --color-yellow:        #fcd34d;
+  --color-blue:          #7dd3fc;
+  --color-teal:          #5eead4;
+  --color-success:       #6ee7a0;   /* soft green for GAINS (not amber) */
   --color-error:         #f87171;
-  --color-warning:       #fbbf24;
-  --color-primary:       #2dd4bf;
+  --color-warning:       #fcd34d;
+  --color-primary:       #f5a623;   /* amber */
 }
 
 body {
-  background: var(--bg-base, #0b0f0b);
+  background: var(--bg-base, #0e0c09);
   color: var(--text-primary, #dceadc);
 }
 
-.app-shell { background: linear-gradient(180deg, #081817 0%, #0A201F 46%, #081716 100%) !important; }
+.app-shell {
+    background: linear-gradient(
+      180deg,
+      #0f0d09 0%,
+      #141108 46%,
+      #100e08 100%
+    ) !important;
+  }
 .section-label { color: var(--text-3) !important; }
 .editorial-title { color: var(--text) !important; }
 .divider { background: linear-gradient(90deg, transparent, var(--border), transparent) !important; }
@@ -902,10 +970,14 @@ body {
   background: rgba(255,255,255,0.02) !important;
   color: var(--text-2) !important;
 }
-.btn-icon:hover { background: rgba(200,179,142,0.08) !important; color: var(--text) !important; border-color: rgba(200,179,142,0.24) !important; }
+.btn-icon:hover {
+    background: rgba(245,166,35,0.08) !important;
+    color: var(--text) !important;
+    border-color: rgba(245,166,35,0.28) !important;
+  }
 .btn-primary {
   background: var(--text) !important;
-  color: #0A201F !important;
+  color: #141108 !important;
   border: 1px solid rgba(236,224,204,0.18) !important;
 }
 .btn-ghost {
@@ -913,12 +985,12 @@ body {
   color: var(--text-2) !important;
   border: 1px solid var(--border) !important;
 }
-.badge-gold { color: var(--gold) !important; border-color: rgba(200,179,142,0.24) !important; background: rgba(200,179,142,0.08) !important; }
-.badge-green { color: #6FAE8D !important; border-color: rgba(111,174,141,0.22) !important; background: rgba(111,174,141,0.08) !important; }
+.badge-gold { color: var(--gold) !important; border-color: rgba(245,166,35,0.24) !important; background: rgba(245,166,35,0.08) !important; }
+.badge-green { color: #6ee7a0 !important; border-color: rgba(110,231,160,0.22) !important; background: rgba(110,231,160,0.08) !important; }
 .badge-red { color: #B66A6A !important; border-color: rgba(182,106,106,0.22) !important; background: rgba(182,106,106,0.08) !important; }
-.data-table th { color: var(--text-3) !important; border-bottom-color: rgba(45,60,55,0.85) !important; }
-.data-table td { color: var(--text-2) !important; border-bottom-color: rgba(45,60,55,0.45) !important; }
-.data-table tbody tr:hover { background: rgba(200,179,142,0.04) !important; }
+.data-table th { color: var(--text-3) !important; border-bottom-color: rgba(42,36,22,0.85) !important; }
+.data-table td { color: var(--text-2) !important; border-bottom-color: rgba(42,36,22,0.45) !important; }
+.data-table tbody tr:hover { background: rgba(245,166,35,0.04) !important; }
 
 @media (max-width: 980px) {
   .app-shell > aside { display: none; }
@@ -969,7 +1041,7 @@ body {
   display: inline-block;
   width: 2px;
   height: 10px;
-  background: var(--accent-green, #4ade80);
+  background: var(--accent-green, #f5a623);
   border-radius: 1px;
   margin-right: 8px;
   vertical-align: middle;
@@ -980,7 +1052,7 @@ body {
 }
 
 .insights-chip:hover {
-  background: var(--bg-card-hover, #162016) !important;
+  background: var(--bg-card-hover, #1c1810) !important;
   border-color: var(--border, #1f2b1f) !important;
-  box-shadow: 0 0 0 1px rgba(74,222,128,0.1);
+  box-shadow: 0 0 0 1px rgba(245,166,35,0.10);
 }

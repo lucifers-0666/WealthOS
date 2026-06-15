@@ -408,7 +408,7 @@ def portfolio_summary_api(user_id: str = Depends(get_user_id)):
 
     for row in holdings:
         ticker = (row.get("ticker") or "").upper()
-        quantity = float(row.get("quantity") or 0)
+        quantity = float(row.get("quantity") or row.get("qty") or 0)
         avg = float(row.get("avg_buy_price") or row.get("avg_price") or 0)
         invested = float(row.get("invested_amount") or (quantity * avg))
 
@@ -420,10 +420,10 @@ def portfolio_summary_api(user_id: str = Depends(get_user_id)):
             else:
                 day_change_valid = False
         else:
-            price = float(row.get("current_price_inr") or row.get("current_price") or avg)
+            price = float(row.get("ltp") or row.get("current_price_inr") or row.get("current_price") or avg)
             day_change_valid = False
 
-        current_value = quantity * price if quantity and price else invested
+        current_value = quantity * price
         total_value += current_value
         total_invested += invested
 

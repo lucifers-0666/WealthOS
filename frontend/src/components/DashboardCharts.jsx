@@ -24,6 +24,32 @@ function safePct(val) {
   return Number.isFinite(n) ? `${n >= 0 ? '+' : ''}${n.toFixed(2)}%` : '-';
 }
 
+export function PositionWeightsCard({ topPositions = [] }) {
+  const ranked = useMemo(() => {
+    const total = topPositions.reduce((s, i) => s + Number(i.current_value || 0), 0) || 1;
+    return topPositions.map((item, idx) => ({ ...item, pct: (Number(item.current_value || 0) / total) * 100, color: COLORS[idx % COLORS.length] }));
+  }, [topPositions]);
+
+  return (
+    <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: "18px 20px" }}>
+      <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, marginBottom: 10 }}>Position Weights</div>
+      <div className="position-bars">
+        {ranked.map((item, i) => (
+          <div key={`b${i}`} className="position-bar-row">
+            <div className="position-bar-meta">
+              <span title={item.company_name || item.name}>{item.company_name || item.name || item.ticker}</span>
+              <strong>{item.pct.toFixed(1)}%</strong>
+            </div>
+            <div className="position-bar-track">
+              <div className="position-bar-fill" style={{ width: `${Math.max(item.pct, 2)}%`, background: `linear-gradient(90deg, ${item.color}, rgba(74,222,128,0.25))` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Insight({ label, value, sub, tone }) {
   return (
     <div style={{ background: C.cardHov, border: `1px solid ${C.borderSub}`, borderRadius: 6, padding: '12px 14px' }}>
@@ -34,14 +60,7 @@ function Insight({ label, value, sub, tone }) {
   );
 }
 
-export default function DashboardCharts({ allocationData = [], topPositions = [], portfolioValue }) {
-  const data = useMemo(() => {
-    const total = allocationData.reduce((s, i) => s + Number(i.value || 0), 0) || 1;
-    return allocationData
-      .filter(i => Number(i.value || 0) > 0)
-      .map((item, idx) => ({ ...item, value: Number(item.value || 0), pct: (Number(item.value || 0) / total) * 100, color: COLORS[idx % COLORS.length] }));
-  }, [allocationData]);
-
+export function InsightsCard({ topPositions = [] }) {
   const ranked = useMemo(() => {
     const total = topPositions.reduce((s, i) => s + Number(i.current_value || 0), 0) || 1;
     return topPositions.map((item, idx) => ({ ...item, pct: (Number(item.current_value || 0) / total) * 100, color: COLORS[idx % COLORS.length] }));
@@ -57,79 +76,57 @@ export default function DashboardCharts({ allocationData = [], topPositions = []
   const concSub    = topConc ? `${topConc.pct.toFixed(1)}% of portfolio` : null;
   const concTone   = topConc?.pct > 30 ? C.yellow : C.text;
   const divTone    = divScore > 70 ? C.green : divScore > 40 ? C.text : C.yellow;
-  const centerVal  = portfolioValue ?? ranked.reduce((s, i) => s + (i.current_value || 0), 0);
-
-  if (!data.length) {
-    return (
-      <div style={{ minHeight: 200, display: 'grid', placeItems: 'center', color: C.muted, textAlign: 'center' }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 6 }}>No holdings to chart</div>
-          <a href="/app/upload" style={{ fontSize: 12, color: C.blue, textDecoration: 'none' }}>Import Holdings</a>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="allocation-module">
+    <div className="insights-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+      <Insight label="Top Gainer"      value={topGainer?.ticker || '-'} sub={topGainer ? safePct(topGainer.unrealised_pnl_pct ?? topGainer.day_change_pct) : null} tone={topGainer ? C.green : C.faint} />
+      <Insight label="Top Loser"       value={topLoser?.ticker  || '-'} sub={topLoser  ? safePct(topLoser.unrealised_pnl_pct  ?? topLoser.day_change_pct)  : null} tone={topLoser  ? C.red   : C.faint} />
+      <Insight label="Concentration"   value={concLabel} sub={concSub} tone={concTone} />
+      <Insight label="Diversification" value={`${divScore}/100`} tone={divTone} />
+      <Insight label="Sector Exposure" value={`${sectors.size || 0} sector${sectors.size !== 1 ? 's' : ''}`} tone={C.text} />
+      <Insight label="Alloc. Drift"    value={topConc?.pct > 35 ? 'Concentrated' : 'Normal'} tone={topConc?.pct > 35 ? C.yellow : C.muted} />
+    </div>
+  );
+}
 
-      <section className="allocation-donut-panel">
-        <div className="allocation-donut-inner">
-          <div className="allocation-chart-wrap">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={data} dataKey="value" nameKey="name" innerRadius="58%" outerRadius="86%" paddingAngle={3} strokeWidth={1} stroke="rgba(0,0,0,0.2)" animationDuration={600}>
-                  {data.map((item, i) => <Cell key={`c${i}`} fill={item.color} className="allocation-slice" />)}
-                </Pie>
-                <Tooltip contentStyle={{ background: '#0d170d', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontSize: 12 }} formatter={(v, _n, pl) => [`${money(v)} - ${pl?.payload?.pct?.toFixed(1)}%`, pl?.payload?.name]} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="allocation-center">
-              <strong>{money(centerVal)}</strong>
-              <span>Portfolio</span>
-            </div>
-          </div>
-          <div className="allocation-legend">
-            {data.map((item, i) => (
-              <div key={`l${i}`} className="allocation-legend-row">
-                <span style={{ background: item.color }} />
-                <p title={item.name}>{item.name || item.ticker || '-'}</p>
-                <strong>{item.pct.toFixed(1)}%</strong>
-              </div>
-            ))}
+export function DonutCard({ allocationData = [], portfolioValue }) {
+  const data = useMemo(() => {
+    const total = allocationData.reduce((s, i) => s + Number(i.value || 0), 0) || 1;
+    return allocationData
+      .filter(i => Number(i.value || 0) > 0)
+      .map((item, idx) => ({ ...item, value: Number(item.value || 0), pct: (Number(item.value || 0) / total) * 100, color: COLORS[idx % COLORS.length] }));
+  }, [allocationData]);
+
+  const centerVal  = portfolioValue ?? data.reduce((s, i) => s + (i.value || 0), 0);
+  const legendData = data.slice(0, 7); // max 7 items
+
+  return (
+    <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 20, alignItems: 'start' }}>
+        <div className="allocation-chart-wrap" style={{ width: 160, height: 160, position: 'relative' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={data} dataKey="value" nameKey="name" innerRadius="58%" outerRadius="86%" paddingAngle={3} strokeWidth={1} stroke="rgba(0,0,0,0.2)" animationDuration={600}>
+                {data.map((item, i) => <Cell key={`c${i}`} fill={item.color} className="allocation-slice" />)}
+              </Pie>
+              <Tooltip contentStyle={{ background: '#0d170d', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontSize: 12 }} formatter={(v, _n, pl) => [`${money(v)} - ${pl?.payload?.pct?.toFixed(1)}%`, pl?.payload?.name]} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="allocation-center" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <strong style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{money(centerVal)}</strong>
+            <span style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase' }}>Portfolio</span>
           </div>
         </div>
-      </section>
-
-      <section className="allocation-bars-panel">
-        <div className="allocation-section-head">
-          <span>Position Weights</span>
-          <strong>{ranked.length} tracked</strong>
-        </div>
-        <div className="position-bars">
-          {ranked.map((item, i) => (
-            <div key={`b${i}`} className="position-bar-row">
-              <div className="position-bar-meta">
-                <span title={item.company_name || item.name}>{item.company_name || item.name || item.ticker}</span>
-                <strong>{item.pct.toFixed(1)}%</strong>
-              </div>
-              <div className="position-bar-track">
-                <div className="position-bar-fill" style={{ width: `${Math.max(item.pct, 2)}%`, background: `linear-gradient(90deg, ${item.color}, rgba(74,222,128,0.25))` }} />
-              </div>
+        <div className="allocation-legend" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {legendData.map((item, i) => (
+            <div key={`l${i}`} className="allocation-legend-row" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+              <p title={item.name} style={{ margin: 0, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{item.name || item.ticker || '-'}</p>
+              <strong style={{ color: C.text }}>{item.pct.toFixed(1)}%</strong>
             </div>
           ))}
         </div>
-      </section>
-
-      <section className="allocation-insights-panel">
-        <Insight label="Top Gainer"      value={topGainer?.ticker || '-'} sub={topGainer ? safePct(topGainer.unrealised_pnl_pct ?? topGainer.day_change_pct) : null} tone={topGainer ? C.green : C.faint} />
-        <Insight label="Top Loser"       value={topLoser?.ticker  || '-'} sub={topLoser  ? safePct(topLoser.unrealised_pnl_pct  ?? topLoser.day_change_pct)  : null} tone={topLoser  ? C.red   : C.faint} />
-        <Insight label="Concentration"   value={concLabel} sub={concSub} tone={concTone} />
-        <Insight label="Diversification" value={`${divScore}/100`} tone={divTone} />
-        <Insight label="Sector Exposure" value={`${sectors.size || 0} sector${sectors.size !== 1 ? 's' : ''}`} tone={C.text} />
-        <Insight label="Alloc. Drift"    value={topConc?.pct > 35 ? 'Concentrated' : 'Normal'} tone={topConc?.pct > 35 ? C.yellow : C.muted} />
-      </section>
-
+      </div>
     </div>
   );
 }

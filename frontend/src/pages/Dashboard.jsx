@@ -1,11 +1,11 @@
-﻿import React, { useMemo, Suspense, lazy, useEffect, useState } from "react";
+﻿import React, { useMemo, Suspense, useEffect, useState } from "react";
 import { usePortfolio } from "../lib/usePortfolio.js";
 import { useMarketData } from "../lib/MarketDataContext.jsx";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { PageLoadingState, PageErrorState, EmptyState } from "../components/PageStates.jsx";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { request } from "../services/api.js";
-const DashboardCharts = lazy(() => import("../components/DashboardCharts.jsx"));
+import { DonutCard, InsightsCard, PositionWeightsCard } from "../components/DashboardCharts.jsx";
 
 const C = {
   bg: "#0b0f0b", card: "#111811", cardHov: "#162016",
@@ -141,7 +141,7 @@ export default function Dashboard() {
   if (error && !liveHoldings.length) return <PageErrorState title="Command center unavailable" message={error} />;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: C.bg }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", background: C.bg }}>
 
       {/* Command bar */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 24px", height: 48, flexShrink: 0, borderBottom: "1px solid " + C.border }}>
@@ -155,112 +155,118 @@ export default function Dashboard() {
         <span style={{ fontSize: 11, color: C.faint }}>{holdings.length} positions</span>
       </div>
 
-      {/* Scrollable body */}
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-
-        {/* KPI row */}
-        <div style={{ padding: "16px 24px 0", flexShrink: 0 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-            {kpis.map(item => <StatCard key={item.label} {...item} />)}
-          </div>
+      {/* KPI row */}
+      <div style={{ padding: "16px 24px 0", flexShrink: 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+          {kpis.map(item => <StatCard key={item.label} {...item} />)}
         </div>
+      </div>
 
-        {/* Ticker tape */}
-        <div style={{ flexShrink: 0, marginTop: 16 }}>
-          <TickerTape items={tickerItems} />
-        </div>
+      {/* Ticker tape */}
+      <div style={{ flexShrink: 0, marginTop: 16 }}>
+        <TickerTape items={tickerItems} />
+      </div>
 
-        {/* Body grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16, padding: "16px 24px 24px", alignItems: "start", flex: 1 }}>
+      {/* Body grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16, padding: "16px 24px 24px", alignItems: "start", flex: 1, minHeight: 0 }}>
 
-          {/* Left column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
-            <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: 20 }}>
+        {/* Left column */}
+        <div className="left-column" style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0, paddingBottom: 24 }}>
+          
+          {/* AI Brief */}
+          <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: "18px 20px" }}>
+            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, marginBottom: 10 }}>AI Brief</div>
+            <div style={{ display: "grid", gap: 8, color: C.muted, lineHeight: 1.65, fontSize: 13 }}>
               {holdings.length ? (
-                <Suspense fallback={<div style={{ color: C.muted, fontSize: 13 }}>Loading charts...</div>}>
-                  <DashboardCharts allocationData={allocationData} topPositions={topPositions} portfolioValue={summary.current_value} />
-                </Suspense>
+                <>
+                  <p style={{ margin: 0 }}>You hold <strong style={{ color: C.text }}>{holdings.length}</strong> active positions. Unrealised P&amp;L stands at <strong style={{ color: (summary.total_pnl || 0) >= 0 ? C.green : C.red }}>{fmt(summary.total_pnl)} ({pct(summary.total_pnl_pct)})</strong>. Your largest exposure is <strong style={{ color: C.text }}>{topPositions[0]?.ticker || topPositions[0]?.symbol || "-"}</strong> at <strong style={{ color: C.text }}>{((topPositions[0]?.current_value || 0) / (summary.current_value || 1) * 100).toFixed(1)}%</strong> of the portfolio.</p>
+                  {sparkData.length > 1 && (
+                    <div style={{ marginTop: 8, height: 48 }}>
+                      <ResponsiveContainer width="100%" height={48}>
+                        <LineChart data={sparkData}>
+                          <Line type="monotone" dataKey="v" stroke={C.green} strokeWidth={1.5} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </>
               ) : (
-                <EmptyState title="No holdings to chart" message="Import a portfolio to unlock allocation visuals." />
+                <p style={{ margin: 0 }}>Add your first holding to activate intelligence.</p>
               )}
             </div>
           </div>
 
-          {/* Right column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, width: 320, flexShrink: 0 }}>
+          {/* Donut Card */}
+          {holdings.length > 0 ? (
+            <>
+              <Suspense fallback={<div style={{ color: C.muted, fontSize: 13 }}>Loading charts...</div>}>
+                <DonutCard allocationData={allocationData} portfolioValue={summary.current_value} />
+                <InsightsCard topPositions={topPositions} />
+              </Suspense>
+            </>
+          ) : (
+            <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: 20 }}>
+              <EmptyState title="No holdings to chart" message="Import a portfolio to unlock allocation visuals." />
+            </div>
+          )}
 
-            {/* AI Brief */}
-            <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: "18px 20px" }}>
-              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, marginBottom: 10 }}>AI Brief</div>
-              <div style={{ display: "grid", gap: 8, color: C.muted, lineHeight: 1.65, fontSize: 13 }}>
-                {holdings.length ? (
-                  <>
-                    <p style={{ margin: 0 }}>You hold <strong style={{ color: C.text }}>{holdings.length}</strong> active positions.</p>
-                    <p style={{ margin: 0 }}>Unrealised P&amp;L: <strong style={{ color: (summary.total_pnl || 0) >= 0 ? C.green : C.red }}>{fmt(summary.total_pnl)} ({pct(summary.total_pnl_pct)})</strong></p>
-                    <p style={{ margin: 0 }}>Largest: <strong style={{ color: C.text }}>{topPositions[0]?.ticker || topPositions[0]?.symbol || "-"}</strong> at <strong style={{ color: C.text }}>{((topPositions[0]?.current_value || 0) / (summary.current_value || 1) * 100).toFixed(1)}%</strong></p>
-                    <p style={{ margin: 0 }}>Watchlist: <strong style={{ color: C.text }}>{watchlist.length}</strong> tracked</p>
-                    {sparkData.length > 1 && (
-                      <div style={{ marginTop: 8, height: 48 }}>
-                        <ResponsiveContainer width="100%" height={48}>
-                          <LineChart data={sparkData}>
-                            <Line type="monotone" dataKey="v" stroke={C.green} strokeWidth={1.5} dot={false} />
-                          </LineChart>
-                        </ResponsiveContainer>
+        </div>
+
+        {/* Right column */}
+        <div className="right-column" style={{ display: "flex", flexDirection: "column", gap: 16, width: 320, minWidth: 320, flexShrink: 0 }}>
+
+          {/* Position Weights */}
+          {holdings.length > 0 && (
+            <Suspense fallback={<div />}>
+              <PositionWeightsCard topPositions={topPositions} />
+            </Suspense>
+          )}
+
+          {/* Activity Feed */}
+          <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: "18px 20px" }}>
+            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, marginBottom: 10 }}>Activity Feed</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {activity.length ? activity.map((tx, i) => (
+                <div key={tx.id || i} style={{ padding: "9px 12px", borderRadius: 6, border: "1px solid " + C.borderSub, background: C.cardHov }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: tx.action === "BUY" ? "rgba(74,222,128,0.15)" : "rgba(248,113,113,0.15)", color: tx.action === "BUY" ? C.green : C.red, border: "1px solid " + (tx.action === "BUY" ? "rgba(74,222,128,0.3)" : "rgba(248,113,113,0.3)") }}>{tx.action}</span>
+                      <div>
+                        <div style={{ fontWeight: 600, color: C.text, fontSize: 13 }}>{tx.ticker}</div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{tx.quantity} @ {fmt(tx.price)}</div>
                       </div>
-                    )}
-                  </>
-                ) : (
-                  <p style={{ margin: 0 }}>Add your first holding to activate intelligence.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Activity Feed */}
-            <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: "18px 20px" }}>
-              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, marginBottom: 10 }}>Activity Feed</div>
-              <div style={{ display: "grid", gap: 8 }}>
-                {activity.length ? activity.map((tx, i) => (
-                  <div key={tx.id || i} style={{ padding: "9px 12px", borderRadius: 6, border: "1px solid " + C.borderSub, background: C.cardHov }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: tx.action === "BUY" ? "rgba(74,222,128,0.15)" : "rgba(248,113,113,0.15)", color: tx.action === "BUY" ? C.green : C.red, border: "1px solid " + (tx.action === "BUY" ? "rgba(74,222,128,0.3)" : "rgba(248,113,113,0.3)") }}>{tx.action}</span>
-                        <div>
-                          <div style={{ fontWeight: 600, color: C.text, fontSize: 13 }}>{tx.ticker}</div>
-                          <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{tx.quantity} @ {fmt(tx.price)}</div>
-                        </div>
-                      </div>
-                      {tx.action === "BUY" ? <TrendingUp size={13} color={C.green} /> : <TrendingDown size={13} color={C.red} />}
                     </div>
+                    {tx.action === "BUY" ? <TrendingUp size={13} color={C.green} /> : <TrendingDown size={13} color={C.red} />}
                   </div>
-                )) : (
-                  <div style={{ color: C.faint, fontSize: 13, display: "flex", flexDirection: "column", gap: 8 }}>
-                    <span>No transactions yet.</span>
-                    <a href="/app/upload" style={{ color: C.blue, textDecoration: "none", fontSize: 12 }}>Import your holdings -&gt;</a>
-                  </div>
-                )}
-              </div>
+                </div>
+              )) : (
+                <div style={{ color: C.faint, fontSize: 13, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <span>No transactions yet.</span>
+                  <a href="/app/upload" style={{ color: C.blue, textDecoration: "none", fontSize: 12 }}>Import your holdings -&gt;</a>
+                </div>
+              )}
             </div>
-
-            {/* Watchlist */}
-            <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: "18px 20px" }}>
-              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, marginBottom: 10 }}>Watchlist</div>
-              <div style={{ display: "grid", gap: 8 }}>
-                {watchlist.length ? watchlist.map(item => (
-                  <div key={item.id || item.ticker} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 6, border: "1px solid " + C.borderSub }}>
-                    <span style={{ fontWeight: 600, color: C.text, fontSize: 13 }}>{item.ticker}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
-                      {item.current_price && <span style={{ fontVariantNumeric: "tabular-nums", color: C.text }}>{fmt(item.current_price)}</span>}
-                      {item.change_pct != null && <span style={{ color: item.change_pct >= 0 ? C.green : C.red }}>{pct(item.change_pct)}</span>}
-                      {!item.current_price && <span style={{ color: C.muted }}>{item.target_price ? fmt(item.target_price) : "No target"}</span>}
-                    </div>
-                  </div>
-                )) : (
-                  <a href="/app/watchlist" style={{ color: C.blue, textDecoration: "none", fontSize: 13 }}>Add symbols from the Watchlist page -&gt;</a>
-                )}
-              </div>
-            </div>
-
           </div>
+
+          {/* Watchlist */}
+          <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: "18px 20px" }}>
+            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, marginBottom: 10 }}>Watchlist</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {watchlist.length ? watchlist.map(item => (
+                <div key={item.id || item.ticker} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 6, border: "1px solid " + C.borderSub }}>
+                  <span style={{ fontWeight: 600, color: C.text, fontSize: 13 }}>{item.ticker}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
+                    {item.current_price && <span style={{ fontVariantNumeric: "tabular-nums", color: C.text }}>{fmt(item.current_price)}</span>}
+                    {item.change_pct != null && <span style={{ color: item.change_pct >= 0 ? C.green : C.red }}>{pct(item.change_pct)}</span>}
+                    {!item.current_price && <span style={{ color: C.muted }}>{item.target_price ? fmt(item.target_price) : "No target"}</span>}
+                  </div>
+                </div>
+              )) : (
+                <a href="/app/watchlist" style={{ color: C.blue, textDecoration: "none", fontSize: 13 }}>Add symbols from the Watchlist page -&gt;</a>
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

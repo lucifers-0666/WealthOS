@@ -961,3 +961,26 @@ body {
     font-size: 10px;
   }
 }
+
+/* UX Polish Enhancements */
+
+.card-header::before {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 10px;
+  background: var(--accent-green, #4ade80);
+  border-radius: 1px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.ticker-wrap:hover .ticker-track {
+  animation-play-state: paused !important;
+}
+
+.insights-chip:hover {
+  background: var(--bg-card-hover, #162016) !important;
+  border-color: var(--border, #1f2b1f) !important;
+  box-shadow: 0 0 0 1px rgba(74,222,128,0.1);
+}

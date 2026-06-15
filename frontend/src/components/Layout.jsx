@@ -58,6 +58,8 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState('');
+  const [topSearch, setTopSearch] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
   const [paletteIndex, setPaletteIndex] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const paletteInputRef = useRef(null);
@@ -296,19 +298,56 @@ export default function Layout() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {/* Search bar */}
-            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 9, width: 300, padding: '8px 10px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(10,32,31,0.42)' }}>
-              <SearchIcon size={14} color={theme.colors.textMuted} />
-              <input
-                value={paletteQuery}
-                onChange={(e) => {
-                  setPaletteQuery(e.target.value);
-                  setPaletteOpen(true);
-                }}
-                onFocus={() => setPaletteOpen(true)}
-                placeholder="Search holdings, watchlist, news…"
-                style={{ flex: 1, border: 0, outline: 'none', background: 'transparent', color: theme.colors.text, fontSize: 12 }}
-              />
-              <span className="mono" style={{ color: theme.colors.textMuted, fontSize: 10, border: `1px solid ${theme.colors.border}`, borderRadius: 6, padding: '1px 5px' }}>CTRL K</span>
+            <div className="hide-mobile" style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, width: 300, padding: '8px 10px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(10,32,31,0.42)' }}>
+                <SearchIcon size={14} color={theme.colors.textMuted} />
+                <input
+                  value={topSearch}
+                  onChange={(e) => {
+                    const q = e.target.value;
+                    setTopSearch(q);
+                    if (!q.trim()) { setSearchResults([]); return; }
+                    const h = portfolio?.holdings || [];
+                    const matches = h.filter(item => 
+                      (item.name || '').toLowerCase().includes(q.toLowerCase()) || 
+                      (item.symbol || item.ticker || '').toLowerCase().includes(q.toLowerCase())
+                    );
+                    setSearchResults(matches.slice(0, 6));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setSearchResults([]);
+                      setTopSearch('');
+                    }
+                  }}
+                  placeholder="Search holdings, watchlist, news…"
+                  style={{ flex: 1, border: 0, outline: 'none', background: 'transparent', color: theme.colors.text, fontSize: 12 }}
+                />
+                <span className="mono" style={{ color: theme.colors.textMuted, fontSize: 10, border: `1px solid ${theme.colors.border}`, borderRadius: 6, padding: '1px 5px' }}>CTRL K</span>
+              </div>
+              
+              {searchResults.length > 0 && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 8, background: '#111811', border: `1px solid ${theme.colors.border}`, borderRadius: 8, zIndex: 100, overflow: 'hidden' }}>
+                  {searchResults.map((item, i) => (
+                    <button key={i} onClick={() => {
+                      setTopSearch('');
+                      setSearchResults([]);
+                      navigate(`/portfolio?highlight=${item.symbol || item.ticker}`);
+                    }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '10px 12px', background: 'transparent', border: 'none', borderBottom: i === searchResults.length - 1 ? 'none' : `1px solid ${theme.colors.borderSubtle}`, color: theme.colors.text, cursor: 'pointer', textAlign: 'left' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600 }}>{item.symbol || item.ticker}</span>
+                        <span style={{ fontSize: 10, color: theme.colors.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>{item.name}</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>₹{(item.current_value || 0).toLocaleString('en-IN', {maximumFractionDigits:0})}</span>
+                        <span style={{ fontSize: 10, color: (item.pnl_pct || item.change_pct || 0) >= 0 ? '#4ade80' : '#f87171' }}>
+                          {(item.pnl_pct || item.change_pct || 0) >= 0 ? '+' : ''}{(item.pnl_pct || item.change_pct || 0).toFixed(2)}%
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* ── Real-time market status badge ── */}

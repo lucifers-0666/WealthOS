@@ -430,11 +430,19 @@ def portfolio_summary_api(user_id: str = Depends(get_user_id)):
         if row.get("sector"):
             sector_set.add(row.get("sector"))
 
+        pnl = current_value - invested
+        pnl_pct = (pnl / invested * 100) if invested > 0 else 0.0
         change_pct = ((price - avg) / avg * 100) if avg > 0 else 0.0
+        
         enriched_holdings.append({
             "symbol": ticker,
             "current_value": current_value,
-            "change_pct": change_pct
+            "change_pct": change_pct,
+            "pnl": pnl,
+            "pnl_pct": pnl_pct,
+            "unrealised_pnl": pnl,
+            "unrealised_pnl_pct": pnl_pct,
+            "day_change_pct": change_pct,
         })
 
     unrealised_pnl = total_value - total_invested
@@ -466,9 +474,19 @@ def portfolio_summary_api(user_id: str = Depends(get_user_id)):
     holdings_count = len(enriched_holdings)
     sector_count = len(sector_set)
 
-    base = min(holdings_count * 10, 60)
-    sector_bonus = min(sector_count * 8, 40)
-    diversification_score = base + sector_bonus
+    def calculate_diversification_score(enriched):
+        if not enriched: return 0
+        total_val = sum(h["current_value"] for h in enriched)
+        if total_val <= 0: return 0
+        weights = [h["current_value"] / total_val for h in enriched]
+        hhi = sum(w**2 for w in weights)
+        count_score = min(len(enriched) / 25 * 100, 100)
+        hhi_score = (1 - hhi) * 100
+        sector_score = min(sector_count / 8 * 100, 100)
+        final = (count_score * 0.25 + hhi_score * 0.50 + sector_score * 0.25)
+        return round(final)
+
+    diversification_score = calculate_diversification_score(enriched_holdings)
 
     return {
         "total_value": total_value,

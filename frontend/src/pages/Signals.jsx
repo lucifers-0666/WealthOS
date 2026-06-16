@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-const SENTIMENT_BADGE = {
-  bullish: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  bearish: 'bg-red-500/15 text-red-400 border-red-500/30',
-  neutral: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+const SENTIMENT_STYLE = {
+  bullish: { background: 'rgba(74,138,106,0.15)', color: 'var(--aegean-green)', border: '1px solid rgba(74,138,106,0.3)' },
+  bearish: { background: 'rgba(107,46,46,0.15)', color: 'var(--terracotta)', border: '1px solid rgba(107,46,46,0.3)' },
+  neutral: { background: 'rgba(212,160,23,0.15)', color: 'var(--greek-gold)', border: '1px solid rgba(212,160,23,0.3)' },
 };
 
 const MACRO_SIGNALS = [
@@ -61,19 +61,21 @@ export default function Signals() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-cream">Signals & Intelligence</h1>
-        <p className="text-xs text-muted mt-1">Macro signals · Market sentiment · Portfolio-relevant news</p>
+        <h1 className="text-xl font-semibold" style={{ color: 'var(--parchment)', fontFamily: 'var(--font-serif)' }}>Signals & Intelligence</h1>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>Macro signals · Market sentiment · Portfolio-relevant news</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl bg-white/5 w-fit">
+      <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: 'var(--bg-card)' }}>
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              tab === t.key ? 'bg-emerald-600 text-white' : 'text-muted hover:text-cream'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition`}
+            style={{
+              background: tab === t.key ? 'var(--greek-gold)' : 'transparent',
+              color: tab === t.key ? '#1a1206' : 'var(--text-secondary)'
+            }}
           >
             {t.label}
           </button>
@@ -84,15 +86,15 @@ export default function Signals() {
       {tab === 'macro' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {MACRO_SIGNALS.map(sig => (
-            <div key={sig.label} className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+            <div key={sig.label} className="p-4 rounded-2xl space-y-2" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted uppercase tracking-wider">{sig.label}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${SENTIMENT_BADGE[sig.sentiment]}`}>
+                <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>{sig.label}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full" style={SENTIMENT_STYLE[sig.sentiment]}>
                   {sig.sentiment}
                 </span>
               </div>
-              <p className="text-lg font-bold text-cream">{sig.value}</p>
-              <p className="text-xs text-muted">{sig.detail}</p>
+              <p className="text-lg font-bold" style={{ color: 'var(--cream)', fontFamily: 'var(--font-serif)' }}>{sig.value}</p>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{sig.detail}</p>
             </div>
           ))}
         </div>
@@ -107,11 +109,12 @@ export default function Signals() {
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
-                className={`px-3 py-1.5 rounded-full text-xs border transition ${
-                  filter === f.key
-                    ? 'bg-emerald-600 text-white border-emerald-600'
-                    : 'border-white/10 text-muted hover:text-cream'
-                }`}
+                className="px-3 py-1.5 rounded-full text-xs transition"
+                style={{
+                  background: filter === f.key ? 'var(--greek-gold)' : 'transparent',
+                  color: filter === f.key ? '#1a1206' : 'var(--text-secondary)',
+                  border: `1px solid ${filter === f.key ? 'var(--greek-gold)' : 'var(--border-subtle)'}`
+                }}
               >
                 {f.label}
               </button>
@@ -121,13 +124,13 @@ export default function Signals() {
           {loading ? (
             <div className="space-y-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-24 rounded-2xl bg-white/5 animate-pulse" />
+                <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: 'var(--bg-card-hover)' }} />
               ))}
             </div>
           ) : news.length === 0 ? (
-            <div className="text-center py-16 text-muted">
+            <div className="text-center py-16" style={{ color: 'var(--text-secondary)' }}>
               <div className="text-4xl mb-3">📰</div>
-              <p className="font-medium text-cream">No news articles available</p>
+              <p className="font-medium" style={{ color: 'var(--cream)', fontFamily: 'var(--font-serif)' }}>No news articles available</p>
               <p className="text-xs mt-1">News integration coming soon. Configure your News API key in Settings.</p>
             </div>
           ) : (
@@ -138,15 +141,16 @@ export default function Signals() {
                   href={article.url || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/8 transition"
+                  className="block p-4 rounded-2xl transition"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-cream line-clamp-2">{article.title}</p>
-                      <p className="text-xs text-muted mt-1">{article.source} · {article.publishedAt?.slice(0, 10)}</p>
+                      <p className="text-sm font-medium line-clamp-2" style={{ color: 'var(--cream)', fontFamily: 'var(--font-serif)' }}>{article.title}</p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{article.source} · {article.publishedAt?.slice(0, 10)}</p>
                     </div>
                     {article.sentiment && (
-                      <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full border ${SENTIMENT_BADGE[article.sentiment] || SENTIMENT_BADGE.neutral}`}>
+                      <span className="shrink-0 text-xs px-2 py-0.5 rounded-full" style={SENTIMENT_STYLE[article.sentiment] || SENTIMENT_STYLE.neutral}>
                         {article.sentiment}
                       </span>
                     )}
@@ -160,9 +164,9 @@ export default function Signals() {
 
       {/* PORTFOLIO SIGNALS */}
       {tab === 'portfolio' && (
-        <div className="text-center py-16 text-muted">
+        <div className="text-center py-16" style={{ color: 'var(--text-secondary)' }}>
           <div className="text-4xl mb-3">🧠</div>
-          <p className="font-medium text-cream">Portfolio signal analysis</p>
+          <p className="font-medium" style={{ color: 'var(--cream)', fontFamily: 'var(--font-serif)' }}>Portfolio signal analysis</p>
           <p className="text-xs mt-1">AI-driven signals based on your holdings will appear here once the AI Advisor has processed your portfolio.</p>
         </div>
       )}

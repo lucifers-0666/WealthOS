@@ -94,9 +94,9 @@ export default function Settings() {
           <div style={{ maxWidth: 740 }}>
             <div className="section-label">System settings</div>
             <h2 className="editorial-title" style={{ margin: '8px 0 0', fontSize: 'clamp(2rem, 3vw, 3rem)' }}>Profile, preferences, and allocation policy.</h2>
-            <p style={{ margin: '10px 0 0', color: theme.colors.textSoft, lineHeight: 1.65 }}>Keep your system profile, strategy, and account controls in one quiet place.</p>
+            <p style={{ margin: '10px 0 0', color: 'var(--text-secondary)', lineHeight: 1.65, fontFamily: 'var(--font-sans)' }}>Keep your system profile, strategy, and account controls in one quiet place.</p>
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, color: theme.colors.textSoft }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, border: `1px solid var(--border-subtle)`, color: 'var(--text-secondary)' }}>
             <ShieldCheck size={15} /> Protected
           </div>
         </div>
@@ -107,11 +107,11 @@ export default function Settings() {
           <div style={{ ...panelStyle({ padding: 20 }) }}>
             <div className="section-label">Account</div>
             <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>User profile</h3>
-            <div style={{ display: 'grid', gap: 10, color: theme.colors.textSoft, fontSize: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span>Email</span><span style={{ color: theme.colors.text }}>{user?.email || '—'}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span>User ID</span><span className="mono" style={{ color: theme.colors.text }}>{user?.id?.slice(0, 16) || '—'}...</span></div>
+            <div style={{ display: 'grid', gap: 10, color: 'var(--text-secondary)', fontSize: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span>Email</span><span style={{ color: 'var(--text-primary)' }}>{user?.email || '—'}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span>User ID</span><span className="mono" style={{ color: 'var(--text-primary)' }}>{user?.id?.slice(0, 16) || '—'}...</span></div>
             </div>
-            <button onClick={handleSignOut} style={{ marginTop: 16, border: '0', borderRadius: 12, padding: '11px 14px', background: 'rgba(182,106,106,0.12)', color: theme.colors.error, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={handleSignOut} style={{ marginTop: 16, border: '1px solid var(--border)', borderRadius: 12, padding: '11px 14px', background: 'rgba(107,46,46,0.12)', color: 'var(--terracotta)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <LogOut size={15} /> Sign out
             </button>
           </div>
@@ -121,27 +121,27 @@ export default function Settings() {
             <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Currency, risk, and corpus goals</h3>
             <div style={{ display: 'grid', gap: 12 }}>
               <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Currency</label>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Currency</label>
                 <select value={profile.currency} onChange={(e) => setProfile((p) => ({ ...p, currency: e.target.value }))} style={fieldStyle()}>
                   {['INR', 'USD', 'EUR', 'GBP'].map((c) => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Risk level</label>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Risk level</label>
                 <select value={profile.risk_profile} onChange={(e) => setProfile((p) => ({ ...p, risk_profile: e.target.value }))} style={fieldStyle()}>
                   {['conservative', 'moderate', 'aggressive'].map((r) => <option key={r}>{r}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Investment goal</label>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Investment goal</label>
                 <input value={profile.investment_goal} onChange={(e) => setProfile((p) => ({ ...p, investment_goal: e.target.value }))} placeholder="Retirement, house, corpus planning…" style={fieldStyle()} />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Target corpus</label>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Target corpus</label>
                 <input type="number" min={0} step="any" value={profile.target_corpus} onChange={(e) => setProfile((p) => ({ ...p, target_corpus: e.target.value }))} placeholder="10000000" style={fieldStyle()} />
               </div>
             </div>
-            <div style={{ marginTop: 14, color: theme.colors.textSoft, fontSize: 13 }}>
+            <div style={{ marginTop: 14, color: 'var(--text-secondary)', fontSize: 13 }}>
               These preferences persist to your profile row in Supabase when configured.
             </div>
           </div>
@@ -151,13 +151,13 @@ export default function Settings() {
             <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Strategy mode and rebalance cadence</h3>
             <div style={{ display: 'grid', gap: 12 }}>
               <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Strategy mode</label>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Strategy mode</label>
                 <select value={preferences.strategy_mode} onChange={(e) => setPreferences((p) => ({ ...p, strategy_mode: e.target.value }))} style={fieldStyle()}>
                   {['conservative', 'balanced', 'growth'].map((m) => <option key={m}>{m}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: theme.colors.textMuted }}>Rebalance frequency</label>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Rebalance frequency</label>
                 <select value={preferences.rebalance_frequency} onChange={(e) => setPreferences((p) => ({ ...p, rebalance_frequency: e.target.value }))} style={fieldStyle()}>
                   {['monthly', 'quarterly', 'semiannual', 'annual'].map((r) => <option key={r}>{r}</option>)}
                 </select>
@@ -168,7 +168,7 @@ export default function Settings() {
           <div style={{ ...panelStyle({ padding: 20 }) }}>
             <div className="section-label">Security posture</div>
             <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Session and access control</h3>
-            <div style={{ display: 'grid', gap: 10, color: theme.colors.textSoft, lineHeight: 1.7, fontSize: 14 }}>
+            <div style={{ display: 'grid', gap: 10, color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: 14 }}>
               <div>Protected routes enabled</div>
               <div>Session persistence active</div>
               <div>Auth token sync to backend</div>
@@ -184,8 +184,8 @@ export default function Settings() {
             {ASSET_CLASSES.map(({ key, label }) => (
               <div key={key} style={{ display: 'grid', gap: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                  <label htmlFor={key} style={{ color: theme.colors.textSoft, fontSize: 13 }}>{label}</label>
-                  <span style={{ color: theme.colors.textMuted, fontSize: 12 }}>{Number(allocations[key] || 0).toFixed(0)}%</span>
+                  <label htmlFor={key} style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{label}</label>
+                  <span style={{ color: 'var(--text-faint)', fontSize: 12 }}>{Number(allocations[key] || 0).toFixed(0)}%</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
@@ -199,22 +199,22 @@ export default function Settings() {
                     placeholder="0"
                     style={{ ...fieldStyle({ maxWidth: 120 }) }}
                   />
-                  <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.min(Number(allocations[key] || 0), 100)}%`, height: '100%', borderRadius: 999, background: theme.colors.gold }} />
+                  <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'var(--bg-card)', overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.min(Number(allocations[key] || 0), 100)}%`, height: '100%', borderRadius: 999, background: 'var(--greek-gold)' }} />
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, color: theme.colors.textSoft }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, color: 'var(--text-secondary)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><SlidersHorizontal size={15} /> Total target allocation</div>
-            <strong style={{ color: valid ? theme.colors.text : theme.colors.error }}>{total.toFixed(1)}%</strong>
+            <strong style={{ color: valid ? 'var(--text-primary)' : 'var(--terracotta)' }}>{total.toFixed(1)}%</strong>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-            <button onClick={handleSaveProfile} disabled={saving} style={{ border: '0', borderRadius: 12, padding: '12px 16px', background: theme.colors.text, color: '#0A201F', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={handleSaveProfile} disabled={saving} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12, padding: '12px 16px', background: 'linear-gradient(180deg, #f0e6c8, #d4a017)', color: '#1a1206', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <CheckCircle2 size={15} /> {saving ? 'Saving…' : profileSaved ? 'Profile saved' : 'Save profile'}
             </button>
-            <button onClick={handleSave} disabled={saving || (!valid && total > 0)} style={{ border: '0', borderRadius: 12, padding: '12px 16px', background: 'rgba(255,255,255,0.03)', color: theme.colors.text, fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={handleSave} disabled={saving || (!valid && total > 0)} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', background: 'rgba(212,160,23,0.05)', color: 'var(--greek-gold)', fontWeight: 600, cursor: 'pointer' }}>
               {saving ? 'Saving…' : saved ? 'Saved' : 'Save allocation'}
             </button>
           </div>

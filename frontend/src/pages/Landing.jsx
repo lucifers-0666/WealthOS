@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Shield, TrendingUp, Upload, Bot, Newspaper, LayoutDashboard } from 'lucide-react';
 import { theme, panelStyle } from '../lib/theme.js';
 import { useAuth } from '../lib/useAuth.js';
+import { GreekStar, IonicColumn, Pediment, OrnamentDivider } from '../components/GreekOrnaments.jsx';
 
 const features = [
   { title: 'Institutional dashboard', icon: LayoutDashboard, text: 'Command-centre views for portfolio, risk, and live intelligence.' },
@@ -24,17 +25,17 @@ export default function Landing() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div style={{ minHeight: '100dvh', color: theme.colors.text, background: 'linear-gradient(180deg, #081817 0%, #0A201F 48%, #081716 100%)' }}>
+    <div style={{ minHeight: '100dvh', color: theme.colors.text, background: 'var(--bg-base)' }}>
       <div style={{ maxWidth: 1360, margin: '0 auto', padding: '28px 22px 42px' }}>
         {/* ── Nav ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 34 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: 13, display: 'grid', placeItems: 'center', ...panelStyle({ padding: 0 }) }}>
-              <TrendingUp size={18} color={theme.colors.gold} />
+              <TrendingUp size={18} color="var(--greek-gold)" />
             </div>
             <div>
-              <div style={{ fontSize: 11, letterSpacing: '0.24em', textTransform: 'uppercase', color: theme.colors.textMuted }}>WealthOS</div>
-              <div style={{ fontSize: 13, color: theme.colors.textSoft }}>Luxury financial intelligence operating system</div>
+              <div style={{ fontSize: 11, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--greek-gold)' }}>WealthOS</div>
+              <div style={{ fontSize: 13, color: theme.colors.textSoft, fontFamily: 'var(--font-serif)' }}>Institutional Private Terminal</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
@@ -42,12 +43,12 @@ export default function Landing() {
             <button
               onClick={() => navigate(isAuthenticated ? '/app/dashboard' : '/login')}
               style={{
-                border: '0',
+                border: '1px solid rgba(212,160,23,0.5)',
                 borderRadius: 12,
                 padding: '11px 16px',
-                background: theme.colors.gold,
-                color: '#0A201F',
-                fontWeight: 700,
+                background: 'linear-gradient(180deg, #f0e6c8, #d4a017)',
+                color: '#1a1206',
+                fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
@@ -62,37 +63,37 @@ export default function Landing() {
             <div style={{ maxWidth: 720, position: 'relative', zIndex: 1 }}>
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 10px',
-                borderRadius: 999, border: `1px solid ${theme.colors.border}`,
-                color: theme.colors.gold, fontSize: 11, letterSpacing: '0.16em',
-                textTransform: 'uppercase', marginBottom: 22,
+                borderRadius: 999, border: `1px solid var(--border-subtle)`,
+                color: 'var(--greek-gold)', fontSize: 11, letterSpacing: '0.16em',
+                textTransform: 'uppercase', marginBottom: 22, fontFamily: 'var(--font-serif)',
               }}>
-                <Shield size={12} /> Secure. Calm. Institutional.
+                <GreekStar size={12} /> Secure. Calm. Institutional.
               </div>
 
-              {/* BUG FIX: was maxWidth: 12 (number = 12px), now correctly '12ch' */}
               <h1 style={{
-                fontFamily: 'Space Grotesk, Inter, sans-serif',
-                fontSize: 'clamp(2.4rem, 5vw, 5rem)',
-                lineHeight: 1.0,
-                letterSpacing: '-0.04em',
+                fontFamily: 'var(--font-serif)',
+                fontSize: 'clamp(2.4rem, 5vw, 4.5rem)',
+                lineHeight: 1.1,
+                letterSpacing: '0.02em',
                 margin: '0 0 20px',
                 maxWidth: '14ch',
+                color: 'var(--parchment)',
               }}>
-                Financial intelligence with terminal-grade clarity.
+                Intelligence for Private Wealth.
               </h1>
 
-              <p style={{ fontSize: 17, lineHeight: 1.7, color: theme.colors.textSoft, maxWidth: 560, marginBottom: 24 }}>
+              <p style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--cream)', maxWidth: 560, marginBottom: 24, fontFamily: 'var(--font-sans)' }}>
                 WealthOS turns broker exports, live market data, and AI reasoning into a premium operating system for serious investors.
               </p>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 26 }}>
                 <button
                   onClick={() => navigate(isAuthenticated ? '/app/dashboard' : '/login')}
-                  style={{ border: '0', borderRadius: 12, padding: '13px 18px', background: theme.colors.text, color: '#0A201F', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                  style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12, padding: '13px 18px', background: 'linear-gradient(180deg, #f0e6c8, #d4a017)', color: '#1a1206', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
                 >
                   Enter dashboard <ArrowRight size={16} />
                 </button>
-                <Link to="/onboarding" style={{ ...panelStyle({ padding: '13px 18px', textDecoration: 'none', color: theme.colors.text }) }}>
+                <Link to="/onboarding" style={{ ...panelStyle({ padding: '13px 18px', textDecoration: 'none', color: 'var(--parchment)', fontFamily: 'var(--font-serif)' }) }}>
                   Start onboarding
                 </Link>
               </div>
@@ -105,9 +106,9 @@ export default function Landing() {
                   ['Market posture', 'Active', 'NSE + global'],
                 ].map(([label, value, sub]) => (
                   <div key={label} style={panelStyle({ padding: 18 })}>
-                    <div style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.colors.textMuted, marginBottom: 12 }}>{label}</div>
-                    <div style={{ fontSize: 28, fontFamily: 'Space Grotesk, Inter, sans-serif', marginBottom: 6 }}>{value}</div>
-                    <div style={{ color: theme.colors.textSoft, fontSize: 13 }}>{sub}</div>
+                    <div style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--sand)', marginBottom: 12 }}>{label}</div>
+                    <div style={{ fontSize: 28, fontFamily: 'var(--font-serif)', marginBottom: 6, color: 'var(--greek-gold)' }}>{value}</div>
+                    <div style={{ color: 'var(--cream)', fontSize: 13 }}>{sub}</div>
                   </div>
                 ))}
               </div>
@@ -120,13 +121,13 @@ export default function Landing() {
               <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.colors.textMuted, marginBottom: 10 }}>What it does</div>
               <div style={{ display: 'grid', gap: 12 }}>
                 {features.map(({ title, icon: Icon, text }) => (
-                  <div key={title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: 14, borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(255,255,255,0.01)' }}>
-                    <div style={{ width: 30, height: 30, borderRadius: 10, display: 'grid', placeItems: 'center', background: 'rgba(134,159,196,0.12)', color: theme.colors.gold, flexShrink: 0 }}>
+                  <div key={title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: 14, borderRadius: 12, border: `1px solid var(--border-subtle)`, background: 'rgba(212,160,23,0.01)' }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 10, display: 'grid', placeItems: 'center', background: 'rgba(212,160,23,0.12)', color: 'var(--greek-gold)', flexShrink: 0 }}>
                       <Icon size={15} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, marginBottom: 4 }}>{title}</div>
-                      <div style={{ color: theme.colors.textSoft, fontSize: 13, lineHeight: 1.55 }}>{text}</div>
+                      <div style={{ fontWeight: 600, marginBottom: 4, fontFamily: 'var(--font-serif)' }}>{title}</div>
+                      <div style={{ color: 'var(--cream)', fontSize: 13, lineHeight: 1.55 }}>{text}</div>
                     </div>
                   </div>
                 ))}

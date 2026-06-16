@@ -145,26 +145,29 @@ export default function AIAdvisor() {
 
   return (
     <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
-      <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+      <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
         <div>
-          <h1 className="text-xl font-semibold text-cream">AI Advisor</h1>
-          <p className="text-xs text-muted mt-0.5">Portfolio-aware · Gemini powered</p>
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--parchment)', fontFamily: 'var(--font-serif)' }}>AI Advisor</h1>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Portfolio-aware · Gemini powered</p>
         </div>
         {loading && (
-          <span className="flex items-center gap-2 text-xs text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="flex items-center gap-2 text-xs" style={{ color: 'var(--aegean-green)' }}>
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--aegean-green)' }} />
             {streaming ? 'Streaming...' : 'Thinking...'}
           </span>
         )}
       </div>
 
-      <div className="px-4 py-3 flex gap-2 overflow-x-auto scrollbar-none border-b border-white/5">
+      <div className="px-4 py-3 flex gap-2 overflow-x-auto scrollbar-none" style={{ borderBottom: '1px solid var(--border)' }}>
         {SMART_PROMPTS.map(sp => (
           <button
             key={sp.label}
             onClick={() => sendMessage(sp.text)}
             disabled={loading}
-            className="shrink-0 px-3 py-1.5 rounded-full text-xs border border-white/10 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-muted hover:text-emerald-300 transition-all disabled:opacity-40"
+            className="shrink-0 px-3 py-1.5 rounded-full text-xs transition-all disabled:opacity-40"
+            style={{ border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-faint)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-faint)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
           >
             {sp.label}
           </button>
@@ -175,20 +178,21 @@ export default function AIAdvisor() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
-              className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+              className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap`}
+              style={
                 msg.role === 'user'
-                  ? 'bg-emerald-600/20 border border-emerald-500/20 text-cream'
+                  ? { background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.3)', color: 'var(--parchment)' }
                   : msg.isError
-                  ? 'bg-amber-900/20 border border-amber-500/20 text-amber-200'
-                  : 'bg-white/5 border border-white/10 text-cream/90'
-              }`}
+                  ? { background: 'rgba(107,46,46,0.15)', border: '1px solid rgba(107,46,46,0.3)', color: 'var(--terracotta)' }
+                  : { background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--cream)' }
+              }
             >
               {msg.content}
               {msg.streaming && (
                 <span className="inline-flex gap-0.5 ml-1 align-middle">
-                  <span className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1 h-1 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--aegean-green)', animationDelay: '0ms' }} />
+                  <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--aegean-green)', animationDelay: '150ms' }} />
+                  <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--aegean-green)', animationDelay: '300ms' }} />
                 </span>
               )}
             </div>
@@ -197,7 +201,7 @@ export default function AIAdvisor() {
         <div ref={endRef} />
       </div>
 
-      <div className="px-4 py-4 border-t border-white/10">
+      <div className="px-4 py-4" style={{ borderTop: '1px solid var(--border)' }}>
         <div className="flex gap-2">
           <input
             value={input}
@@ -205,17 +209,19 @@ export default function AIAdvisor() {
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             placeholder="Ask anything about your portfolio..."
             disabled={loading}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-cream placeholder-muted text-sm focus:outline-none focus:border-emerald-500/50 transition disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition disabled:opacity-50"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--cream)' }}
           />
           <button
             onClick={() => sendMessage()}
             disabled={loading || !input.trim()}
-            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition disabled:opacity-40"
+            className="px-4 py-2.5 rounded-xl text-sm font-medium transition disabled:opacity-40"
+            style={{ background: 'var(--greek-gold)', color: '#1a1206', border: '1px solid rgba(212,160,23,0.5)' }}
           >
             {loading ? '...' : 'Send'}
           </button>
         </div>
-        <p className="text-xs text-muted/50 mt-2 text-center">Powered by Gemini · Portfolio context auto-injected</p>
+        <p className="text-xs mt-2 text-center" style={{ color: 'var(--text-faint)' }}>Powered by Gemini · Portfolio context auto-injected</p>
       </div>
     </div>
   );

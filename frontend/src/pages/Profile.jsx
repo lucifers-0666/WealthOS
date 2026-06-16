@@ -11,13 +11,14 @@ import { PageLoadingState, PageErrorState } from '../components/PageStates.jsx';
 const badgeStyle = (tone) => ({
   padding: '6px 10px',
   borderRadius: 999,
-  border: `1px solid ${theme.colors.border}`,
-  background: tone === 'risk' ? 'rgba(200,179,142,0.12)' : 'rgba(111,174,141,0.08)',
-  color: tone === 'risk' ? theme.colors.gold : theme.colors.success,
+  border: `1px solid var(--border)`,
+  background: tone === 'risk' ? 'rgba(212,160,23,0.12)' : 'rgba(74,138,106,0.08)',
+  color: tone === 'risk' ? 'var(--greek-gold)' : 'var(--aegean-green)',
   fontSize: 12,
-  fontWeight: 700,
+  fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.08em',
+  fontFamily: 'var(--font-serif)',
 });
 
 export default function Profile() {
@@ -269,7 +270,7 @@ export default function Profile() {
             preferencesQuery.refetch();
             activityQuery.refetch();
           }}
-          style={{ border: 0, borderRadius: 12, padding: '10px 14px', background: theme.colors.text, color: '#0A201F', fontWeight: 700, cursor: 'pointer', width: 'fit-content' }}
+          style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12, padding: '10px 14px', background: 'linear-gradient(180deg, #f0e6c8, #d4a017)', color: '#1a1206', fontWeight: 600, cursor: 'pointer', width: 'fit-content' }}
         >
           Retry
         </button>
@@ -294,19 +295,19 @@ export default function Profile() {
       <section style={{ ...panelStyle({ padding: 24 }) }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <div style={{ width: 64, height: 64, borderRadius: 20, background: 'rgba(200,179,142,0.14)', display: 'grid', placeItems: 'center', color: theme.colors.gold }}>
+            <div style={{ width: 64, height: 64, borderRadius: 20, background: 'rgba(212,160,23,0.14)', display: 'grid', placeItems: 'center', color: 'var(--greek-gold)' }}>
               {avatarPreview ? <img src={avatarPreview} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: 20, objectFit: 'cover' }} /> : <UserCircle2 size={28} />}
             </div>
             <div>
               <div className="section-label">WealthOS Profile</div>
               <h2 className="editorial-title" style={{ margin: '6px 0 0', fontSize: 'clamp(1.8rem, 2.6vw, 2.6rem)' }}>{profileForm.full_name || '—'}</h2>
-              <div style={{ color: theme.colors.textSoft, fontSize: 13 }}>{profileForm.email || user?.email || '—'} · {joinDate ? joinDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{profileForm.email || user?.email || '—'} · {joinDate ? joinDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={badgeStyle('risk')}>{profileForm.risk_profile || 'Not set'}</div>
             <div style={badgeStyle('safe')}>Portfolio ₹{Number(metrics.portfolio_value || 0).toLocaleString('en-IN')}</div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, border: `1px solid ${theme.colors.border}`, color: verified ? theme.colors.success : theme.colors.textSoft, fontSize: 12 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, border: `1px solid var(--border)`, color: verified ? 'var(--aegean-green)' : 'var(--text-secondary)', fontSize: 12 }}>
               <ShieldCheck size={14} /> {verified ? 'Email verified' : 'Email not verified'}
             </div>
           </div>
@@ -318,9 +319,9 @@ export default function Profile() {
             ['Total Invested', `₹${Number(metrics.total_invested || 0).toLocaleString('en-IN')}`],
             ['Unrealized P&L', `₹${Number(metrics.unrealized_pnl || 0).toLocaleString('en-IN')}`],
           ].map(([label, value]) => (
-            <div key={label} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 12px' }}>
-              <div style={{ color: theme.colors.textMuted, fontSize: 12 }}>{label}</div>
-              <div style={{ color: theme.colors.text, fontWeight: 700, marginTop: 4 }}>{value}</div>
+            <div key={label} style={{ border: `1px solid var(--border)`, borderRadius: 12, padding: '10px 12px' }}>
+              <div style={{ color: 'var(--text-faint)', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</div>
+              <div style={{ color: 'var(--parchment)', fontWeight: 600, marginTop: 4, fontFamily: 'var(--font-serif)' }}>{value}</div>
             </div>
           ))}
         </div>
@@ -379,10 +380,10 @@ export default function Profile() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ShieldCheck size={14} /> MFA readiness: {mfaReady ? 'Enabled factors detected' : 'No factors enrolled yet'}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ShieldCheck size={14} /> Last sign-in: {user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString('en-IN') : 'Unavailable'}</div>
             </div>
-            {securityNotice && <div style={{ marginTop: 12, color: theme.colors.gold, fontSize: 13 }}>{securityNotice}</div>}
+            {securityNotice && <div style={{ marginTop: 12, color: 'var(--greek-gold)', fontSize: 13 }}>{securityNotice}</div>}
             <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-              <button onClick={handlePasswordReset} style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px', background: 'transparent', color: theme.colors.textSoft, cursor: 'pointer' }}>Reset password</button>
-              <button onClick={handleLogoutAll} style={{ border: 0, borderRadius: 12, padding: '10px 14px', background: 'rgba(200,179,142,0.12)', color: theme.colors.gold, cursor: 'pointer' }}>Logout all devices</button>
+              <button onClick={handlePasswordReset} style={{ border: `1px solid var(--border-subtle)`, borderRadius: 12, padding: '10px 14px', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}>Reset password</button>
+              <button onClick={handleLogoutAll} style={{ border: 0, borderRadius: 12, padding: '10px 14px', background: 'rgba(212,160,23,0.12)', color: 'var(--greek-gold)', cursor: 'pointer' }}>Logout all devices</button>
             </div>
           </div>
         </div>
@@ -454,21 +455,21 @@ export default function Profile() {
       </section>
 
       <section style={{ ...panelStyle({ padding: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }) }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: theme.colors.textSoft }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)' }}>
           <Activity size={16} /> {hasUnsavedChanges ? 'Unsaved changes detected' : 'All changes synced'}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ color: saveState === 'error' ? theme.colors.error : theme.colors.textSoft, fontSize: 12 }}>
+          <div style={{ color: saveState === 'error' ? 'var(--terracotta)' : 'var(--text-secondary)', fontSize: 12 }}>
             {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'error' ? 'Save failed' : 'Idle'}
           </div>
-          <button onClick={handleSaveAll} disabled={saveState === 'saving' || !hasUnsavedChanges} style={{ border: 0, borderRadius: 12, padding: '12px 16px', background: theme.colors.text, color: '#0A201F', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, opacity: hasUnsavedChanges ? 1 : 0.6 }}>
+          <button onClick={handleSaveAll} disabled={saveState === 'saving' || !hasUnsavedChanges} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12, padding: '12px 16px', background: 'linear-gradient(180deg, #f0e6c8, #d4a017)', color: '#1a1206', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, opacity: hasUnsavedChanges ? 1 : 0.6 }}>
             <Save size={15} /> {saveState === 'saving' ? 'Saving…' : 'Save profile'}
           </button>
         </div>
       </section>
 
       {toast && (
-        <div style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 60, padding: '10px 14px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: toast.tone === 'error' ? 'rgba(182,106,106,0.2)' : 'rgba(111,174,141,0.2)', color: theme.colors.text, display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 60, padding: '10px 14px', borderRadius: 12, border: `1px solid var(--border)`, background: toast.tone === 'error' ? 'rgba(107,46,46,0.2)' : 'rgba(74,138,106,0.2)', color: 'var(--text-primary)', display: 'inline-flex', gap: 8, alignItems: 'center' }}>
           {toast.tone === 'error' ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
           {toast.message}
         </div>

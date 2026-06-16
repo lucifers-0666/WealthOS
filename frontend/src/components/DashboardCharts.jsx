@@ -2,31 +2,30 @@ import React, { useMemo, useState } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 const C = {
-  card:     '#111811',
-  cardHov:  '#162016',
-  border:   '#1f2b1f',
-  borderSub:'#192319',
-  text:     '#dceadc',
-  muted:    '#6b806b',
-  faint:    '#3a4a3a',
-  green:    '#4ade80',
-  red:      '#f87171',
-  yellow:   '#fbbf24',
-  blue:     '#60a5fa',
-  teal:     '#2dd4bf',
+  card:     'var(--bg-card)',
+  cardHov:  'var(--bg-card-hover)',
+  border:   'var(--border)',
+  borderSub:'var(--border-subtle)',
+  text:     'var(--text-primary)',
+  muted:    'var(--text-secondary)',
+  faint:    'var(--text-faint)',
+  green:    'var(--aegean-green)',
+  red:      'var(--terracotta)',
+  yellow:   'var(--amber-gold)',
+  blue:     'var(--accent-blue)',
+  teal:     'var(--accent-teal)',
 };
 
 const COLORS = [
-  '#f5a623',  // Phosphor Amber  — primary
-  '#e8920f',  // Burnt Amber     — secondary
-  '#fcd34d',  // Warm Yellow     — tertiary
-  '#f0e6c8',  // Parchment       — fourth
-  '#7dd3fc',  // Sky Blue        — fifth (contrast)
-  '#5eead4',  // Teal            — sixth
-  '#c4b5fd',  // Soft Violet     — seventh
-  '#f87171',  // Coral Red       — eighth
-  '#86efac',  // Mint Green      — ninth
-  '#fb923c',  // Orange          — tenth
+  '#d4a017',  // greek-gold
+  '#b8960a',  // amber-gold
+  '#f0e6c8',  // parchment
+  '#e8d8a8',  // cream
+  '#c4b48a',  // sand
+  '#4a8a6a',  // aegean-green
+  '#3d2e0a',  // border-dark
+  '#6b2e2e',  // terracotta
+  '#8b7b54',  // muted sand
 ];
 const money = v => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v || 0);
 
@@ -49,16 +48,16 @@ export function PositionWeightsCard({ topPositions = [] }) {
           const isTop = i === 0;
           return (
             <div key={`b${i}`} className="position-bar-row" style={{
-              background: isTop ? 'rgba(245,166,35,0.04)' : 'transparent',
-              borderLeft: isTop ? '2px solid var(--accent-green)' : '2px solid transparent',
+              background: isTop ? 'rgba(212,160,23,0.04)' : 'transparent',
+              borderLeft: isTop ? '2px solid var(--greek-gold)' : '2px solid transparent',
               paddingLeft: 4, marginLeft: -6, paddingRight: 4
             }}>
               <div className="position-bar-meta">
-                <span title={item.company_name || item.name}>{item.company_name || item.name || item.ticker}</span>
-                <strong>{item.pct.toFixed(1)}%</strong>
+                <span title={item.company_name || item.name} style={{ fontFamily: 'var(--font-serif)' }}>{item.company_name || item.name || item.ticker}</span>
+                <strong style={{ color: 'var(--greek-gold)' }}>{item.pct.toFixed(1)}%</strong>
               </div>
               <div className="position-bar-track">
-                <div className="position-bar-fill" style={{ width: `${Math.max(item.pct, 2)}%`, background: `linear-gradient(90deg, ${item.color}, rgba(245,166,35,0.25))` }} />
+                <div className="position-bar-fill" style={{ width: `${Math.max(item.pct, 2)}%`, background: `linear-gradient(90deg, ${item.color}, rgba(212,160,23,0.25))` }} />
               </div>
             </div>
           );
@@ -72,7 +71,7 @@ function Insight({ label, value, sub, tone }) {
   return (
     <div className="insights-chip" style={{ background: C.cardHov, border: `1px solid ${C.borderSub}`, borderRadius: 6, padding: '12px 14px', transition: 'all 0.2s' }}>
       <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: tone || C.text }}>{value}</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: tone || C.text, fontFamily: 'var(--font-serif)' }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{sub}</div>}
     </div>
   );
@@ -164,8 +163,8 @@ export function DonutCard({ allocationData = [], portfolioValue }) {
               style={{
                 fontSize: 9, padding: '3px 8px', borderRadius: 3,
                 border: '1px solid var(--border)',
-                background: allocView === v ? 'var(--accent-green)' : 'transparent',
-                color: allocView === v ? '#0b0f0b' : 'var(--text-secondary)',
+                background: allocView === v ? 'var(--greek-gold)' : 'transparent',
+                color: allocView === v ? '#1a1206' : 'var(--text-secondary)',
                 cursor: 'pointer', fontWeight: 700, letterSpacing: '0.06em'
               }}
             >{v}</button>
@@ -181,7 +180,7 @@ export function DonutCard({ allocationData = [], portfolioValue }) {
                 <Pie data={data} dataKey="value" nameKey="name" innerRadius="58%" outerRadius="86%" paddingAngle={3} stroke="none" animationDuration={600}>
                   {data.map((item, i) => <Cell key={`c${i}`} fill={item.color} className="allocation-slice" />)}
                 </Pie>
-                <Tooltip contentStyle={{ background: '#0d170d', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontSize: 12 }} formatter={(v, _n, pl) => [`${money(v)} - ${pl?.payload?.pct?.toFixed(1)}%`, pl?.payload?.name]} />
+                <Tooltip contentStyle={{ background: '#1a1206', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontSize: 12, fontFamily: 'var(--font-sans)' }} formatter={(v, _n, pl) => [`${money(v)} - ${pl?.payload?.pct?.toFixed(1)}%`, pl?.payload?.name]} />
               </PieChart>
             </ResponsiveContainer>
             <div className="allocation-center" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>

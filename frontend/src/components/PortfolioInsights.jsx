@@ -14,7 +14,7 @@ export default function PortfolioInsights({ insights }) {
   } = insights;
 
   const pnlPositive = total_pnl >= 0;
-  const riskColor = risk_score <= 3 ? '#22c55e' : risk_score <= 6 ? '#f59e0b' : '#ef4444';
+  const riskColor = risk_score <= 3 ? 'var(--aegean-green)' : risk_score <= 6 ? 'var(--greek-gold)' : 'var(--terracotta)';
   const riskLabel = risk_score <= 3 ? 'Low Risk' : risk_score <= 6 ? 'Moderate Risk' : 'High Risk';
 
   return (

@@ -9,17 +9,17 @@ import { useMarketStatus } from '../lib/useMarketStatus.js';
 
 const SESSION_STYLES = {
   open: {
-    color: '#6FAE8D',
-    border: 'rgba(111,174,141,0.22)',
-    bg: 'rgba(111,174,141,0.07)',
-    dot: '#6FAE8D',
+    color: 'var(--aegean-green)',
+    border: 'rgba(74,138,106,0.22)',
+    bg: 'rgba(74,138,106,0.07)',
+    dot: 'var(--aegean-green)',
     pulse: true,
   },
   pre_open: {
-    color: '#C8B38E',
-    border: 'rgba(200,179,142,0.22)',
-    bg: 'rgba(200,179,142,0.07)',
-    dot: '#C8B38E',
+    color: 'var(--greek-gold)',
+    border: 'rgba(212,160,23,0.22)',
+    bg: 'rgba(212,160,23,0.07)',
+    dot: 'var(--greek-gold)',
     pulse: false,
   },
   after_hours: {
@@ -30,10 +30,10 @@ const SESSION_STYLES = {
     pulse: false,
   },
   closed: {
-    color: '#6B7F78',
-    border: 'rgba(107,127,120,0.18)',
-    bg: 'rgba(107,127,120,0.05)',
-    dot: '#6B7F78',
+    color: 'var(--text-faint)',
+    border: 'var(--border-subtle)',
+    bg: 'transparent',
+    dot: 'var(--text-faint)',
     pulse: false,
   },
 };
@@ -46,11 +46,11 @@ export default function MarketStatusBadge({ showClock = true, showNextOpen = tru
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
         padding: '7px 11px', borderRadius: 12,
-        border: '1px solid rgba(107,127,120,0.18)',
-        background: 'rgba(107,127,120,0.05)',
-        fontSize: 12, color: '#6B7F78',
+        border: '1px solid var(--border-subtle)',
+        background: 'transparent',
+        fontSize: 12, color: 'var(--text-faint)',
       }}>
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#6B7F78', display: 'inline-block' }} />
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--text-faint)', display: 'inline-block' }} />
         <span className="mono">--:--:--</span>
       </div>
     );

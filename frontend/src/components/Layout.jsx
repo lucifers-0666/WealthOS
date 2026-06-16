@@ -179,7 +179,7 @@ export default function Layout() {
         minHeight: '100dvh',
         display: 'flex',
         overflow: 'hidden',
-        background: 'linear-gradient(180deg, #081817 0%, #0A201F 46%, #081716 100%)',
+        background: 'var(--bg-base)',
       }}
     >
       {/* ── Sidebar ── */}
@@ -195,9 +195,9 @@ export default function Layout() {
               style={{
                 width: 36, height: 36, borderRadius: 12,
                 display: 'grid', placeItems: 'center',
-                color: '#0A201F',
-                background: theme.colors.gold,
-                boxShadow: '0 16px 34px rgba(200,179,142,0.12)',
+                color: 'var(--obsidian)',
+                background: 'var(--greek-gold)',
+                boxShadow: '0 16px 34px rgba(212,160,23,0.12)',
                 flexShrink: 0,
               }}
             >
@@ -235,9 +235,9 @@ export default function Layout() {
                             padding: collapsed ? '0' : '0 10px',
                             position: 'relative',
                             borderRadius: 12,
-                            border: `1px solid ${isActive ? 'rgba(200,179,142,0.22)' : 'transparent'}`,
+                            border: `1px solid ${isActive ? 'rgba(212,160,23,0.22)' : 'transparent'}`,
                             color: isActive ? theme.colors.text : theme.colors.textSoft,
-                            background: isActive ? 'rgba(200,179,142,0.09)' : 'transparent',
+                            background: isActive ? 'rgba(212,160,23,0.09)' : 'transparent',
                             transition: 'all 180ms cubic-bezier(0.16,1,0.3,1)',
                           }}
                         >
@@ -247,7 +247,7 @@ export default function Layout() {
                                 position: 'absolute', left: -1, top: 9, bottom: 9, width: 2,
                                 borderRadius: 99,
                                 background: `linear-gradient(180deg, ${theme.colors.gold}, ${theme.colors.accent})`,
-                                boxShadow: '0 0 16px rgba(200,179,142,0.18)',
+                                boxShadow: '0 0 16px rgba(212,160,23,0.18)',
                               }}
                             />
                           )}
@@ -299,7 +299,7 @@ export default function Layout() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {/* Search bar */}
             <div className="hide-mobile" style={{ position: 'relative' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9, width: 300, padding: '8px 10px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(10,32,31,0.42)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, width: 300, padding: '8px 10px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, background: 'rgba(26,18,6,0.42)' }}>
                 <SearchIcon size={14} color={theme.colors.textMuted} />
                 <input
                   value={topSearch}
@@ -361,7 +361,7 @@ export default function Layout() {
               <Bell size={15} />
               <span style={{ position: 'absolute', top: 8, right: 8, width: 6, height: 6, borderRadius: 99, background: theme.colors.gold }} />
             </button>
-            <button onClick={() => navigate('/app/profile')} style={{ width: 36, height: 36, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'rgba(200,179,142,0.1)', border: '1px solid rgba(200,179,142,0.22)', color: theme.colors.gold, fontWeight: 800, cursor: 'pointer' }} aria-label="Open profile">W</button>
+            <button onClick={() => navigate('/app/profile')} style={{ width: 36, height: 36, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.22)', color: theme.colors.gold, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-serif)' }} aria-label="Open profile">W</button>
           </div>
         </header>
 
@@ -410,7 +410,7 @@ export default function Layout() {
               onClick={(e) => e.stopPropagation()}
               style={{ width: 'min(760px, calc(100vw - 28px))', ...panelStyle({ padding: 18 }) }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${theme.colors.border}`, borderRadius: 14, padding: '10px 12px', background: 'rgba(10,32,31,0.42)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${theme.colors.border}`, borderRadius: 14, padding: '10px 12px', background: 'rgba(26,18,6,0.42)' }}>
                 <SearchIcon size={16} color={theme.colors.textMuted} />
                 <input
                   ref={paletteInputRef}
@@ -427,7 +427,7 @@ export default function Layout() {
                   <button
                     key={item.id}
                     onClick={() => runCommand(item)}
-                    style={{ textAlign: 'left', border: `1px solid ${theme.colors.border}`, borderRadius: 12, background: commandResults[paletteIndex]?.id === item.id ? 'rgba(200,179,142,0.08)' : 'rgba(255,255,255,0.01)', padding: '12px 14px', cursor: 'pointer', color: theme.colors.text }}
+                    style={{ textAlign: 'left', border: `1px solid ${theme.colors.border}`, borderRadius: 12, background: commandResults[paletteIndex]?.id === item.id ? 'rgba(212,160,23,0.08)' : 'rgba(255,255,255,0.01)', padding: '12px 14px', cursor: 'pointer', color: theme.colors.text }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                       <strong style={{ fontSize: 14 }}>{item.label}</strong>

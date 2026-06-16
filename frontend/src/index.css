@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=IM+Fell+English:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,80 +10,89 @@
 
   :root {
   /* ═══════════════════════════════════════════════
-     WEALTHOS PHOSPHOR AMBER — warm oscilloscope terminal
-     Concept: vintage instrument panel + aged gold + parchment
-     Nobody in Indian fintech is using this. It's yours.
+     WEALTHOS GREEK LUXURY SYSTEM
+     Concept: Ancient Greek architecture, private banking terminal, obsidian + gold
      ═══════════════════════════════════════════════ */
 
-  /* Base surfaces — deep warm charcoal, slight brown undertone */
-  --bg-base:         #0e0c09;
-  --bg-card:         #141108;
-  --bg-card-hover:   #1c1810;
-  --bg-sidebar:      #100e08;
-  --border:          #2a2416;
-  --border-subtle:   #1f1b10;
+  /* Core Greek Palette */
+  --obsidian: #1a1206;
+  --night-marble: #221808;
+  --border-dark: #3d2e0a;
+  --amber-gold: #b8960a;
+  --greek-gold: #d4a017;
+  --parchment: #f0e6c8;
+  --cream: #e8d8a8;
+  --sand: #c4b48a;
+  --aegean-green: #4a8a6a;
+  --terracotta: #6b2e2e;
 
-  /* Text — warm ivory/parchment, NOT cold white */
-  --text-primary:    #f0e6c8;
-  --text-secondary:  #8a7a52;
-  --text-faint:      #3d3520;
+  /* Base surfaces */
+  --bg-base:         var(--obsidian);
+  --bg-card:         var(--night-marble);
+  --bg-card-hover:   #2e210b;
+  --bg-sidebar:      var(--obsidian);
+  --border:          var(--border-dark);
+  --border-subtle:   rgba(212,160,23,0.15);
 
-  /* PRIMARY ACCENT — Phosphor Amber (replaces #4ade80 green) */
-  --accent-green:    #f5a623;   /* amber — the signature color */
-  --accent-green-2:  #e8920f;   /* darker amber for bars/fills */
+  /* Text */
+  --text-primary:    var(--parchment);
+  --text-secondary:  var(--cream);
+  --text-faint:      var(--sand);
 
-  /* Semantic stays the same logic, just warmer tones */
-  --accent-red:      #f87171;   /* kept — universal loss color */
-  --accent-yellow:   #fcd34d;   /* kept — warning */
-  --accent-blue:     #7dd3fc;   /* kept — links/info */
-  --accent-teal:     #5eead4;   /* kept — secondary accent */
+  /* PRIMARY ACCENT */
+  --accent-green:    var(--greek-gold);
+  --accent-green-2:  var(--amber-gold);
 
-  /* Fonts — unchanged */
-  --font-mono:       'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
-  --font-sans:       'Inter', system-ui, sans-serif;
+  /* Semantic */
+  --accent-red:      var(--terracotta);
+  --accent-yellow:   var(--greek-gold);
+  --accent-blue:     #5e8eb3;
+  --accent-teal:     #6ba394;
 
-  /* ───────────────────────────────────────────────
-     LEGACY ALIASES (used by non-dashboard pages)
-     ─────────────────────────────────────────────── */
-  --bg:              #0e0c09;
-  --surface:         #100e08;
-  --card:            #141108;
-  --panel:           #1c1810;
-  --text:            #f0e6c8;
-  --text-2:          #8a7a52;
-  --text-3:          #3d3520;
-  --cyan:            #7dd3fc;
-  --violet:          #c4b5fd;
-  --gold:            #f5a623;   /* gold IS the primary now */
-  --soft-cyan:       #5eead4;
-  --border-color:    rgba(42,36,22,0.95);
-  --glow:            rgba(245,166,35,0.07);  /* amber glow */
-  --shadow:          0 24px 80px rgba(0,0,0,0.60);
-  --radius:          14px;
+  /* Fonts */
+  --font-mono:       'IBM Plex Mono', 'Fira Code', monospace;
+  --font-sans:       'Space Grotesk', system-ui, sans-serif;
+  --font-serif:      'Cinzel', serif;
+  --font-advisory:   'IM Fell English', serif;
+
+  /* Legacy aliases */
+  --bg:              var(--obsidian);
+  --surface:         var(--night-marble);
+  --card:            var(--night-marble);
+  --panel:           #2e210b;
+  --text:            var(--parchment);
+  --text-2:          var(--cream);
+  --text-3:          var(--sand);
+  --cyan:            #5e8eb3;
+  --violet:          #a890b0;
+  --gold:            var(--greek-gold);
+  --soft-cyan:       var(--accent-teal);
+  --border-color:    var(--border-dark);
+  --glow:            rgba(212,160,23,0.05);
+  --shadow:          0 8px 32px rgba(0,0,0,0.18);
+  --radius:          18px;
   --ease:            cubic-bezier(0.16,1,0.3,1);
   --t:               240ms;
 
-  /* ───────────────────────────────────────────────
-     DASHBOARD / CHART TOKENS
-     ─────────────────────────────────────────────── */
-  --color-bg:            #0e0c09;
-  --color-surface:       #141108;
-  --color-surface-2:     #1c1810;
-  --color-border:        #2a2416;
-  --color-border-subtle: #1f1b10;
-  --color-text:          #f0e6c8;
-  --color-text-muted:    #8a7a52;
-  --color-text-faint:    #3d3520;
-  --color-accent:        #f5a623;   /* amber primary */
-  --color-accent-2:      #e8920f;
-  --color-red:           #f87171;
-  --color-yellow:        #fcd34d;
-  --color-blue:          #7dd3fc;
-  --color-teal:          #5eead4;
-  --color-success:       #6ee7a0;   /* soft green for GAINS (not amber) */
-  --color-error:         #f87171;
-  --color-warning:       #fcd34d;
-  --color-primary:       #f5a623;   /* amber */
+  /* Dashboard / Chart Tokens */
+  --color-bg:            var(--obsidian);
+  --color-surface:       var(--night-marble);
+  --color-surface-2:     #2e210b;
+  --color-border:        var(--border-dark);
+  --color-border-subtle: rgba(212,160,23,0.15);
+  --color-text:          var(--parchment);
+  --color-text-muted:    var(--cream);
+  --color-text-faint:    var(--sand);
+  --color-accent:        var(--greek-gold);
+  --color-accent-2:      var(--amber-gold);
+  --color-red:           var(--terracotta);
+  --color-yellow:        var(--greek-gold);
+  --color-blue:          #5e8eb3;
+  --color-teal:          #6ba394;
+  --color-success:       var(--aegean-green);
+  --color-error:         var(--terracotta);
+  --color-warning:       var(--greek-gold);
+  --color-primary:       var(--greek-gold);
 }
 
   html { scroll-behavior: smooth; background: var(--bg); }
@@ -92,10 +102,15 @@
     background: var(--bg-base);
     color: var(--text-primary);
     font-family: var(--font-sans);
-    font-size: 13px;
-    line-height: 1.55;
+    font-size: 14px; /* Increased slightly for readability */
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    letter-spacing: 0.04em;
   }
 
   /* Body grain overlays removed — green terminal theme uses flat bg */
@@ -105,11 +120,10 @@
 
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.24); border-radius: 99px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+  ::-webkit-scrollbar-thumb { background: rgba(212,160,23,0.15); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--greek-gold); }
   ::-webkit-scrollbar-track { background: var(--bg-base); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  ::selection { background: rgba(245,166,35,0.20); color: var(--text); }
+  ::selection { background: rgba(212,160,23,0.20); color: var(--text-primary); }
 }
 
 @layer components {
@@ -121,11 +135,11 @@
     position: relative;
     overflow: hidden;
     background:
-      linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008)),
-      linear-gradient(135deg, rgba(20,17,8,0.92), rgba(14,12,9,0.76));
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, var(--shadow);
+      linear-gradient(180deg, rgba(212,160,23,0.035), rgba(212,160,23,0.008)),
+      linear-gradient(135deg, rgba(34,24,8,0.92), rgba(26,18,6,0.76));
+    border: 1px solid rgba(212,160,23,0.15);
+    border-radius: 18px;
+    box-shadow: 0 1px 0 rgba(212,160,23,0.05) inset, var(--shadow);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     transition: transform var(--t) var(--ease), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease), background var(--t) var(--ease);
@@ -139,8 +153,8 @@
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(circle at 16% 0%, rgba(245,166,35,0.08), transparent 20rem),
-      linear-gradient(90deg, rgba(255,255,255,0.025), transparent 34%);
+      radial-gradient(circle at 16% 0%, rgba(212,160,23,0.08), transparent 20rem),
+      linear-gradient(90deg, rgba(212,160,23,0.025), transparent 34%);
     opacity: 0.9;
   }
 
@@ -151,8 +165,8 @@
   .lux-card:hover,
   .card:hover {
     transform: translateY(-2px);
-    border-color: rgba(245,166,35,0.28);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 26px 90px rgba(0,0,0,0.54), 0 0 34px rgba(245,166,35,0.06);
+    border-color: rgba(212,160,23,0.35);
+    box-shadow: 0 1px 0 rgba(212,160,23,0.08) inset, 0 26px 90px rgba(0,0,0,0.54), 0 0 34px rgba(212,160,23,0.1);
   }
 
   .section-label {
@@ -164,9 +178,9 @@
   }
 
   .editorial-title {
-    font-family: 'Space Grotesk', 'Inter', sans-serif;
-    font-weight: 700;
-    letter-spacing: 0;
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: 0.04em;
     color: var(--text);
   }
 
@@ -177,10 +191,10 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-height: 34px;
-    padding: 8px 14px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
+    min-height: 38px;
+    padding: 8px 18px;
+    border-radius: var(--btn-radius, 14px);
+    border: 1px solid var(--border-subtle);
     cursor: pointer;
     white-space: nowrap;
     color: var(--text);
@@ -190,23 +204,23 @@
 
   .btn:hover:not(:disabled) {
     transform: translateY(-1px);
-    border-color: rgba(245,166,35,0.28);
-    background: rgba(245,166,35,0.09);
-    box-shadow: 0 0 20px rgba(125,211,252,0.06);
+    border-color: rgba(212,160,23,0.28);
+    background: rgba(212,160,23,0.09);
+    box-shadow: 0 0 20px rgba(212,160,23,0.06);
   }
 
   .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
   .btn-primary {
-    background: linear-gradient(180deg, #fcd99c, #f5a623) !important;
-    color: #0e0c09 !important;
-    border: 1px solid rgba(245,166,35,0.42) !important;
-    font-weight: 800;
-    box-shadow: 0 10px 30px rgba(245,166,35,0.14) !important;
+    background: linear-gradient(180deg, #f0e6c8, #d4a017) !important;
+    color: #1a1206 !important;
+    border: 1px solid rgba(212,160,23,0.5) !important;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(212,160,23,0.14) !important;
   }
   .btn-primary:hover:not(:disabled) {
-    background: linear-gradient(180deg, #fce0b0, #f5a623) !important;
-    color: #0e0c09 !important;
+    background: linear-gradient(180deg, #f0e6c8, #e8d8a8) !important;
+    color: #1a1206 !important;
   }
 
   .btn-ghost {
@@ -215,11 +229,11 @@
   }
 
   .btn-icon {
-    width: 34px;
-    height: 34px;
+    width: 38px;
+    height: 38px;
     padding: 0;
-    border-radius: 10px;
-    border: 1px solid var(--border);
+    border-radius: var(--btn-radius, 14px);
+    border: 1px solid var(--border-subtle);
     color: var(--text-2);
     background: rgba(148,163,184,0.055);
     display: inline-flex;
@@ -230,19 +244,19 @@
   }
 
   .btn-icon:hover {
-    background: rgba(245,166,35,0.08) !important;
+    background: rgba(212,160,23,0.08) !important;
     color: var(--text) !important;
-    border-color: rgba(245,166,35,0.28) !important;
+    border-color: rgba(212,160,23,0.28) !important;
   }
 
   .input {
     width: 100%;
-    min-height: 38px;
-    padding: 10px 13px;
+    min-height: 42px;
+    padding: 10px 14px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--input-radius, 12px);
     color: var(--text);
-    background: rgba(14,12,9,0.58);
+    background: rgba(26,18,6,0.6);
     outline: none;
     transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease), background 180ms var(--ease);
   }

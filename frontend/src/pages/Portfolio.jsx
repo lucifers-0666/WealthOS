@@ -32,29 +32,29 @@ function compact(n) {
 // ---- Animated KPI card ------------------------------------------------
 function KpiCard({ label, rawValue, sub, tone = 'neutral', live = false, prefix = '' }) {
   const { value, direction } = useAnimatedNumber(rawValue || 0, 500);
-  const color = tone === 'positive' ? 'var(--color-success,#4ade80)'
-              : tone === 'negative' ? 'var(--color-error,#f87171)'
-              : theme.colors.text;
+  const color = tone === 'positive' ? 'var(--aegean-green)'
+              : tone === 'negative' ? 'var(--terracotta)'
+              : 'var(--text-primary)';
   return (
     <div style={{ ...panelStyle({ padding: 18, minHeight: 110 }) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <div style={{ fontSize: 11, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.colors.textMuted }}>
+        <div style={{ fontSize: 11, letterSpacing: '0.13em', textTransform: 'uppercase', color: 'var(--text-faint)' }}>
           {label}
         </div>
         {live && (
           <span style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase',
-            color: 'var(--color-success,#4ade80)', border: '1px solid var(--color-success,#4ade80)',
+            color: 'var(--aegean-green)', border: '1px solid var(--aegean-green)',
             borderRadius: 999, padding: '1px 6px' }}>LIVE</span>
         )}
       </div>
       <div
         className={flashClass(direction)}
-        style={{ fontFamily: 'Space Grotesk,Inter,sans-serif', fontSize: 28, fontVariantNumeric: 'tabular-nums',
+        style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontVariantNumeric: 'tabular-nums',
           lineHeight: 1, color, marginBottom: 6 }}
       >
         {prefix}{compact(value)}
       </div>
-      <div style={{ fontSize: 13, color: theme.colors.textSoft }}>{sub}</div>
+      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{sub}</div>
     </div>
   );
 }
@@ -87,27 +87,27 @@ function HoldingRow({ holding, totalValue, onEdit, onDelete }) {
   const isPositive = pnlVal >= 0;
   const isDayUp    = dayChange >= 0;
 
-  const cell = { padding: '14px 12px', fontSize: 13, verticalAlign: 'middle', borderBottom: `1px solid ${theme.colors.border}` };
+  const cell = { padding: '14px 12px', fontSize: 13, verticalAlign: 'middle', borderBottom: `1px solid var(--border)` };
 
   return (
     <tr style={{ transition: 'background 0.15s' }}
-      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
+      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(212,160,23,0.05)'}
       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
       {/* Ticker + Company name */}
-      <td style={{ ...cell, fontWeight: 700, paddingLeft: 20 }}>
+      <td style={{ ...cell, fontWeight: 600, paddingLeft: 20 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ color: theme.colors.text }}>{holding.company_name || holding.name || holding.ticker}</span>
-          <span style={{ fontSize: 11, color: theme.colors.textMuted, fontWeight: 400 }}>
+          <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>{holding.company_name || holding.name || holding.ticker}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 400 }}>
             {holding.ticker} · {holding.exchange || 'NSE'} · {holding.asset_class || 'Equity'}
           </span>
         </div>
       </td>
       {/* Qty */}
-      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: theme.colors.textSoft }}>
+      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--text-secondary)' }}>
         {holding.quantity}
       </td>
       {/* Avg buy */}
-      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: theme.colors.textSoft }}>
+      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--text-secondary)' }}>
         {fmt(holding.avg_buy_price)}
       </td>
       {/* LTP */}
@@ -118,8 +118,8 @@ function HoldingRow({ holding, totalValue, onEdit, onDelete }) {
         <div style={{
           fontSize: 11, marginTop: 2,
           color: Math.abs(dayPct) > 0.01
-            ? (isDayUp ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)')
-            : 'var(--text-faint,#3a4a3a)',
+            ? (isDayUp ? 'var(--aegean-green)' : 'var(--terracotta)')
+            : 'var(--text-faint)',
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
           {Math.abs(dayPct) > 0.01 ? (isDayUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />) : null}
           {pct(dayPct)}
@@ -128,18 +128,18 @@ function HoldingRow({ holding, totalValue, onEdit, onDelete }) {
       {/* Current value */}
       <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
         {compact(liveValue)}
-        <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 2 }}>
+        <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
           {weight.toFixed(1)}% of portfolio
         </div>
       </td>
       {/* P&L */}
       <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-        <div style={{ color: isPositive ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)',
+        <div style={{ color: isPositive ? 'var(--aegean-green)' : 'var(--terracotta)',
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, fontWeight: 600 }}>
           {isPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
           {compact(livePnl)}
         </div>
-        <div style={{ fontSize: 11, color: isPositive ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)',
+        <div style={{ fontSize: 11, color: isPositive ? 'var(--aegean-green)' : 'var(--terracotta)',
           textAlign: 'right', marginTop: 2 }}>
           {pct(pnlPct)}
         </div>
@@ -149,21 +149,21 @@ function HoldingRow({ holding, totalValue, onEdit, onDelete }) {
         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
           <button
             onClick={() => onEdit(holding)}
-            style={{ padding: '6px 8px', borderRadius: 8, border: `1px solid ${theme.colors.border}`,
-              background: 'transparent', color: theme.colors.textMuted, cursor: 'pointer',
+            style={{ padding: '6px 8px', borderRadius: 8, border: `1px solid var(--border)`,
+              background: 'transparent', color: 'var(--text-faint)', cursor: 'pointer',
               transition: 'color 0.15s, border-color 0.15s' }}
             title="Edit holding" aria-label="Edit holding"
-            onMouseEnter={(e) => { e.currentTarget.style.color = theme.colors.text; e.currentTarget.style.borderColor = theme.colors.textMuted; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textMuted; e.currentTarget.style.borderColor = theme.colors.border; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-faint)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
           ><Pencil size={13} /></button>
           <button
             onClick={() => onDelete(holding)}
-            style={{ padding: '6px 8px', borderRadius: 8, border: `1px solid ${theme.colors.border}`,
-              background: 'transparent', color: theme.colors.textMuted, cursor: 'pointer',
+            style={{ padding: '6px 8px', borderRadius: 8, border: `1px solid var(--border)`,
+              background: 'transparent', color: 'var(--text-faint)', cursor: 'pointer',
               transition: 'color 0.15s, border-color 0.15s' }}
             title="Delete holding" aria-label="Delete holding"
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-error,#f87171)'; e.currentTarget.style.borderColor = 'var(--color-error,#f87171)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = theme.colors.textMuted; e.currentTarget.style.borderColor = theme.colors.border; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--terracotta)'; e.currentTarget.style.borderColor = 'var(--terracotta)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
           ><Trash2 size={13} /></button>
         </div>
       </td>
@@ -243,11 +243,11 @@ export default function Portfolio() {
 
   const thStyle = (key) => ({
     padding: '10px 12px', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
-    color: sortKey === key ? theme.colors.text : theme.colors.textMuted,
+    color: sortKey === key ? 'var(--text-primary)' : 'var(--text-faint)',
     textAlign: key === 'ticker' ? 'left' : 'right',
     paddingLeft: key === 'ticker' ? 20 : 12,
     cursor: 'pointer', userSelect: 'none',
-    borderBottom: `1px solid ${theme.colors.border}`,
+    borderBottom: `1px solid var(--border)`,
     whiteSpace: 'nowrap',
   });
 
@@ -270,30 +270,30 @@ export default function Portfolio() {
       {/* Header */}
       <div style={{ ...panelStyle({ padding: '22px 26px' }), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
         <div>
-          <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.colors.textMuted, marginBottom: 6 }}>
+          <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-faint)', marginBottom: 6 }}>
             Holdings register
           </div>
-          <h2 style={{ margin: 0, fontFamily: 'Space Grotesk,Inter,sans-serif', fontSize: 'clamp(1.6rem,2.5vw,2.4rem)', letterSpacing: '-0.04em', lineHeight: 1.05 }}>
+          <h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontSize: 'clamp(1.6rem,2.5vw,2.4rem)', letterSpacing: '-0.04em', lineHeight: 1.05 }}>
             Live portfolio
           </h2>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {wsStatus === 'disconnected' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-error,#f87171)', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--color-error,#f87171)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--terracotta)', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--terracotta)' }}>
               <WifiOff size={13} /> No live feed
             </div>
           )}
           <LiveIndicator wsStatus={wsStatus} updatedAt={updatedAt} />
           <button
             onClick={() => setEditTarget({})}
-            style={{ background: 'var(--color-primary,#01696f)', color: '#fff', border: 'none', borderRadius: 12,
-              padding: '10px 16px', fontWeight: 700, cursor: 'pointer',
+            style={{ background: 'var(--greek-gold)', color: '#1a1206', border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12,
+              padding: '10px 16px', fontWeight: 600, cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14 }}
           ><PlusCircle size={15} /> Add holding</button>
           <button
             onClick={handleRefresh}
-            style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px',
-              background: 'transparent', color: theme.colors.text, cursor: 'pointer',
+            style={{ border: `1px solid var(--border)`, borderRadius: 12, padding: '10px 14px',
+              background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14 }}
           ><RefreshCw size={15} /> Refresh</button>
         </div>
@@ -312,9 +312,9 @@ export default function Portfolio() {
             onClick={() => setFilterClass(ac)}
             style={{
               padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              border: `1px solid ${filterClass === ac ? 'var(--color-primary,#01696f)' : theme.colors.border}`,
-              background: filterClass === ac ? 'rgba(1,105,111,0.12)' : 'transparent',
-              color: filterClass === ac ? 'var(--color-primary,#01696f)' : theme.colors.textMuted,
+              border: `1px solid ${filterClass === ac ? 'var(--greek-gold)' : 'var(--border)'}`,
+              background: filterClass === ac ? 'rgba(212,160,23,0.12)' : 'transparent',
+              color: filterClass === ac ? 'var(--greek-gold)' : 'var(--text-faint)',
               transition: 'all 0.15s',
             }}
           >{ac}</button>
@@ -332,7 +332,7 @@ export default function Portfolio() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
               <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.01)' }}>
+                <tr style={{ background: 'rgba(212,160,23,0.02)' }}>
                   {[['ticker','Stock'],['quantity','Qty'],['avg_buy_price','Avg buy'],
                     ['current_price','LTP'],['current_value','Value'],
                     ['unrealised_pnl','P&L']].map(([key, label]) => (
@@ -362,7 +362,7 @@ export default function Portfolio() {
       {/* Summary footer */}
       {holdings.length > 0 && (
         <div style={{ ...panelStyle({ padding: '14px 22px' }), display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: 13, color: theme.colors.textMuted }}>
+          <span style={{ fontSize: 13, color: 'var(--text-faint)' }}>
             {holdings.length} holding{holdings.length !== 1 ? 's' : ''}
           </span>
           <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
@@ -372,7 +372,7 @@ export default function Portfolio() {
             Current: <strong>{compact(summary.totalCurrent)}</strong>
           </span>
           <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums',
-            color: (summary.totalPnl || 0) >= 0 ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)' }}>
+            color: (summary.totalPnl || 0) >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)' }}>
             P&L: <strong>{compact(summary.totalPnl)} ({pct(summary.totalPnlPct)})</strong>
           </span>
         </div>

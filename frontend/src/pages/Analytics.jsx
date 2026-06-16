@@ -29,13 +29,13 @@ function fmtCrore(n) {
 
 // ── Donut ────────────────────────────────────────────────────────
 const DONUT_COLORS = [
-  theme.colors.gold,
-  theme.colors.accent,
-  theme.colors.success,
-  theme.colors.warning,
-  '#8B9DBC',
-  '#7ABFA5',
-  '#C4A882',
+  'var(--greek-gold)',
+  'var(--amber-gold)',
+  'var(--parchment)',
+  'var(--cream)',
+  'var(--sand)',
+  'var(--aegean-green)',
+  'var(--border-dark)',
 ];
 
 function AllocationDonut({ slices }) {
@@ -65,8 +65,8 @@ function AllocationDonut({ slices }) {
           style={{ transition: 'stroke-dasharray 0.4s ease' }}
         />
       ))}
-      <text x={cx} y={cy - 6} textAnchor="middle" fill={theme.colors.text} fontSize="11" fontWeight="700">{slices.length}</text>
-      <text x={cx} y={cy + 9} textAnchor="middle" fill={theme.colors.textMuted} fontSize="9">classes</text>
+      <text x={cx} y={cy - 6} textAnchor="middle" fill="var(--text-primary)" fontSize="11" fontWeight="700" fontFamily="var(--font-serif)">{slices.length}</text>
+      <text x={cx} y={cy + 9} textAnchor="middle" fill="var(--text-faint)" fontSize="9" letterSpacing="0.05em" textTransform="uppercase">classes</text>
     </svg>
   );
 }
@@ -82,7 +82,7 @@ function PnLBar({ pnl, maxAbs }) {
           height: '100%',
           width: `${pct * 100}%`,
           borderRadius: 99,
-          background: positive ? theme.colors.success : theme.colors.error,
+          background: positive ? 'var(--aegean-green)' : 'var(--terracotta)',
           transition: 'width 0.4s ease',
         }}
       />
@@ -95,21 +95,21 @@ function DayHeatmapCell({ ticker, pct }) {
   const intensity = Math.min(Math.abs(pct || 0) / 5, 1);
   const positive = (pct || 0) >= 0;
   const bg = positive
-    ? `rgba(111,174,141,${0.15 + intensity * 0.65})`
-    : `rgba(182,106,106,${0.15 + intensity * 0.65})`;
+    ? `rgba(74,138,106,${0.15 + intensity * 0.65})`
+    : `rgba(107,46,46,${0.15 + intensity * 0.65})`;
   return (
     <div
       style={{
         borderRadius: 10,
         padding: '8px 10px',
         background: bg,
-        border: `1px solid ${positive ? 'rgba(111,174,141,0.22)' : 'rgba(182,106,106,0.22)'}`,
+        border: `1px solid ${positive ? 'rgba(74,138,106,0.22)' : 'rgba(107,46,46,0.22)'}`,
         minWidth: 72,
         textAlign: 'center',
       }}
     >
-      <div style={{ color: theme.colors.text, fontWeight: 700, fontSize: 12 }}>{ticker}</div>
-      <div style={{ color: positive ? theme.colors.success : theme.colors.error, fontSize: 11, fontWeight: 600, marginTop: 2 }}>
+      <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 12, fontFamily: 'var(--font-serif)' }}>{ticker}</div>
+      <div style={{ color: positive ? 'var(--aegean-green)' : 'var(--terracotta)', fontSize: 11, fontWeight: 600, marginTop: 2 }}>
         {pct != null ? `${pct >= 0 ? '+' : ''}${fmt(pct, 2)}%` : '—'}
       </div>
     </div>
@@ -120,11 +120,11 @@ function DayHeatmapCell({ ticker, pct }) {
 function StatCard({ label, value, sub, color, icon: Icon }) {
   return (
     <div style={{ ...panelStyle({ padding: '16px 18px' }), display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: theme.colors.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-faint)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
         {Icon && <Icon size={13} />}{label}
       </div>
-      <div style={{ color: color || theme.colors.text, fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px' }}>{value}</div>
-      {sub && <div style={{ color: theme.colors.textMuted, fontSize: 12 }}>{sub}</div>}
+      <div style={{ color: color || 'var(--text-primary)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.5px', fontFamily: 'var(--font-serif)' }}>{value}</div>
+      {sub && <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{sub}</div>}
     </div>
   );
 }
@@ -325,7 +325,7 @@ export default function Analytics() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div className="section-label">Performance Analytics</div>
-          <div style={{ color: theme.colors.textMuted, fontSize: 12 }}>Historical return analysis, benchmark comparison, and risk metrics.</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Historical return analysis, benchmark comparison, and risk metrics.</div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {['30', '90', '365'].map((value) => (
@@ -335,11 +335,11 @@ export default function Analytics() {
               style={{
                 padding: '8px 12px',
                 borderRadius: 999,
-                border: `1px solid ${range === value ? theme.colors.gold : theme.colors.border}`,
-                background: range === value ? 'rgba(213,181,115,0.12)' : 'transparent',
-                color: theme.colors.text,
+                border: `1px solid ${range === value ? 'var(--greek-gold)' : 'var(--border)'}`,
+                background: range === value ? 'rgba(212,160,23,0.12)' : 'transparent',
+                color: 'var(--text-primary)',
                 fontSize: 12,
-                fontWeight: 700,
+                fontWeight: 600,
               }}
             >
               {value === '30' ? '30D' : value === '90' ? '90D' : '1Y'}
@@ -354,21 +354,21 @@ export default function Analytics() {
           label="Total P&L"
           value={fmtCrore(totalPnl)}
           sub={`${totalPnl >= 0 ? '+' : ''}${fmt(totalPnlPct, 2)}% overall`}
-          color={totalPnl >= 0 ? theme.colors.success : theme.colors.error}
+          color={totalPnl >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)'}
           icon={BarChart2}
         />
         <StatCard
           label="Best Performer"
           value={best?.ticker || '—'}
           sub={best ? `+${fmt(best.pnlPct, 2)}%` : ''}
-          color={theme.colors.success}
+          color={'var(--aegean-green)'}
           icon={TrendingUp}
         />
         <StatCard
           label="Worst Performer"
           value={worst?.ticker || '—'}
           sub={worst ? `${fmt(worst.pnlPct, 2)}%` : ''}
-          color={theme.colors.error}
+          color={'var(--terracotta)'}
           icon={TrendingDown}
         />
         <StatCard
@@ -381,14 +381,14 @@ export default function Analytics() {
           label="CAGR"
           value={`${fmt(cagr, 2)}%`}
           sub="Annualized return"
-          color={cagr >= 0 ? theme.colors.success : theme.colors.error}
+          color={cagr >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)'}
           icon={ArrowUpRight}
         />
         <StatCard
           label="XIRR"
           value={`${fmt(xirr, 2)}%`}
           sub="Cash-flow weighted return"
-          color={xirr >= 0 ? theme.colors.success : theme.colors.error}
+          color={xirr >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)'}
           icon={Percent}
         />
         <StatCard
@@ -409,22 +409,22 @@ export default function Analytics() {
         <div className="section-label" style={{ marginBottom: 14 }}>Portfolio vs Benchmark</div>
         <div style={{ height: 280, width: '100%' }}>
           {loadingHistory ? (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.textMuted }}>Loading history…</div>
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)' }}>Loading history…</div>
           ) : chartData.length ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
-                <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: theme.colors.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: theme.colors.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
+                <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
+                <XAxis dataKey="date" tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
                 <Tooltip
-                  contentStyle={{ background: '#0f1e1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, color: theme.colors.text }}
+                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-primary)' }}
                 />
-                <Line type="monotone" dataKey="portfolio" stroke={theme.colors.gold} strokeWidth={2.5} dot={false} />
-                <Line type="monotone" dataKey="benchmark" stroke={theme.colors.accent} strokeWidth={2} dot={false} strokeDasharray="5 4" />
+                <Line type="monotone" dataKey="portfolio" stroke="var(--greek-gold)" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="benchmark" stroke="var(--amber-gold)" strokeWidth={2} dot={false} strokeDasharray="5 4" />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.textMuted }}>No history available yet.</div>
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)' }}>No history available yet.</div>
           )}
         </div>
       </div>
@@ -436,15 +436,15 @@ export default function Analytics() {
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="drawdownFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={theme.colors.error} stopOpacity={0.35} />
-                  <stop offset="95%" stopColor={theme.colors.error} stopOpacity={0.02} />
+                  <stop offset="5%" stopColor="var(--terracotta)" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="var(--terracotta)" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-              <XAxis dataKey="date" tick={{ fill: theme.colors.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: theme.colors.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
-              <Tooltip contentStyle={{ background: '#0f1e1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, color: theme.colors.text }} />
-              <Area type="monotone" dataKey="drawdown" stroke={theme.colors.error} fill="url(#drawdownFill)" strokeWidth={2} dot={false} />
+              <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
+              <XAxis dataKey="date" tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
+              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-primary)' }} />
+              <Area type="monotone" dataKey="drawdown" stroke="var(--terracotta)" fill="url(#drawdownFill)" strokeWidth={2} dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -461,8 +461,8 @@ export default function Analytics() {
               {donutSlices.map((s, i) => (
                 <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                   <span style={{ width: 10, height: 10, borderRadius: 3, background: DONUT_COLORS[i % DONUT_COLORS.length], flexShrink: 0 }} />
-                  <span style={{ color: theme.colors.textSoft, flex: 1, textTransform: 'capitalize' }}>{s.label}</span>
-                  <span style={{ color: theme.colors.text, fontWeight: 700 }}>
+                  <span style={{ color: 'var(--text-secondary)', flex: 1, textTransform: 'capitalize' }}>{s.label}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
                     {fmt((s.value / donutSlices.reduce((a, x) => a + x.value, 0)) * 100, 1)}%
                   </span>
                 </div>
@@ -477,11 +477,11 @@ export default function Analytics() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto' }}>
             {sorted.map((h) => (
               <div key={h.id || h.ticker} style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 28 }}>
-                <span style={{ color: theme.colors.textSoft, fontSize: 12, fontWeight: 700, width: 72, flexShrink: 0 }}>{h.ticker}</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, width: 72, flexShrink: 0, fontFamily: 'var(--font-serif)' }}>{h.ticker}</span>
                 <PnLBar pnl={h.pnl} maxAbs={maxAbs} />
                 <span
                   style={{
-                    color: h.pnl >= 0 ? theme.colors.success : theme.colors.error,
+                    color: h.pnl >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)',
                     fontSize: 12, fontWeight: 700, width: 80, textAlign: 'right', flexShrink: 0,
                   }}
                 >
@@ -489,7 +489,7 @@ export default function Analytics() {
                 </span>
                 <span
                   style={{
-                    color: h.pnl >= 0 ? theme.colors.success : theme.colors.error,
+                    color: h.pnl >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)',
                     fontSize: 11, width: 52, textAlign: 'right', flexShrink: 0,
                   }}
                 >
@@ -517,20 +517,20 @@ export default function Analytics() {
           <div key={label} style={{ ...panelStyle({ padding: '16px 14px' }) }}>
             <div className="section-label" style={{ marginBottom: 12 }}>{label}</div>
             {!items.length ? (
-              <div style={{ color: theme.colors.textMuted, fontSize: 12 }}>None</div>
+              <div style={{ color: 'var(--text-faint)', fontSize: 12 }}>None</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {items.map((h) => (
                   <div key={h.ticker} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
                     <div>
-                      <div style={{ color: theme.colors.text, fontWeight: 700 }}>{h.ticker}</div>
-                      <div style={{ color: theme.colors.textMuted, fontSize: 11 }}>{h.company_name || h.asset_class}</div>
+                      <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontFamily: 'var(--font-serif)' }}>{h.ticker}</div>
+                      <div style={{ color: 'var(--text-faint)', fontSize: 11 }}>{h.company_name || h.asset_class}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ color: positive ? theme.colors.success : theme.colors.error, fontWeight: 700 }}>
+                      <div style={{ color: positive ? 'var(--aegean-green)' : 'var(--terracotta)', fontWeight: 700 }}>
                         {h.pnl >= 0 ? '+' : ''}{fmtCrore(h.pnl)}
                       </div>
-                      <div style={{ color: theme.colors.textMuted, fontSize: 11 }}>
+                      <div style={{ color: 'var(--text-faint)', fontSize: 11 }}>
                         {h.pnlPct >= 0 ? '+' : ''}{fmt(h.pnlPct, 2)}%
                       </div>
                     </div>

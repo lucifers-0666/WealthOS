@@ -1,5 +1,10 @@
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned -Force
 
+# Ensure PowerShell uses UTF-8 so Unicode box-drawing and arrow characters render correctly
+chcp 65001 > $null
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+
 # Repository root
 $RepoRoot = "D:\wealthOS\WealthOS"
 Set-Location -Path $RepoRoot

@@ -1,10 +1,11 @@
-﻿import React, { useMemo, Suspense, useEffect, useState } from "react";
+import React, { useMemo, Suspense, useEffect, useState } from "react";
 import { usePortfolio } from "../lib/usePortfolio.js";
 import { useMarketData } from "../lib/MarketDataContext.jsx";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { PageLoadingState, PageErrorState, EmptyState } from "../components/PageStates.jsx";
 import { LineChart, Line, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 import { request } from "../services/api.js";
+import { supabase } from "../lib/auth.js";
 import { DonutCard, InsightsCard, PositionWeightsCard } from "../components/DashboardCharts.jsx";
 
 const C = {
@@ -86,16 +87,22 @@ export default function Dashboard() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    request("GET", "/api/portfolio/history", null, { days: 7 })
-      .then(data => { if (Array.isArray(data)) setSparkData(data.map(d => ({ value: d.value }))); })
-      .catch(() => {});
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      request("GET", "/api/portfolio/history", null, { days: 7 }, { headers: { Authorization: `Bearer ${token}` } })
+        .then(data => { if (Array.isArray(data)) setSparkData(data.map(d => ({ value: d.value }))); })
+        .catch(() => {});
+    });
   }, []);
 
   useEffect(() => {
     const load = () => {
-      request("GET", "/api/market/ticker")
-        .then(data => { if (Array.isArray(data) && data.length) setTickerItems(data); })
-        .catch(() => {});
+      supabase.auth.getSession().then(({ data }) => {
+        const token = data?.session?.access_token;
+        request("GET", "/api/market/ticker", null, null, { headers: { Authorization: `Bearer ${token}` } })
+          .then(data => { if (Array.isArray(data) && data.length) setTickerItems(data); })
+          .catch(() => {});
+      });
     };
     load();
     const t = setInterval(load, 60000);

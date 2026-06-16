@@ -612,6 +612,30 @@ def remove_holding(holding_id: str, user_id: str = Depends(get_user_id)):
         logger.warning(f"Failed to write holding removal activity: {exc}")
     return {"deleted": True, "persisted": True}
 
+class HoldingUpdateIn(BaseModel):
+    ticker: Optional[str] = None
+    company_name: Optional[str] = None
+    quantity: Optional[float] = None
+    avg_buy_price: Optional[float] = None
+    exchange: Optional[str] = None
+    asset_class: Optional[str] = None
+    currency: Optional[str] = None
+    sector: Optional[str] = None
+
+@app.put("/portfolio/holdings/{holding_id}")
+def update_holding(holding_id: str, updates: HoldingUpdateIn, user_id: str = Depends(get_user_id)):
+    existing = get_holdings(user_id)
+    match = next((h for h in existing if str(h.get("id")) == holding_id), None)
+    if not match:
+        raise HTTPException(status_code=404, detail="Holding not found")
+    payload = {**match, **updates.model_dump(exclude_none=True)}
+    result = upsert_holding(user_id, payload)
+    try:
+        create_user_activity(user_id, "holding_edited", f"Updated holding {payload.get('ticker','')}", {"holding_id": holding_id})
+    except Exception as exc:
+        logger.warning(f"Failed to write update activity: {exc}")
+    return result
+
 
 # ── Transactions ─────────────────────────────────────────────────
 @app.get("/transactions")

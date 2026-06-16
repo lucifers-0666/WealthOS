@@ -21,6 +21,7 @@ export const getActivity = (limit = 50) => request('GET', '/api/user/activity', 
 export const getHoldings = () => request('GET', '/holdings');
 export const getPortfolio = () => request('GET', '/portfolio');
 export const createHolding = (data) => request('POST', '/holdings', data);
+export const updateHolding = (id, payload) => request('PUT', `/portfolio/holdings/${id}`, payload);
 export const deleteHolding = (id) => request('DELETE', `/holdings/${id}`);
 
 export const getTransactions = (ticker = null, action = null) =>

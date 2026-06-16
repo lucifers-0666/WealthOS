@@ -2,7 +2,6 @@ import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { usePortfolio } from '../lib/usePortfolio.js';
 import { useMarketData } from '../lib/MarketDataContext.jsx';
 import { theme, panelStyle } from '../lib/theme.js';
-import { calcSummary, calcConcentration } from '../lib/usePortfolioCalc.js';
 import { useAnimatedNumber, flashClass } from '../lib/useAnimatedNumber.js';
 import { PageLoadingState, PageErrorState, EmptyState } from '../components/PageStates.jsx';
 import LiveIndicator from '../components/LiveIndicator.jsx';
@@ -203,8 +202,8 @@ export default function Portfolio() {
     });
   }, [rawHoldings, filterClass, sortKey, sortDir]);
 
-  const summary = useMemo(() => calcSummary(rawHoldings) || portfolio?.summary || {}, [rawHoldings, portfolio?.summary]);
-  const totalValue = summary.current_value || 0;
+  const summary = portfolio?.summary || {};
+  const totalValue = summary.totalCurrent || 0;
 
   function toggleSort(key) {
     if (sortKey === key) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
@@ -260,10 +259,10 @@ export default function Portfolio() {
   }
 
   const kpis = [
-    { label: 'Portfolio value',  rawValue: summary.current_value,  sub: 'Live valuation',        tone: 'neutral',  live: isLive },
-    { label: 'Total invested',   rawValue: summary.total_invested,  sub: 'Cost basis',            tone: 'neutral',  live: false  },
-    { label: 'Unrealised P&L',  rawValue: summary.total_pnl,       sub: pct(summary.total_pnl_pct),   tone: (summary.total_pnl  || 0) >= 0 ? 'positive' : 'negative', live: isLive },
-    { label: 'Day change',       rawValue: summary.day_change,      sub: pct(summary.day_change_pct),  tone: (summary.day_change || 0) >= 0 ? 'positive' : 'negative', live: isLive },
+    { label: 'Portfolio value',  rawValue: summary.totalCurrent,  sub: 'Live valuation',        tone: 'neutral',  live: isLive },
+    { label: 'Total invested',   rawValue: summary.totalInvested,  sub: 'Cost basis',            tone: 'neutral',  live: false  },
+    { label: 'Unrealised P&L',  rawValue: summary.totalPnl,       sub: pct(summary.totalPnlPct),   tone: (summary.totalPnl  || 0) >= 0 ? 'positive' : 'negative', live: isLive },
+    { label: 'Day change',       rawValue: summary.totalDayChange,      sub: pct(summary.totalDayChangePct),  tone: (summary.totalDayChange || 0) >= 0 ? 'positive' : 'negative', live: isLive },
   ];
 
   return (
@@ -367,14 +366,14 @@ export default function Portfolio() {
             {holdings.length} holding{holdings.length !== 1 ? 's' : ''}
           </span>
           <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
-            Invested: <strong>{compact(summary.total_invested)}</strong>
+            Invested: <strong>{compact(summary.totalInvested)}</strong>
           </span>
           <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
-            Current: <strong>{compact(summary.current_value)}</strong>
+            Current: <strong>{compact(summary.totalCurrent)}</strong>
           </span>
           <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums',
-            color: (summary.total_pnl || 0) >= 0 ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)' }}>
-            P&L: <strong>{compact(summary.total_pnl)} ({pct(summary.total_pnl_pct)})</strong>
+            color: (summary.totalPnl || 0) >= 0 ? 'var(--color-success,#4ade80)' : 'var(--color-error,#f87171)' }}>
+            P&L: <strong>{compact(summary.totalPnl)} ({pct(summary.totalPnlPct)})</strong>
           </span>
         </div>
       )}

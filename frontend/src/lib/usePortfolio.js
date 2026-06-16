@@ -13,6 +13,7 @@ import {
   getTargetAllocation,
   getWatchlist,
   createHolding as createHoldingApi,
+  updateHolding as updateHoldingApi,
   deleteHolding as deleteHoldingApi,
   addToWatchlist as addToWatchlistApi,
   removeFromWatchlist as removeFromWatchlistApi,
@@ -120,7 +121,7 @@ function mergeWithLivePrice(holding, priceData) {
 }
 
 function buildSummary(enrichedHoldings) {
-  const totalInvested = enrichedHoldings.reduce((s, h) => s + (h.invested || 0), 0);
+  const totalInvested = enrichedHoldings.reduce((s, h) => s + (h.invested_amount || 0), 0);
   const totalCurrent = enrichedHoldings.reduce((s, h) => s + (h.current_value || 0), 0);
   const totalPnl = totalCurrent - totalInvested;
   const totalPnlPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
@@ -244,7 +245,7 @@ export function usePortfolio() {
   // Merge live prices — recomputes whenever prices Map or rawHoldings changes
   const holdings = useMemo(() => {
     return rawHoldings.map(h => {
-      const priceData = prices.get(h.symbol);
+      const priceData = prices.get(h.symbol) || prices.get(h.ticker) || prices.get(h.symbol + '.NS') || null;
       return mergeWithLivePrice(h, priceData);
     });
   }, [rawHoldings, prices]);
@@ -271,7 +272,8 @@ export function usePortfolio() {
     return res;
   }, [refresh]);
 
-  const updateHolding = useCallback(async (id, payload) => {
+  const updateHolding = useCallback(async (data) => {
+    const { id, ...payload } = data;
     // Optimistic update
     setRawHoldings(prev => prev.map(h => h.id === id ? { ...h, ...payload } : h));
     try {
@@ -286,7 +288,7 @@ export function usePortfolio() {
         if (mountedRef.current) setRawHoldings(next.map(normalizeHolding));
         return { id, ...payload };
       }
-      const res = await createHoldingApi({ id, ...payload });
+      const res = await updateHoldingApi(id, payload);
       await refresh();
       return res;
     } catch (err) {

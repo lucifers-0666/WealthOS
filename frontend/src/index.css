@@ -1070,3 +1070,289 @@ body {
   border-color: var(--border, #1f2b1f) !important;
   box-shadow: 0 0 0 1px rgba(245,166,35,0.10);
 }
+
+/* =========================================================================
+   USER REQUESTED VISUAL FIXES
+   ========================================================================= */
+
+/* ISSUE 1 — BACKGROUNDS ARE TOO DARK AND FLAT */
+body, #root { background-color: #1a1206; }
+
+/* Level 1 — sidebar */
+.sidebar { background: #1c1508; }
+
+/* Level 2 — cards, panels */
+.card, [class*="card"], [class*="panel"], [class*="Card"] {
+  background: #271c09;
+  border: 0.5px solid rgba(212, 160, 23, 0.22);
+  border-top: 1px solid rgba(212, 160, 23, 0.38);
+}
+
+/* Level 3 — table rows hover, inner elements */
+.table-row:hover, [class*="row"]:hover {
+  background: rgba(212, 160, 23, 0.06);
+}
+
+/* Level 4 — topbar */
+.topbar, header, nav[class*="top"] {
+  background: rgba(24, 15, 5, 0.97);
+  border-bottom: 0.5px solid rgba(212, 160, 23, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+/* ISSUE 2 — INPUT FIELDS ARE BRIGHT WHITE / WRONG COLOR */
+input, textarea, select, [class*="input"], [class*="Input"] {
+  background: #271c09 !important;
+  border: 0.5px solid rgba(212, 160, 23, 0.3) !important;
+  border-radius: 3px !important;
+  color: #f0e6c8 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  padding: 12px 14px !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #c4b48a !important;
+  opacity: 1 !important;
+}
+
+input:focus, textarea:focus {
+  outline: none !important;
+  border-color: rgba(212, 160, 23, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(212, 160, 23, 0.1) !important;
+}
+
+/* ISSUE 3 — SIGN IN BUTTON HAS GRADIENT */
+button[type="submit"],
+[class*="sign-in"], [class*="SignIn"],
+button:has(> span:contains("Sign in")) {
+  background: #d4a017 !important;
+  background-image: none !important;
+  color: #1a1206 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  letter-spacing: 0.04em !important;
+  border-radius: 3px !important;
+  border: none !important;
+  transition: background 180ms ease !important;
+}
+
+button[type="submit"]:hover {
+  background: #e8b820 !important;
+}
+
+/* ISSUE 4 — DONUT CHART CONTAINER */
+canvas, [class*="chart"], [class*="Chart"] {
+  background: transparent !important;
+}
+
+/* ISSUE 5 — POSITION WEIGHT BARS ARE WRONG COLOR */
+[class*="progress"], [class*="Progress"], [role="progressbar"] {
+  background: rgba(212, 160, 23, 0.12) !important;
+}
+
+[class*="progress"] > div,
+[class*="Progress"] > div,
+[role="progressbar"] > div {
+  background: linear-gradient(90deg, #b8960a, #d4a017) !important;
+  border-radius: 1px !important;
+}
+
+/* ISSUE 6 — EMPTY STATE ICONS ARE NOT STYLED */
+[class*="empty"], [class*="Empty"] {
+  background: #271c09 !important;
+  border: 0.5px solid rgba(212, 160, 23, 0.18) !important;
+  border-radius: 4px !important;
+}
+
+[class*="empty"] svg, [class*="Empty"] svg {
+  color: rgba(212, 160, 23, 0.4) !important;
+  width: 40px !important;
+  height: 40px !important;
+}
+
+[class*="empty"] h3, [class*="empty"] strong, [class*="Empty"] h3 {
+  font-family: 'Cinzel', serif !important;
+  color: #f0e6c8 !important;
+  font-size: 16px !important;
+}
+
+[class*="empty"] p, [class*="Empty"] p {
+  font-family: 'Space Grotesk', sans-serif !important;
+  color: #c4b48a !important;
+  font-size: 14px !important;
+}
+
+/* AI Advisor welcome bubble */
+[class*="message"], [class*="Message"], [class*="bubble"], [class*="Bubble"] {
+  background: #271c09 !important;
+  border: 0.5px solid rgba(212, 160, 23, 0.2) !important;
+  border-left: 2px solid rgba(212, 160, 23, 0.5) !important;
+  color: #f0e6c8 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  border-radius: 3px !important;
+}
+
+/* ISSUE 7 — AI ADVISOR PROMPT CHIPS LOOK GENERIC */
+[class*="chip"], [class*="Chip"], [class*="tag"], [class*="Tag"],
+[class*="prompt"], [class*="Prompt"] {
+  background: rgba(212, 160, 23, 0.08) !important;
+  border: 0.5px solid rgba(212, 160, 23, 0.25) !important;
+  color: #e8d8a8 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.03em !important;
+  border-radius: 2px !important;
+  padding: 6px 12px !important;
+}
+
+[class*="chip"]:hover, [class*="Chip"]:hover {
+  background: rgba(212, 160, 23, 0.14) !important;
+  border-color: rgba(212, 160, 23, 0.4) !important;
+  color: #d4a017 !important;
+}
+
+/* ISSUE 8 — ANALYTICS PAGE METRICS ARE LOW CONTRAST */
+[class*="metric-value"], [class*="MetricValue"],
+[class*="stat-value"], [class*="kpi"] h2,
+[class*="kpi"] h3 {
+  font-family: 'Cinzel', serif !important;
+  color: #f0e6c8 !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+[class*="metric-label"], [class*="MetricLabel"],
+[class*="stat-label"], [class*="kpi"] p,
+[class*="kpi"] span:not([class*="value"]) {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: #c4b48a !important;
+}
+
+[class*="negative"], [class*="loss"], [class*="red"],
+span:contains("-₹"), span:contains("-3.80%") {
+  color: #c0443a !important;
+}
+
+[class*="positive"], [class*="gain"], [class*="green"],
+span:contains("+") {
+  color: #4a8a6a !important;
+}
+
+/* ISSUE 10 — SEARCH BAR BACKGROUND IS WRONG */
+[class*="search"], [class*="Search"],
+input[placeholder*="Search"], input[placeholder*="search"] {
+  background: rgba(39, 28, 9, 0.8) !important;
+  border: 0.5px solid rgba(212, 160, 23, 0.2) !important;
+  border-radius: 4px !important;
+  color: #f0e6c8 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+}
+
+[class*="search"] svg, [class*="Search"] svg {
+  color: #c4b48a !important;
+}
+
+[class*="kbd"], kbd {
+  background: rgba(212, 160, 23, 0.1) !important;
+  border: 0.5px solid rgba(212, 160, 23, 0.25) !important;
+  color: #c4b48a !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 10px !important;
+  border-radius: 2px !important;
+}
+
+/* ISSUE 11 — TYPOGRAPHY: CINZEL NOT APPLIED TO ALL HEADINGS */
+h1, h2, h3, h4,
+[class*="heading"], [class*="Heading"],
+[class*="title"]:not([class*="subtitle"]),
+[class*="Title"]:not([class*="Subtitle"]),
+[class*="page-title"], [class*="PageTitle"] {
+  font-family: 'Cinzel', serif !important;
+  letter-spacing: 0.03em !important;
+  line-height: 1.15 !important;
+  color: #f0e6c8 !important;
+}
+
+p, span, li, label, nav a,
+[class*="subtitle"], [class*="Subtitle"],
+[class*="label"], [class*="Label"],
+[class*="body"], [class*="Body"],
+[class*="nav-item"], [class*="NavItem"] {
+  font-family: 'Space Grotesk', sans-serif !important;
+}
+
+[class*="advisor-message"], [class*="ai-response"],
+[class*="oracle"], [class*="Oracle"] {
+  font-family: 'IM Fell English', serif !important;
+  font-style: italic !important;
+  color: #e8d8a8 !important;
+}
+
+/* ISSUE 12 — SCROLLING TICKER BAR DUPLICATES */
+[class*="ticker"], [class*="Ticker"] {
+  overflow: hidden !important;
+  white-space: nowrap !important;
+}
+
+[class*="ticker"] > div {
+  display: inline-flex !important;
+  gap: 48px !important;
+  animation: ticker-scroll 30s linear infinite !important;
+}
+
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+[class*="ticker"] span {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #c4b48a !important;
+  letter-spacing: 0.04em !important;
+}
+
+[class*="ticker"] .positive { color: #4a8a6a !important; }
+[class*="ticker"] .negative { color: #c0443a !important; }
+
+/* ISSUE 13 — TABLE FONT INCONSISTENCY */
+thead th, [class*="table-header"], [class*="TableHeader"],
+[class*="col-header"], [class*="ColHeader"] {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  color: #c4b48a !important;
+  border-bottom: 0.5px solid rgba(212, 160, 23, 0.3) !important;
+  padding: 10px 16px !important;
+}
+
+[class*="stock-name"], [class*="StockName"] {
+  font-family: 'Cinzel', serif !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #f0e6c8 !important;
+}
+
+[class*="exchange"], [class*="Exchange"],
+[class*="asset-type"], [class*="AssetType"] {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 11px !important;
+  color: #c4b48a !important;
+  opacity: 1 !important;
+}
+
+tbody tr {
+  border-bottom: 0.5px solid rgba(212, 160, 23, 0.09) !important;
+}
+tbody tr:hover {
+  background: rgba(212, 160, 23, 0.05) !important;
+}

@@ -17,15 +17,16 @@ const C = {
 };
 
 const COLORS = [
-  '#d4a017',  // greek-gold
-  '#b8960a',  // amber-gold
-  '#f0e6c8',  // parchment
-  '#e8d8a8',  // cream
-  '#c4b48a',  // sand
-  '#4a8a6a',  // aegean-green
-  '#3d2e0a',  // border-dark
-  '#6b2e2e',  // terracotta
-  '#8b7b54',  // muted sand
+  '#d4a017',  // Greek gold — primary/largest
+  '#b8960a',  // Amber gold
+  '#c4a535',  // Warm gold-2
+  '#4a8a6a',  // Aegean green
+  '#8a6a3a',  // Bronze
+  '#6a7a5a',  // Muted sage
+  '#a87840',  // Terracotta gold
+  '#c4b48a',  // Sand
+  '#5a7a6a',  // Dark aegean
+  '#9a8030',  // Deep gold
 ];
 const money = v => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v || 0);
 

@@ -62,11 +62,10 @@ function TickerItem({ name, value, change }) {
 }
 
 function TickerTape({ items }) {
-  const doubled = [...items, ...items];
   return (
     <div className="ticker-wrap" style={{ width: "100%", overflow: "hidden", background: C.card, borderTop: "1px solid " + C.border, borderBottom: "1px solid " + C.border, height: 36, display: "flex", alignItems: "center" }}>
       <div className="ticker-track" style={{ display: "flex", gap: 0, animation: "ticker-scroll 50s linear infinite", whiteSpace: "nowrap", height: "100%", alignItems: "center" }}>
-        {doubled.map((item, i) => <TickerItem key={i} {...item} />)}
+        {items.map((item, i) => <TickerItem key={i} {...item} />)}
       </div>
     </div>
   );

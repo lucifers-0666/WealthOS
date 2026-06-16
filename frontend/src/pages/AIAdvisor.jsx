@@ -4,13 +4,13 @@ import { usePortfolio } from '../lib/usePortfolio';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const SMART_PROMPTS = [
-  { label: '⚖️ Rebalance', text: 'Analyze my current allocation and suggest a rebalancing plan.' },
-  { label: '🎯 Concentration Risk', text: 'Identify concentration risks in my portfolio and suggest fixes.' },
-  { label: '📊 vs NIFTY', text: 'Compare my portfolio performance against NIFTY 50 benchmark.' },
-  { label: '💡 SIP Plan', text: 'Suggest a monthly SIP plan based on my current holdings and risk profile.' },
-  { label: '🛡️ Tax Harvesting', text: 'Identify tax loss harvesting opportunities in my portfolio.' },
-  { label: '📉 Stress Test 10%', text: 'What happens to my portfolio if NIFTY falls 10%? Show sector impact.' },
-  { label: '💻 IT Sector -15%', text: 'Simulate a 15% drop in IT sector — what is my estimated portfolio impact?' },
+  { label: 'Rebalance', text: 'Analyze my current allocation and suggest a rebalancing plan.' },
+  { label: 'Concentration Risk', text: 'Identify concentration risks in my portfolio and suggest fixes.' },
+  { label: 'vs NIFTY', text: 'Compare my portfolio performance against NIFTY 50 benchmark.' },
+  { label: 'SIP Plan', text: 'Suggest a monthly SIP plan based on my current holdings and risk profile.' },
+  { label: 'Tax Harvesting', text: 'Identify tax loss harvesting opportunities in my portfolio.' },
+  { label: 'Stress Test 10%', text: 'What happens to my portfolio if NIFTY falls 10%? Show sector impact.' },
+  { label: 'IT Sector -15%', text: 'Simulate a 15% drop in IT sector — what is my estimated portfolio impact?' },
 ];
 
 const FALLBACK_MSG = 'Advisor systems are temporarily under elevated load. Your portfolio context is preserved — please try again in a moment.';

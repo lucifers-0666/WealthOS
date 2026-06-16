@@ -28,9 +28,9 @@
 
   /* Base surfaces */
   --bg-base:         var(--obsidian);
-  --bg-card:         var(--night-marble);
+  --bg-card:         #271c09;
   --bg-card-hover:   #2e210b;
-  --bg-sidebar:      var(--obsidian);
+  --bg-sidebar:      #1c1508;
   --border:          var(--border-dark);
   --border-subtle:   rgba(212,160,23,0.15);
 
@@ -1076,14 +1076,14 @@ body {
    ========================================================================= */
 
 /* ISSUE 1 — BACKGROUNDS ARE TOO DARK AND FLAT */
-body, #root { background-color: #1a1206; }
+body, #root { background-color: var(--bg-base); }
 
 /* Level 1 — sidebar */
-.sidebar { background: #1c1508; }
+.sidebar { background: var(--bg-sidebar); }
 
 /* Level 2 — cards, panels */
 .card, [class*="card"], [class*="panel"], [class*="Card"] {
-  background: #271c09;
+  background: var(--bg-card);
   border: 0.5px solid rgba(212, 160, 23, 0.22);
   border-top: 1px solid rgba(212, 160, 23, 0.38);
 }
@@ -1102,16 +1102,16 @@ body, #root { background-color: #1a1206; }
 
 /* ISSUE 2 — INPUT FIELDS ARE BRIGHT WHITE / WRONG COLOR */
 input, textarea, select, [class*="input"], [class*="Input"] {
-  background: #271c09 !important;
-  border: 0.5px solid rgba(212, 160, 23, 0.3) !important;
+  background: var(--bg-card) !important;
+  border: 0.5px solid var(--border) !important;
   border-radius: 3px !important;
-  color: #f0e6c8 !important;
-  font-family: 'Space Grotesk', sans-serif !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-sans) !important;
   padding: 12px 14px !important;
 }
 
 input::placeholder, textarea::placeholder {
-  color: #c4b48a !important;
+  color: var(--text-faint) !important;
   opacity: 1 !important;
 }
 
@@ -1235,12 +1235,12 @@ canvas, [class*="chart"], [class*="Chart"] {
 }
 
 [class*="negative"], [class*="loss"], [class*="red"],
-span:contains("-₹"), span:contains("-3.80%") {
+.negative, .loss, [data-negative="true"] {
   color: #c0443a !important;
 }
 
 [class*="positive"], [class*="gain"], [class*="green"],
-span:contains("+") {
+.positive, .gain, [data-positive="true"] {
   color: #4a8a6a !important;
 }
 

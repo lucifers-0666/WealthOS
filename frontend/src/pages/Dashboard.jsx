@@ -56,16 +56,17 @@ function TickerItem({ name, value, change }) {
     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "0 22px", borderRight: "1px solid " + C.borderSub, fontSize: 11, flexShrink: 0, height: "100%" }}>
       <span style={{ color: C.muted, fontWeight: 600, letterSpacing: "0.05em" }}>{name}</span>
       {valStr && <span style={{ color: C.text, fontVariantNumeric: "tabular-nums" }}>{valStr}</span>}
-      <span style={{ fontSize: 10, color }}>{prefix}{Math.abs(change).toFixed(2)}%</span>
+      <span className={change >= 0 ? "positive" : "negative"} style={{ fontSize: 10 }}>{prefix}{Math.abs(change).toFixed(2)}%</span>
     </span>
   );
 }
 
 function TickerTape({ items }) {
+  const doubled = [...items, ...items];
   return (
     <div className="ticker-wrap" style={{ width: "100%", overflow: "hidden", background: C.card, borderTop: "1px solid " + C.border, borderBottom: "1px solid " + C.border, height: 36, display: "flex", alignItems: "center" }}>
       <div className="ticker-track" style={{ display: "flex", gap: 0, animation: "ticker-scroll 50s linear infinite", whiteSpace: "nowrap", height: "100%", alignItems: "center" }}>
-        {items.map((item, i) => <TickerItem key={i} {...item} />)}
+        {doubled.map((item, i) => <TickerItem key={i} {...item} />)}
       </div>
     </div>
   );
@@ -206,7 +207,7 @@ export default function Dashboard() {
             <div style={{ display: "grid", gap: 8, color: C.muted, lineHeight: 1.65, fontSize: 13 }}>
               {holdings.length ? (
                 <>
-                  <p style={{ margin: 0 }}>You hold <strong style={{ color: C.text }}>{holdings.length}</strong> active positions. Unrealised P&amp;L stands at <strong style={{ color: (summary.total_pnl || 0) >= 0 ? C.green : C.red }}>{fmt(summary.total_pnl)} ({pct(summary.total_pnl_pct)})</strong>. Your largest exposure is <strong style={{ color: C.text }}>{topPositions[0]?.ticker || topPositions[0]?.symbol || "-"}</strong> at <strong style={{ color: C.text }}>{((topPositions[0]?.current_value || 0) / (summary.current_value || 1) * 100).toFixed(1)}%</strong> of the portfolio.</p>
+                  <p style={{ margin: 0 }}>You hold <strong style={{ color: C.text }}>{holdings.length}</strong> active positions. Unrealised P&amp;L stands at <strong className={(summary.total_pnl || 0) >= 0 ? "positive" : "negative"}>{fmt(summary.total_pnl)} ({pct(summary.total_pnl_pct)})</strong>. Your largest exposure is <strong style={{ color: C.text }}>{topPositions[0]?.ticker || topPositions[0]?.symbol || "-"}</strong> at <strong style={{ color: C.text }}>{((topPositions[0]?.current_value || 0) / (summary.current_value || 1) * 100).toFixed(1)}%</strong> of the portfolio.</p>
                   
                   <div style={{ marginTop: 12 }}>
                     <div style={{ fontSize: 9, color: 'var(--text-faint, #3d3520)', letterSpacing: '0.1em', marginBottom: 6 }}>7-DAY PERFORMANCE</div>
@@ -232,7 +233,7 @@ export default function Dashboard() {
                         ].map(({ label, value }) => (
                           <div key={label} style={{ background: 'var(--bg-base)', borderRadius: 4, padding: '6px 8px', border: '1px solid var(--border-subtle)' }}>
                             <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.08em' }}>{label}</div>
-                            <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: value >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)', marginTop: 2 }}>
+                            <div className={value >= 0 ? "positive" : "negative"} style={{ fontSize: 12, fontFamily: 'var(--font-mono)', marginTop: 2 }}>
                               {value >= 0 ? '+' : ''}{value.toFixed(2)}%
                             </div>
                           </div>
@@ -308,7 +309,7 @@ export default function Dashboard() {
                   <span style={{ fontWeight: 600, color: C.text, fontSize: 13 }}>{item.ticker}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
                     {item.current_price && <span style={{ fontVariantNumeric: "tabular-nums", color: C.text }}>{fmt(item.current_price)}</span>}
-                    {item.change_pct != null && <span style={{ color: item.change_pct >= 0 ? C.green : C.red }}>{pct(item.change_pct)}</span>}
+                    {item.change_pct != null && <span className={item.change_pct >= 0 ? "positive" : "negative"}>{pct(item.change_pct)}</span>}
                     {!item.current_price && <span style={{ color: C.muted }}>{item.target_price ? fmt(item.target_price) : "No target"}</span>}
                   </div>
                 </div>

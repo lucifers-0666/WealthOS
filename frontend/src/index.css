@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=IM+Fell+English:ital@0;1&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=EB+Garamond:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,89 +9,103 @@
 
   :root {
   /* ═══════════════════════════════════════════════
-     WEALTHOS GREEK LUXURY SYSTEM
-     Concept: Ancient Greek architecture, private banking terminal, obsidian + gold
+     ANTIGRAVITY COMMAND CENTER
+     Concept: Dark Forest Teal, Cinematic editorial fintech terminal
      ═══════════════════════════════════════════════ */
 
-  /* Core Greek Palette */
-  --obsidian: #1a1206;
-  --night-marble: #221808;
-  --border-dark: #3d2e0a;
-  --amber-gold: #b8960a;
-  --greek-gold: #d4a017;
-  --parchment: #f0e6c8;
-  --cream: #e8d8a8;
-  --sand: #c4b48a;
-  --aegean-green: #4a8a6a;
-  --terracotta: #6b2e2e;
+  /* BACKGROUNDS */
+  --bg-base:      #0A201F;
+  --bg-secondary: #102321;
+  --bg-surface:   #172923;
+  --bg-overlay:   #1E3530;
 
-  /* Base surfaces */
-  --bg-base:         var(--obsidian);
-  --bg-card:         #271c09;
-  --bg-card-hover:   #2e210b;
-  --bg-sidebar:      #1c1508;
-  --border:          var(--border-dark);
-  --border-subtle:   rgba(212,160,23,0.15);
+  /* BORDERS */
+  --border-default: #2D3C37;
+  --border-subtle:  rgba(45,60,55,0.55);
+  --border-strong:  rgba(45,60,55,0.90);
+  --border-gold:    rgba(200,179,142,0.25);
 
-  /* Text */
-  --text-primary:    var(--parchment);
-  --text-secondary:  var(--cream);
-  --text-faint:      var(--sand);
+  /* TEXT */
+  --text-primary:   #ECE0CC;
+  --text-secondary: #ACA492;
+  --text-muted:     #7B7C70;
+  --text-inverse:   #0A201F;
 
-  /* PRIMARY ACCENT */
-  --accent-green:    var(--greek-gold);
-  --accent-green-2:  var(--amber-gold);
+  /* ACCENTS */
+  --accent-gold:        #C8B38E;
+  --accent-blue:        #869FC4;
+  --accent-gold-dim:    rgba(200,179,142,0.12);
+  --accent-blue-dim:    rgba(134,159,196,0.10);
+  --accent-gold-border: rgba(200,179,142,0.22);
 
-  /* Semantic */
-  --accent-red:      var(--terracotta);
-  --accent-yellow:   var(--greek-gold);
-  --accent-blue:     #5e8eb3;
-  --accent-teal:     #6ba394;
+  /* STATUS */
+  --status-gain:    #6FAE8D;
+  --status-loss:    #B66A6A;
+  --status-warning: #D2A76D;
+  --status-neutral: #7B7C70;
 
-  /* Fonts */
-  --font-mono:       'IBM Plex Mono', 'Fira Code', monospace;
-  --font-sans:       'Space Grotesk', system-ui, sans-serif;
+  /* STATUS FILLS */
+  --fill-gain:      rgba(111,174,141,0.12);
+  --fill-loss:      rgba(182,106,106,0.12);
+  --fill-warning:   rgba(210,167,109,0.10);
+  --border-gain:    rgba(111,174,141,0.28);
+  --border-loss:    rgba(182,106,106,0.28);
+  --border-warning: rgba(210,167,109,0.24);
+
+  /* FONTS */
+  --font-mono:       'JetBrains Mono', monospace;
+  --font-sans:       'Inter', system-ui, sans-serif;
   --font-serif:      'Cinzel', serif;
-  --font-advisory:   'IM Fell English', serif;
+  --font-advisory:   'EB Garamond', serif;
 
-  /* Legacy aliases */
-  --bg:              var(--obsidian);
-  --surface:         var(--night-marble);
-  --card:            var(--night-marble);
-  --panel:           #2e210b;
-  --text:            var(--parchment);
-  --text-2:          var(--cream);
-  --text-3:          var(--sand);
-  --cyan:            #5e8eb3;
-  --violet:          #a890b0;
-  --gold:            var(--greek-gold);
-  --soft-cyan:       var(--accent-teal);
-  --border-color:    var(--border-dark);
-  --glow:            rgba(212,160,23,0.05);
-  --shadow:          0 8px 32px rgba(0,0,0,0.18);
-  --radius:          18px;
-  --ease:            cubic-bezier(0.16,1,0.3,1);
-  --t:               240ms;
+  /* Legacy Variable Mapping (to avoid breaking un-migrated components) */
+  --obsidian: var(--bg-base);
+  --night-marble: var(--bg-surface);
+  --border-dark: var(--border-default);
+  --amber-gold: var(--accent-gold);
+  --greek-gold: var(--accent-gold);
+  --parchment: var(--text-primary);
+  --cream: var(--text-secondary);
+  --sand: var(--text-muted);
+  --aegean-green: var(--status-gain);
+  --terracotta: var(--status-loss);
 
-  /* Dashboard / Chart Tokens */
-  --color-bg:            var(--obsidian);
-  --color-surface:       var(--night-marble);
-  --color-surface-2:     #2e210b;
-  --color-border:        var(--border-dark);
-  --color-border-subtle: rgba(212,160,23,0.15);
-  --color-text:          var(--parchment);
-  --color-text-muted:    var(--cream);
-  --color-text-faint:    var(--sand);
-  --color-accent:        var(--greek-gold);
-  --color-accent-2:      var(--amber-gold);
-  --color-red:           var(--terracotta);
-  --color-yellow:        var(--greek-gold);
-  --color-blue:          #5e8eb3;
-  --color-teal:          #6ba394;
-  --color-success:       var(--aegean-green);
-  --color-error:         var(--terracotta);
-  --color-warning:       var(--greek-gold);
-  --color-primary:       var(--greek-gold);
+  --bg: var(--bg-base);
+  --surface: var(--bg-surface);
+  --card: var(--bg-surface);
+  --panel: var(--bg-overlay);
+  --text: var(--text-primary);
+  --text-2: var(--text-secondary);
+  --text-3: var(--text-muted);
+  --cyan: var(--accent-blue);
+  --violet: #a890b0;
+  --gold: var(--accent-gold);
+  --soft-cyan: var(--accent-blue);
+  --border-color: var(--border-default);
+  --glow: rgba(200,179,142,0.05);
+  --shadow: 0 8px 32px rgba(0,0,0,0.18);
+  --radius: 3px;
+  --ease: cubic-bezier(0.16,1,0.3,1);
+  --t: 240ms;
+
+  --color-bg: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-surface-2: var(--bg-overlay);
+  --color-border: var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+  --color-text: var(--text-primary);
+  --color-text-muted: var(--text-secondary);
+  --color-text-faint: var(--text-muted);
+  --color-accent: var(--accent-gold);
+  --color-accent-2: var(--accent-gold);
+  --color-red: var(--status-loss);
+  --color-yellow: var(--status-warning);
+  --color-blue: var(--accent-blue);
+  --color-teal: var(--accent-blue);
+  --color-success: var(--status-gain);
+  --color-error: var(--status-loss);
+  --color-warning: var(--status-warning);
+  --color-primary: var(--accent-gold);
 }
 
   html { scroll-behavior: smooth; background: var(--bg); }
@@ -1048,6 +1061,46 @@ body {
   }
 }
 
+/* =========================================================================
+   ANTIGRAVITY FIGMA TEXT STYLES & COMPONENTS
+   ========================================================================= */
+
+.brand-logo-name { font-family: var(--font-serif); font-size: 13px; font-weight: 700; letter-spacing: 0.20em; text-transform: uppercase; color: var(--text-primary); }
+.brand-logo-tagline { font-family: var(--font-serif); font-size: 9px; font-weight: 400; letter-spacing: 0.24em; text-transform: uppercase; color: var(--text-muted); }
+
+.nav-section-label { font-family: var(--font-sans); font-size: 9px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); }
+.nav-item-active { font-family: var(--font-serif); font-size: 11px; font-weight: 600; color: var(--text-primary); }
+.nav-item-inactive { font-family: var(--font-serif); font-size: 11px; font-weight: 400; color: var(--text-secondary); }
+
+.topbar-page-title { font-family: var(--font-serif); font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.01em; }
+.topbar-subtitle { font-family: var(--font-sans); font-size: 11px; font-weight: 400; color: var(--text-muted); }
+
+.section-header { font-family: var(--font-serif); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-secondary); }
+
+.kpi-label { font-family: var(--font-sans); font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-muted); }
+.kpi-value { font-family: var(--font-mono); font-size: 26px; font-weight: 700; color: var(--text-primary); }
+.kpi-sublabel { font-family: var(--font-sans); font-size: 11px; font-weight: 400; color: var(--text-secondary); }
+
+.table-header { font-family: var(--font-sans); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-muted); }
+.table-company { font-family: var(--font-serif); font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.table-value { font-family: var(--font-mono); font-size: 12px; font-weight: 400; color: var(--text-primary); }
+
+.ticker-index-name { font-family: var(--font-sans); font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); }
+.ticker-value { font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--text-primary); }
+.ticker-change { font-family: var(--font-mono); font-size: 10px; font-weight: 400; }
+
+.ai-body-text { font-family: var(--font-advisory); font-size: 14px; font-weight: 400; color: var(--text-secondary); line-height: 1.72; }
+
+.badge-label { font-family: var(--font-sans); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+
+.insight-label { font-family: var(--font-sans); font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); }
+.insight-value { font-family: var(--font-serif); font-size: 17px; font-weight: 700; color: var(--text-primary); }
+
+.watchlist-ticker { font-family: var(--font-serif); font-size: 13px; font-weight: 600; color: var(--text-primary); }
+
+.activity-ticker { font-family: var(--font-serif); font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.activity-meta { font-family: var(--font-sans); font-size: 10px; font-weight: 400; color: var(--text-muted); }
+
 /* UX Polish Enhancements */
 
 .card-header::before {
@@ -1079,13 +1132,14 @@ body {
 body, #root { background-color: var(--bg-base); }
 
 /* Level 1 — sidebar */
-.sidebar { background: var(--bg-sidebar); }
+.sidebar { background: var(--bg-secondary); }
 
 /* Level 2 — cards, panels */
 .card, [class*="card"], [class*="panel"], [class*="Card"] {
-  background: var(--bg-card);
-  border: 0.5px solid rgba(212, 160, 23, 0.22);
-  border-top: 1px solid rgba(212, 160, 23, 0.38);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  box-shadow: none;
 }
 
 /* Level 3 — table rows hover, inner elements */

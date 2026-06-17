@@ -1,45 +1,57 @@
 import React, { useMemo, Suspense, useEffect, useState } from "react";
 import { usePortfolio } from "../lib/usePortfolio.js";
 import { useMarketData } from "../lib/MarketDataContext.jsx";
-import { TrendingDown, TrendingUp } from "lucide-react";
 import { PageLoadingState, PageErrorState, EmptyState } from "../components/PageStates.jsx";
-import { LineChart, Line, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { request } from "../services/api.js";
 import { DonutCard, InsightsCard, PositionWeightsCard } from "../components/DashboardCharts.jsx";
-
-const C = {
-  bg: "var(--bg-base)", card: "var(--bg-card)", cardHov: "var(--bg-card-hover)",
-  border: "var(--border)", borderSub: "var(--border-subtle)",
-  text: "var(--text-primary)", muted: "var(--text-secondary)", faint: "var(--text-faint)",
-  green: "var(--aegean-green)", green2: "var(--greek-gold)", red: "var(--terracotta)",
-  yellow: "var(--amber-gold)", blue: "var(--accent-blue)", teal: "var(--accent-teal)",
-};
+import { ArrowsClockwise, Warning, X, ArrowUp, ArrowDown, Star, Clock } from "@phosphor-icons/react";
 
 function fmt(n) {
   if (n == null || isNaN(n)) return "-";
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
 }
+
 function pct(n) {
   if (n == null || isNaN(n)) return "-";
   return (n >= 0 ? "+" : "") + Number(n).toFixed(2) + "%";
 }
 
-function StatCard({ label, value, sub, tone = "neutral", isLoading = false, trend, borderLeftColor }) {
-  const valueColor = tone === "positive" ? C.green : tone === "negative" ? C.red : C.text;
-  const subColor   = tone === "positive" ? C.green : tone === "negative" ? C.red : C.muted;
+function SectionHeader({ title, icon: Icon, onIconClick }) {
   return (
-    <div style={{ background: C.card, border: "1px solid " + C.border, borderLeft: borderLeftColor ? `2px solid ${borderLeftColor}` : `1px solid ${C.border}`, borderRadius: 8, padding: "20px 24px", minHeight: 110 }}>
-      <div style={{ fontSize: 10, color: C.muted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>{label}</div>
-      {isLoading
-        ? <div style={{ height: 30, width: "60%", borderRadius: 4, background: C.cardHov, marginBottom: 8 }} />
-        : <div style={{ fontSize: 26, fontWeight: 600, color: valueColor, fontVariantNumeric: "tabular-nums", marginBottom: 6 }}>{value}</div>}
-      {isLoading
-        ? <div style={{ height: 13, width: "40%", borderRadius: 4, background: C.cardHov }} />
-        : <div style={{ fontSize: 12, color: subColor }}>{sub}</div>}
-      {trend !== undefined && (
-        <div style={{ marginTop: 6, fontSize: 10, color: trend >= 0 ? 'var(--greek-gold)' : 'var(--terracotta)', display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span>{trend >= 0 ? '▲' : '▼'}</span>
-          <span style={{ fontFamily: 'var(--font-mono)' }}>{Math.abs(trend).toFixed(2)}% vs yesterday</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', height: 14 }}>
+        <div style={{ width: 2, height: '100%', background: 'var(--accent-gold)', marginRight: 8 }} />
+        <span className="section-header">{title}</span>
+      </div>
+      {Icon && (
+        <button onClick={onIconClick} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
+          <Icon size={14} color="var(--text-muted)" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value, sub, leftBorderColor, sparklineColor }) {
+  return (
+    <div style={{
+      background: 'var(--bg-surface)',
+      border: '1px solid var(--border-default)',
+      borderRadius: 3,
+      padding: '18px 20px',
+      minHeight: 100,
+      position: 'relative'
+    }}>
+      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 2, background: leftBorderColor }} />
+      <div className="kpi-label" style={{ marginBottom: 8 }}>{label}</div>
+      <div className="kpi-value" style={{ marginBottom: 4, color: sparklineColor || 'var(--text-primary)' }}>{value}</div>
+      <div className="kpi-sublabel">{sub}</div>
+      {sparklineColor && (
+        <div style={{ position: 'absolute', right: 20, bottom: 18, width: 48, height: 28, opacity: 0.8 }}>
+          <svg width="48" height="28" viewBox="0 0 48 28" preserveAspectRatio="none">
+            <path d="M0 20 Q 12 28, 24 15 T 48 5" fill="none" stroke={sparklineColor} strokeWidth="1" />
+          </svg>
         </div>
       )}
     </div>
@@ -47,40 +59,30 @@ function StatCard({ label, value, sub, tone = "neutral", isLoading = false, tren
 }
 
 function TickerItem({ name, value, change }) {
-  const color  = change > 0 ? C.green : change < 0 ? C.red : C.yellow;
-  const prefix = change > 0 ? "+" : change < 0 ? "-" : "";
-  const valStr = (typeof value === "number" && value > 0)
-    ? value.toLocaleString("en-IN", { maximumFractionDigits: 2 })
-    : null;
+  const isGain = change >= 0;
+  const color = isGain ? 'var(--status-gain)' : 'var(--status-loss)';
+  const valStr = typeof value === "number" ? value.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "-";
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "0 22px", borderRight: "1px solid " + C.borderSub, fontSize: 11, flexShrink: 0, height: "100%" }}>
-      <span style={{ color: C.muted, fontWeight: 600, letterSpacing: "0.05em" }}>{name}</span>
-      {valStr && <span style={{ color: C.text, fontVariantNumeric: "tabular-nums" }}>{valStr}</span>}
-      <span className={change >= 0 ? "positive" : "negative"} style={{ fontSize: 10 }}>{prefix}{Math.abs(change).toFixed(2)}%</span>
-    </span>
-  );
-}
-
-function TickerTape({ items }) {
-  const doubled = [...items, ...items];
-  return (
-    <div className="ticker-wrap" style={{ width: "100%", overflow: "hidden", background: C.card, borderTop: "1px solid " + C.border, borderBottom: "1px solid " + C.border, height: 36, display: "flex", alignItems: "center" }}>
-      <div className="ticker-track" style={{ display: "flex", gap: 0, animation: "ticker-scroll 50s linear infinite", whiteSpace: "nowrap", height: "100%", alignItems: "center" }}>
-        {doubled.map((item, i) => <TickerItem key={i} {...item} />)}
-      </div>
+    <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "0 20px", borderRight: "1px solid var(--border-subtle)", height: "100%" }}>
+      <span className="ticker-index-name">{name}</span>
+      <span className="ticker-value">{valStr}</span>
+      <span className="ticker-change" style={{ color }}>{isGain ? '▲' : '▼'} {Math.abs(change).toFixed(2)}%</span>
     </div>
   );
 }
 
 export default function Dashboard() {
   const { portfolio, transactions, loading, error } = usePortfolio();
-  const { holdings: liveHoldings, watchlist: liveWatchlist, marketStatus, wsStatus } = useMarketData();
+  const { holdings: liveHoldings, watchlist: liveWatchlist } = useMarketData();
 
   const [sparkData, setSparkData] = useState([]);
   const [tickerItems, setTickerItems] = useState([
-    { name: "NIFTY 50",  value: 24820.50, change: 0.45 },
-    { name: "SENSEX",    value: 81620.30, change: -0.12 },
-    { name: "BANKNIFTY", value: 52430.00, change: 0.00 },
+    { name: "NIFTY 50", value: 22419.95, change: 0.42 },
+    { name: "SENSEX", value: 73806.15, change: 0.45 },
+    { name: "USD/INR", value: 83.24, change: -0.12 },
+    { name: "GOLD", value: 71200, change: 1.20 },
+    { name: "MIDCAP 150", value: 11847.30, change: 0.54 },
+    { name: "IT INDEX", value: 36214.80, change: -0.18 },
   ]);
 
   const [dismissed, setDismissed] = useState(false);
@@ -91,21 +93,9 @@ export default function Dashboard() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const load = () => {
-      request("GET", "/api/market/ticker")
-        .then(data => { if (Array.isArray(data) && data.length) setTickerItems(data); })
-        .catch(() => {});
-    };
-    load();
-    const t = setInterval(load, 60000);
-    return () => clearInterval(t);
-  }, []);
-
   const liveHaveVal = liveHoldings.some(h => Number(h?.current_value || 0) > 0 || Number(h?.ltp || 0) > 0);
-  const holdings    = liveHaveVal ? liveHoldings : (portfolio?.holdings || []);
-  const watchlist   = liveWatchlist.some(i => Number(i?.current_price || 0) > 0)
-    ? liveWatchlist : (portfolio?.watchlist || []);
+  const holdings = liveHaveVal ? liveHoldings : (portfolio?.holdings || []);
+  const watchlist = liveWatchlist.some(i => Number(i?.current_price || 0) > 0) ? liveWatchlist : (portfolio?.watchlist || []);
 
   const summary = useMemo(() => {
     const h = holdings;
@@ -119,206 +109,200 @@ export default function Dashboard() {
     return { current_value, total_invested, total_pnl, total_pnl_pct, day_change, day_change_pct };
   }, [holdings, portfolio?.summary]);
 
-  const allocationData = useMemo(() =>
-    holdings.map(h => ({ name: h.company_name || h.name || h.ticker || "Unknown", ticker: h.ticker || h.symbol, value: h.current_value || 0 })),
-    [holdings]
-  );
-
+  const allocationData = useMemo(() => holdings.map(h => ({ name: h.company_name || h.name || h.ticker || "Unknown", ticker: h.ticker || h.symbol, value: h.current_value || 0 })), [holdings]);
   const topPositions = useMemo(() => {
     const total = summary.current_value || 1;
     return holdings.slice().sort((a, b) => (b.current_value || 0) - (a.current_value || 0)).map(h => ({ ...h, weight: ((h.current_value || 0) / total) * 100 })).slice(0, 8);
   }, [holdings, summary.current_value]);
 
-  const activity = useMemo(() => (transactions || []).slice(0, 5), [transactions]);
+  const topHolding = topPositions[0];
+  const isConcentrated = topHolding?.weight > 35;
 
-  const showSkeleton = loading && !liveHoldings.length;
-
-  const yesterdayVal = sparkData.length > 1 ? sparkData[sparkData.length - 2].value : null;
-  const todayVal = sparkData.length > 0 ? sparkData[sparkData.length - 1].value : null;
-  const trend = yesterdayVal && todayVal ? ((todayVal - yesterdayVal) / yesterdayVal) * 100 : undefined;
-
-  const kpis = [
-    { label: "Portfolio Value", value: fmt(summary.current_value),  sub: "Live portfolio valuation",           tone: "neutral",  isLoading: showSkeleton, trend: trend, borderLeftColor: "var(--greek-gold)" },
-    { label: "Total Invested",  value: fmt(summary.total_invested),  sub: "Cost basis across active positions", tone: "neutral",  isLoading: showSkeleton, trend: trend, borderLeftColor: "var(--border-dark)" },
-    { label: "Unrealised P&L",  value: fmt(summary.total_pnl),       sub: pct(summary.total_pnl_pct),          tone: (summary.total_pnl  || 0) >= 0 ? "positive" : "negative", isLoading: showSkeleton, trend: trend, borderLeftColor: (summary.total_pnl  || 0) >= 0 ? "var(--aegean-green)" : "var(--terracotta)" },
-    { label: "Day Change",      value: fmt(summary.day_change),      sub: pct(summary.day_change_pct),         tone: (summary.day_change || 0) >= 0 ? "positive" : "negative", isLoading: showSkeleton, trend: trend, borderLeftColor: (summary.day_change || 0) >= 0 ? "var(--aegean-green)" : "var(--terracotta)" },
-  ];
-
-  let connColor = C.yellow, connLabel = "Connecting...";
-  if (wsStatus === "connected")   { connColor = C.green;  connLabel = "Live"; }
-  else if (wsStatus === "error")  { connColor = C.red;    connLabel = "Reconnecting..."; }
-  else if (marketStatus && !marketStatus.is_open) { connColor = C.yellow; connLabel = "Markets Closed"; }
-
-  if (loading && !liveHoldings.length) return <PageLoadingState title="Loading command center..." subtitle="Resolving live holdings and signal flow." />;
+  if (loading && !liveHoldings.length) return <PageLoadingState title="Loading terminal..." subtitle="Resolving live data." />;
   if (error && !liveHoldings.length) return <PageErrorState title="Command center unavailable" message={error} />;
 
-  const topHolding = topPositions[0];
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", background: C.bg }}>
-
-      {/* Command bar */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 24px", height: 48, flexShrink: 0, borderBottom: "1px solid " + C.border }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--greek-gold)', textTransform: "uppercase", letterSpacing: "0.15em", fontFamily: 'var(--font-serif)' }}>Terminal Alpha</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 5, marginLeft: 16 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: connColor, display: "inline-block", animation: connColor === C.green ? "livepulse 2s ease-in-out infinite" : "none" }} />
-            <span style={{ fontSize: 11, color: connColor }}>{connLabel}</span>
-          </span>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", background: 'var(--bg-base)' }}>
+      
+      {/* Ticker Bar */}
+      <div style={{
+        height: 34,
+        background: 'var(--bg-surface)',
+        borderTop: '1px solid var(--border-subtle)',
+        borderBottom: '1px solid var(--border-default)',
+        display: 'flex',
+        alignItems: 'center',
+        flexShrink: 0
+      }}>
+        {/* Left Anchor */}
+        <div style={{ width: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRight: '1px solid var(--border-default)', height: '100%', flexShrink: 0 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--status-gain)' }} />
+          <span className="badge-label" style={{ color: 'var(--status-gain)' }}>LIVE</span>
         </div>
-        <span style={{ fontSize: 11, color: C.faint }}>{holdings.length} positions</span>
-      </div>
 
-      {topHolding?.weight > 20 && !dismissed && (
-        <div style={{ margin: '8px 24px 0', padding: '10px 16px', background: 'rgba(212,160,23,0.08)', border: '1px solid rgba(212,160,23,0.25)', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontFamily: 'var(--font-advisory)' }}>
-          <span style={{ color: 'var(--greek-gold)', fontSize: 14 }}>⚠</span>
-          <span style={{ color: 'var(--parchment)' }}>
-            Concentration Notice:
-            <strong style={{ color: 'var(--greek-gold)', marginLeft: 4 }}>{topHolding.name || topHolding.symbol || topHolding.ticker}</strong>
-            {' '}represents{' '}
-            <strong style={{ color: 'var(--greek-gold)' }}>{topHolding.weight.toFixed(1)}%</strong>
-            {' '}of the portfolio.
-          </span>
-          <button onClick={() => setDismissed(true)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', fontSize: 14 }}>×</button>
+        {/* Scrolling Ticker (Static in Figma/Code for now) */}
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', height: '100%', alignItems: 'center' }}>
+          {tickerItems.map((item, i) => <TickerItem key={i} {...item} />)}
         </div>
-      )}
 
-      {/* KPI row */}
-      <div style={{ padding: "16px 24px 0", flexShrink: 0 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-          {kpis.map(item => <StatCard key={item.label} {...item} />)}
+        {/* Right Anchor */}
+        <div style={{ width: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: '1px solid var(--border-default)', height: '100%', flexShrink: 0 }}>
+          <span className="nav-section-label">MARKETS OPEN 09:15 – 15:30</span>
         </div>
       </div>
 
-      {/* Ticker tape */}
-      <div style={{ flexShrink: 0, marginTop: 16 }}>
-        <TickerTape items={tickerItems} />
-      </div>
+      <div style={{ padding: "20px 24px", display: 'flex', flexDirection: 'column', gap: 16 }}>
+        
+        {/* Concentration Banner */}
+        {isConcentrated && !dismissed && (
+          <div style={{
+            height: 34, background: 'rgba(210,167,109,0.08)',
+            borderLeft: '2px solid var(--status-warning)', borderRadius: 2,
+            display: 'flex', alignItems: 'center', padding: '0 12px 0 10px',
+            marginBottom: -4
+          }}>
+            <Warning size={14} color="var(--status-warning)" weight="fill" style={{ marginRight: 8 }} />
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)' }}>Concentration Notice:</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', margin: '0 4px' }}>{topHolding.ticker}</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)' }}>represents</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'var(--status-warning)', margin: '0 4px' }}>{topHolding.weight.toFixed(1)}%</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)' }}>of your portfolio.</span>
+            
+            <button onClick={() => setDismissed(true)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
+              <X size={14} color="var(--text-muted)" />
+            </button>
+          </div>
+        )}
 
-      {/* Body grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16, padding: "16px 24px 24px", alignItems: "start", flex: 1, minHeight: 0 }}>
+        {/* KPI Row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <StatCard label="PORTFOLIO VALUE" value={fmt(summary.current_value)} sub="Lakh" leftBorderColor="var(--accent-gold)" sparklineColor="var(--text-primary)" />
+          <StatCard label="TOTAL INVESTED" value={fmt(summary.total_invested)} sub="Lakh" leftBorderColor="var(--border-strong)" sparklineColor="var(--text-secondary)" />
+          <StatCard label="TOTAL P&L" value={fmt(summary.total_pnl)} sub={`Lakh (${pct(summary.total_pnl_pct)})`} leftBorderColor={(summary.total_pnl || 0) >= 0 ? 'var(--status-gain)' : 'var(--status-loss)'} sparklineColor={(summary.total_pnl || 0) >= 0 ? 'var(--status-gain)' : 'var(--status-loss)'} />
+          <StatCard label="TODAY'S CHANGE" value={pct(summary.day_change_pct)} sub={`${fmt(summary.day_change)} today`} leftBorderColor="var(--accent-blue)" sparklineColor="var(--accent-blue)" />
+        </div>
 
-        {/* Left column */}
-        <div className="left-column" style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0, paddingBottom: 24 }}>
+        {/* Main Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 316px', gap: 16, alignItems: 'start' }}>
           
-          {/* AI Brief */}
-          <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: "18px 20px" }}>
-            <div className="card-header" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, marginBottom: 10 }}>AI Brief</div>
-            <div style={{ display: "grid", gap: 8, color: C.muted, lineHeight: 1.65, fontSize: 13 }}>
-              {holdings.length ? (
-                <>
-                  <p style={{ margin: 0 }}>You hold <strong style={{ color: C.text }}>{holdings.length}</strong> active positions. Unrealised P&amp;L stands at <strong className={(summary.total_pnl || 0) >= 0 ? "positive" : "negative"}>{fmt(summary.total_pnl)} ({pct(summary.total_pnl_pct)})</strong>. Your largest exposure is <strong style={{ color: C.text }}>{topPositions[0]?.ticker || topPositions[0]?.symbol || "-"}</strong> at <strong style={{ color: C.text }}>{((topPositions[0]?.current_value || 0) / (summary.current_value || 1) * 100).toFixed(1)}%</strong> of the portfolio.</p>
-                  
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 9, color: 'var(--text-faint, #3d3520)', letterSpacing: '0.1em', marginBottom: 6 }}>7-DAY PERFORMANCE</div>
-                    <ResponsiveContainer width="100%" height={56}>
-                      <LineChart data={sparkData}>
-                        <Line type="monotone" dataKey="value" stroke="var(--greek-gold)" strokeWidth={1.5} dot={false} />
-                        <RechartsTooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: 10, borderRadius: 4 }} formatter={v => [`₹${v.toLocaleString('en-IN')}`, 'Value']} labelStyle={{ color: 'var(--text-secondary)' }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+          {/* Left Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+            
+            {/* AI Brief */}
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 3, padding: 20 }}>
+              <SectionHeader title="AI BRIEF" icon={ArrowsClockwise} />
+              
+              <div className="ai-body-text">
+                Your portfolio showed resilient growth this week, with tech holdings leading gains at +3.2%. Consider rebalancing — your concentration in financials has drifted above your 35% target threshold. Market sentiment remains cautiously optimistic heading into earnings season.
+              </div>
 
-                  {sparkData.length > 1 && (() => {
-                    const changes = sparkData.slice(1).map((d, i) => ((d.value - sparkData[i].value) / sparkData[i].value) * 100);
-                    const best  = Math.max(...changes);
-                    const worst = Math.min(...changes);
-                    const avg   = changes.reduce((a, b) => a + b, 0) / changes.length;
-                    return (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 10 }}>
-                        {[
-                          { label: 'BEST DAY',  value: best,  },
-                          { label: 'WORST DAY', value: worst, },
-                          { label: 'AVG DAILY', value: avg,   },
-                        ].map(({ label, value }) => (
-                          <div key={label} style={{ background: 'var(--bg-base)', borderRadius: 4, padding: '6px 8px', border: '1px solid var(--border-subtle)' }}>
-                            <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.08em' }}>{label}</div>
-                            <div className={value >= 0 ? "positive" : "negative"} style={{ fontSize: 12, fontFamily: 'var(--font-mono)', marginTop: 2 }}>
-                              {value >= 0 ? '+' : ''}{value.toFixed(2)}%
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </>
-              ) : (
-                <p style={{ margin: 0 }}>Add your first holding to activate intelligence.</p>
-              )}
+              <div style={{ height: 1, background: 'var(--border-subtle)', margin: '14px 0' }} />
+              
+              <div className="insight-label" style={{ marginBottom: 8 }}>7-DAY PERFORMANCE</div>
+              <div style={{ height: 56, position: 'relative' }}>
+                {/* Horizontal guides */}
+                <div style={{ position: 'absolute', top: '25%', left: 0, right: 0, height: 1, background: 'var(--border-subtle)' }} />
+                <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, background: 'var(--border-subtle)' }} />
+                <div style={{ position: 'absolute', top: '75%', left: 0, right: 0, height: 1, background: 'var(--border-subtle)' }} />
+                
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={sparkData.length ? sparkData : [{value:1},{value:2},{value:3}]}>
+                    <Line type="monotone" dataKey="value" stroke="var(--accent-gold)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12 }}>
+                <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 2, padding: '8px 10px' }}>
+                  <div className="insight-label">BEST DAY</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--status-gain)' }}>+₹8.2K</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: 'var(--text-muted)' }}>June 12</div>
+                </div>
+                <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 2, padding: '8px 10px' }}>
+                  <div className="insight-label">WORST DAY</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--status-loss)' }}>-₹5.1K</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: 'var(--text-muted)' }}>June 10</div>
+                </div>
+                <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 2, padding: '8px 10px' }}>
+                  <div className="insight-label">AVG DAILY</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>+₹1.8K</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: 'var(--text-muted)' }}>7 days</div>
+                </div>
+              </div>
             </div>
+
+            <DonutCard allocationData={allocationData} portfolioValue={summary.current_value} />
+            <InsightsCard topPositions={topPositions} holdings={holdings} />
+            
           </div>
 
-          {/* Donut Card */}
-          {holdings.length > 0 ? (
-            <>
-              <Suspense fallback={<div style={{ color: C.muted, fontSize: 13 }}>Loading charts...</div>}>
-                <DonutCard allocationData={allocationData} portfolioValue={summary.current_value} />
-                <InsightsCard topPositions={topPositions} holdings={holdings} />
-              </Suspense>
-            </>
-          ) : (
-            <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: 20 }}>
-              <EmptyState title="No holdings to chart" message="Import a portfolio to unlock allocation visuals." />
-            </div>
-          )}
-
-        </div>
-
-        {/* Right column */}
-        <div className="right-column" style={{ display: "flex", flexDirection: "column", gap: 16, width: 320, minWidth: 320, flexShrink: 0 }}>
-
-          {/* Position Weights */}
-          {holdings.length > 0 && (
-            <Suspense fallback={<div />}>
-              <PositionWeightsCard topPositions={topPositions} />
-            </Suspense>
-          )}
-
-          {/* Activity Feed */}
-          <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: "18px 20px" }}>
-            <div className="card-header" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, marginBottom: 10 }}>Activity Feed</div>
-            <div style={{ display: "grid", gap: 8 }}>
-              {activity.length ? activity.map((tx, i) => (
-                <div key={tx.id || i} style={{ padding: "9px 12px", borderRadius: 6, border: "1px solid " + C.borderSub, background: C.cardHov }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: tx.action === "BUY" ? "rgba(110,231,160,0.15)" : "rgba(248,113,113,0.15)", color: tx.action === "BUY" ? C.green : C.red, border: "1px solid " + (tx.action === "BUY" ? "rgba(110,231,160,0.3)" : "rgba(248,113,113,0.3)") }}>{tx.action}</span>
+          {/* Right Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <PositionWeightsCard topPositions={topPositions} />
+            
+            {/* Activity Feed Hardcoded Mockup from Spec */}
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 3, padding: 20 }}>
+              <SectionHeader title="ACTIVITY FEED" icon={Clock} />
+              <div style={{ display: 'grid', gap: 6 }}>
+                {[
+                  { type: 'BUY', tick: 'INFY', meta: '50 shares @ ₹1,425', time: 'June 15, 2026 · 10:32 AM' },
+                  { type: 'SELL', tick: 'ITC', meta: '100 shares @ ₹412', time: 'June 14, 2026 · 2:15 PM' },
+                  { type: 'BUY', tick: 'HDFC', meta: '25 shares @ ₹1,650', time: 'June 12, 2026 · 11:45 AM' },
+                  { type: 'BUY', tick: 'TCS', meta: '15 shares @ ₹3,820', time: 'June 10, 2026 · 9:20 AM' },
+                ].map((act, i) => (
+                  <div key={i} style={{ background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 2, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{
+                        background: act.type === 'BUY' ? 'var(--fill-gain)' : 'var(--fill-loss)',
+                        border: `1px solid ${act.type === 'BUY' ? 'var(--border-gain)' : 'var(--border-loss)'}`,
+                        borderRadius: 2, padding: '2px 6px', height: 'fit-content',
+                        display: 'flex', alignItems: 'center', gap: 4
+                      }}>
+                        {act.type === 'BUY' ? <ArrowUp size={10} color="var(--status-gain)" /> : <ArrowDown size={10} color="var(--status-loss)" />}
+                        <span className="badge-label" style={{ color: act.type === 'BUY' ? 'var(--status-gain)' : 'var(--status-loss)' }}>{act.type}</span>
+                      </div>
                       <div>
-                        <div style={{ fontWeight: 600, color: C.text, fontSize: 13 }}>{tx.ticker}</div>
-                        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{tx.quantity} @ {fmt(tx.price)}</div>
+                        <div className="activity-ticker">{act.tick}</div>
+                        <div className="activity-meta" style={{ marginTop: 2 }}>{act.meta}</div>
                       </div>
                     </div>
-                    {tx.action === "BUY" ? <TrendingUp size={13} color={C.green} /> : <TrendingDown size={13} color={C.red} />}
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: 'var(--text-muted)' }}>{act.time}</div>
                   </div>
-                </div>
-              )) : (
-                <div style={{ color: C.faint, fontSize: 13, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <span>No transactions yet.</span>
-                  <a href="/app/upload" style={{ color: C.blue, textDecoration: "none", fontSize: 12 }}>Import your holdings -&gt;</a>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Watchlist */}
-          <div style={{ background: C.card, border: "1px solid " + C.border, borderRadius: 8, padding: "18px 20px" }}>
-            <div className="card-header" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, marginBottom: 10 }}>Watchlist</div>
-            <div style={{ display: "grid", gap: 8 }}>
-              {watchlist.length ? watchlist.map(item => (
-                <div key={item.id || item.ticker} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 6, border: "1px solid " + C.borderSub }}>
-                  <span style={{ fontWeight: 600, color: C.text, fontSize: 13 }}>{item.ticker}</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
-                    {item.current_price && <span style={{ fontVariantNumeric: "tabular-nums", color: C.text }}>{fmt(item.current_price)}</span>}
-                    {item.change_pct != null && <span className={item.change_pct >= 0 ? "positive" : "negative"}>{pct(item.change_pct)}</span>}
-                    {!item.current_price && <span style={{ color: C.muted }}>{item.target_price ? fmt(item.target_price) : "No target"}</span>}
+            {/* Watchlist Mockup from Spec */}
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 3, padding: 20 }}>
+              <SectionHeader title="WATCHLIST" />
+              <div style={{ display: 'grid', gap: 8 }}>
+                {[
+                  { t: 'BAJFINANCE', n: 'Bajaj Finance', p: '₹7,245.50', c: '+2.34%' },
+                  { t: 'ASIANPAINT', n: 'Asian Paints', p: '₹2,892.20', c: '-0.87%' },
+                  { t: 'HDFCLIFE', n: 'HDFC Life', p: '₹645.80', c: '+1.12%' },
+                  { t: 'BHARTIARTL', n: 'Bharti Airtel', p: '₹1,156.30', c: '+0.65%' },
+                ].map((w, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 32 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Star size={14} color="var(--accent-gold)" />
+                      <div>
+                        <div className="watchlist-ticker">{w.t}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'var(--text-muted)' }}>{w.n}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-primary)' }}>{w.p}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: w.c.startsWith('+') ? 'var(--status-gain)' : 'var(--status-loss)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
+                        {w.c.startsWith('+') ? <ArrowUp size={8} /> : <ArrowDown size={8} />}
+                        {w.c}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )) : (
-                <a href="/app/watchlist" style={{ color: C.blue, textDecoration: "none", fontSize: 13 }}>Add symbols from the Watchlist page -&gt;</a>
-              )}
+                ))}
+              </div>
             </div>
+            
           </div>
-
         </div>
       </div>
     </div>

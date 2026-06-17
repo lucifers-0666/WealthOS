@@ -37,7 +37,7 @@ class AppErrorBoundaryBase extends Component {
     this.setState({ componentStack });
 
     // Structured console error
-    console.error('[WealthOS ErrorBoundary]', {
+    console.error('[Arca ErrorBoundary]', {
       message: error?.message,
       stack: error?.stack,
       componentStack,

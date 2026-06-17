@@ -34,7 +34,7 @@ export default function Landing() {
               <TrendingUp size={18} color="var(--greek-gold)" />
             </div>
             <div>
-              <div style={{ fontSize: 11, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--greek-gold)' }}>WealthOS</div>
+              <div style={{ fontSize: 11, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--greek-gold)' }}>Arca</div>
               <div style={{ fontSize: 13, color: theme.colors.textSoft, fontFamily: 'var(--font-serif)' }}>Institutional Private Terminal</div>
             </div>
           </div>
@@ -83,7 +83,7 @@ export default function Landing() {
               </h1>
 
               <p style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--cream)', maxWidth: 560, marginBottom: 24, fontFamily: 'var(--font-sans)' }}>
-                WealthOS turns broker exports, live market data, and AI reasoning into a premium operating system for serious investors.
+                Arca turns broker exports, live market data, and AI reasoning into a premium operating system for serious investors.
               </p>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 26 }}>

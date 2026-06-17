@@ -17,7 +17,7 @@ const FALLBACK_MSG = 'Advisor systems are temporarily under elevated load. Your 
 
 export default function AIAdvisor() {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Welcome to WealthOS AI Advisor. I have full context of your portfolio. How can I help you today?' }
+    { role: 'assistant', content: 'Welcome to Arca AI Advisor. I have full context of your portfolio. How can I help you today?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);

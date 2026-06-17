@@ -1,5 +1,5 @@
 /**
- * WealthOS Analytics Engine
+ * Arca Analytics Engine
  *
  * All calculations are:
  * - Mathematically validated (Excel XIRR, Zerodha Console, Google Finance compatible)

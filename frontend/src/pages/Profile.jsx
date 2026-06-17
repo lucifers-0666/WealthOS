@@ -299,7 +299,7 @@ export default function Profile() {
               {avatarPreview ? <img src={avatarPreview} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: 20, objectFit: 'cover' }} /> : <UserCircle2 size={28} />}
             </div>
             <div>
-              <div className="section-label">WealthOS Profile</div>
+              <div className="section-label">Arca Profile</div>
               <h2 className="editorial-title" style={{ margin: '6px 0 0', fontSize: 'clamp(1.8rem, 2.6vw, 2.6rem)' }}>{profileForm.full_name || '—'}</h2>
               <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{profileForm.email || user?.email || '—'} · {joinDate ? joinDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
             </div>

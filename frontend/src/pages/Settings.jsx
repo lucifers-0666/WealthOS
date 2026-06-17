@@ -27,7 +27,7 @@ export default function Settings() {
   const [profileSaved, setProfileSaved] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem('wealthos:system-preferences');
+    const stored = window.localStorage.getItem('arca:system-preferences');
     if (stored) {
       try {
         setPreferences((prev) => ({ ...prev, ...JSON.parse(stored) }));
@@ -72,7 +72,7 @@ export default function Settings() {
         investment_goal: profile.investment_goal || null,
         target_corpus: profile.target_corpus ? Number(profile.target_corpus) : null,
       });
-      window.localStorage.setItem('wealthos:system-preferences', JSON.stringify(preferences));
+      window.localStorage.setItem('arca:system-preferences', JSON.stringify(preferences));
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 2500);
     } catch (err) {

@@ -1,6 +1,6 @@
 /**
  * MarketStatusBadge.jsx
- * Premium real-time market session indicator for WealthOS header.
+ * Premium real-time market session indicator for Arca header.
  * Shows: Open / Pre-Market / After Hours / Closed
  * Displays live IST clock and next open time.
  */

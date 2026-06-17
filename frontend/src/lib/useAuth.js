@@ -1,5 +1,5 @@
 /**
- * WealthOS — useAuth hook
+ * Arca — useAuth hook
  * Provides current user, loading state, and auth actions to any component.
  */
 

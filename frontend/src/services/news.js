@@ -1,7 +1,7 @@
 import { theme } from '../lib/theme.js';
 
 const NEWSAPI_KEY = import.meta.env.VITE_NEWSAPI_KEY || '';
-const NEWS_CACHE_KEY = 'wealthos:market-news-cache';
+const NEWS_CACHE_KEY = 'arca:market-news-cache';
 
 const CATEGORY_QUERIES = {
   All: 'Indian stock market NSE BSE economy',

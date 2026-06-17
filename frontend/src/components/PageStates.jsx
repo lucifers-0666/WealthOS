@@ -2,7 +2,7 @@ import React from 'react';
 import { AlertTriangle, Loader2, Inbox } from 'lucide-react';
 import { panelStyle, theme } from '../lib/theme.js';
 
-export function PageLoadingState({ title = 'Loading WealthOS…', subtitle = 'Preparing secure market context.' }) {
+export function PageLoadingState({ title = 'Loading Arca…', subtitle = 'Preparing secure market context.' }) {
   return (
     <div style={{ ...panelStyle({ padding: 24, minHeight: 240, display: 'grid', placeItems: 'center' }) }}>
       <div style={{ textAlign: 'center', color: theme.colors.textSoft }}>

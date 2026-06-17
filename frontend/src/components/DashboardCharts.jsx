@@ -12,16 +12,26 @@ const COLORS = [
 ];
 
 const money = v => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v || 0);
-function safePct(val) {
-  const n = Number(val);
-  return Number.isFinite(n) ? `${n >= 0 ? '+' : ''}${n.toFixed(2)}%` : '-';
+
+function formatIndian(value) {
+  if (value >= 10000000) {
+    return '₹' + (value / 10000000).toFixed(1) + 'Cr';
+  } else if (value >= 100000) {
+    return '₹' + (value / 100000).toFixed(1) + 'L';
+  } else {
+    return '₹' + (value || 0).toLocaleString('en-IN');
+  }
+}
+
+function formatReturn(val) {
+  if (val === null || val === undefined || isNaN(val)) return 'N/A';
+  return (val >= 0 ? '+' : '') + val.toFixed(1) + '% MTD';
 }
 
 function SectionHeader({ title }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', height: 14, marginBottom: 14 }}>
-      <div style={{ width: 2, height: '100%', background: 'var(--accent-gold)', marginRight: 8 }} />
-      <span className="section-header">{title}</span>
+    <div className="section-header">
+      <span className="section-header__text">{title}</span>
     </div>
   );
 }
@@ -33,17 +43,17 @@ export function PositionWeightsCard({ topPositions = [] }) {
   }, [topPositions]);
 
   return (
-    <div style={{ background: 'var(--bg-surface)', border: "1px solid var(--border-default)", borderRadius: 3, padding: "20px" }}>
+    <div className="kpi-card">
       <SectionHeader title="POSITION WEIGHTS" />
       <div style={{ display: 'grid', gap: 12 }}>
         {ranked.map((item, i) => (
-          <div key={`pw-${i}`}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 4 }}>
-              <span className="table-company">{item.company_name || item.name || item.ticker}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--accent-gold)' }}>{item.pct.toFixed(1)}%</span>
+          <div key={`pw-${i}`} className="position-row">
+            <div className="position-row__header">
+              <span className="position-row__name">{item.company_name || item.name || item.ticker}</span>
+              <span className="position-row__pct">{item.pct.toFixed(1)}%</span>
             </div>
-            <div style={{ height: 2, borderRadius: 1, background: 'rgba(45,60,55,0.70)' }}>
-              <div style={{ height: '100%', background: 'var(--accent-gold)', width: `${Math.max(item.pct, 2)}%`, borderRadius: 1 }} />
+            <div className="position-bar-track">
+              <div className="position-bar-fill" style={{ width: `${Math.max(item.pct, 2)}%` }} />
             </div>
           </div>
         ))}
@@ -52,12 +62,12 @@ export function PositionWeightsCard({ topPositions = [] }) {
   );
 }
 
-function InsightTile({ label, value, sub, toneColor }) {
+function InsightTile({ label, value, sub, toneClass }) {
   return (
-    <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 2, padding: '12px 14px' }}>
+    <div className="insight-tile">
       <div className="insight-label">{label}</div>
-      <div className="insight-value" style={{ color: toneColor || 'var(--text-primary)', marginTop: 2 }}>{value}</div>
-      {sub && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'var(--text-secondary)', marginTop: 3 }}>{sub}</div>}
+      <div className={`insight-value ${toneClass || ''}`}>{value}</div>
+      {sub && <div className="insight-sub">{sub}</div>}
     </div>
   );
 }
@@ -68,37 +78,35 @@ export function InsightsCard({ topPositions = [], holdings = [] }) {
     return topPositions.map((item, idx) => ({ ...item, pct: (Number(item.current_value || 0) / total) * 100, color: COLORS[idx % COLORS.length] }));
   }, [topPositions]);
 
-  const allFlat = holdings.length > 0 && holdings.every(h => Math.abs(h.day_change_pct ?? 0) < 0.01);
-  const rankKey = allFlat ? 'pnl_pct' : 'day_change_pct';
-
-  const sortedByRank = [...holdings].sort((a, b) => (b[rankKey] ?? 0) - (a[rankKey] ?? 0));
-  const topGainer = sortedByRank[0];
-  const topLoser = sortedByRank[sortedByRank.length - 1];
-  const topConc = ranked[0];
+  // Use returnMTD if available, fallback to day_change_pct
+  const sorted = [...holdings].sort((a, b) => (b.returnMTD ?? b.day_change_pct ?? 0) - (a.returnMTD ?? a.day_change_pct ?? 0));
+  const best = sorted.length > 0 ? sorted[0] : null;
+  const worst = sorted.length > 0 ? sorted[sorted.length - 1] : null;
   
+  const topConc = ranked[0];
   const sectorsCount = new Set(holdings.map(i => i.sector).filter(Boolean)).size;
 
   return (
-    <div style={{ background: 'var(--bg-surface)', border: "1px solid var(--border-default)", borderRadius: 3, padding: "20px" }}>
+    <div className="kpi-card">
       <SectionHeader title="INSIGHTS" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         <InsightTile 
           label="BEST PERFORMER"      
-          value={topGainer?.ticker || '-'} 
-          sub={topGainer ? `${safePct(topGainer[rankKey])} ${allFlat ? 'Total' : 'Today'}` : ''} 
-          toneColor={topGainer && (topGainer[rankKey] >= 0 || allFlat) ? 'var(--status-gain)' : undefined} 
+          value={best?.ticker || best?.name || 'No data'} 
+          sub={best ? formatReturn(best.returnMTD ?? best.day_change_pct) : '–'} 
+          toneClass={best && (best.returnMTD ?? best.day_change_pct) >= 0 ? 'insight-value--positive' : ''} 
         />
         <InsightTile 
           label="WORST PERFORMER"       
-          value={topLoser?.ticker  || '-'} 
-          sub={topLoser ? `${safePct(topLoser[rankKey])} ${allFlat ? 'Total' : 'Today'}` : ''} 
-          toneColor={topLoser && (topLoser[rankKey] < 0 || allFlat) ? 'var(--status-loss)' : undefined} 
+          value={worst?.ticker || worst?.name || 'No data'} 
+          sub={worst ? formatReturn(worst.returnMTD ?? worst.day_change_pct) : '–'} 
+          toneClass={worst && (worst.returnMTD ?? worst.day_change_pct) < 0 ? 'insight-value--negative' : ''} 
         />
         <InsightTile 
           label="CONCENTRATION"   
           value={topConc ? `${topConc.pct.toFixed(1)}%` : '-'} 
           sub={topConc ? "Top 1 holding" : ""} 
-          toneColor={topConc?.pct > 30 ? 'var(--status-warning)' : undefined} 
+          toneClass={topConc?.pct > 30 ? 'insight-value--warning' : ''} 
         />
         <InsightTile 
           label="DIVERSIFICATION" 
@@ -114,7 +122,7 @@ export function InsightsCard({ topPositions = [], holdings = [] }) {
           label="ALLOC. DRIFT"    
           value={topConc?.pct > 35 ? `${(topConc.pct - 35).toFixed(1)}%` : '0.0%'} 
           sub="From target" 
-          toneColor={topConc?.pct > 35 ? 'var(--status-warning)' : undefined} 
+          toneClass={topConc?.pct > 35 ? 'insight-value--warning' : ''} 
         />
       </div>
     </div>
@@ -148,10 +156,10 @@ export function DonutCard({ allocationData = [], portfolioValue }) {
     }));
   }, [allocationData]);
 
-  const centerVal  = portfolioValue ?? data.reduce((s, i) => s + (i.value || 0), 0);
+  const centerVal = portfolioValue ?? data.reduce((s, i) => s + (i.value || 0), 0);
 
   return (
-    <div style={{ background: 'var(--bg-surface)', border: "1px solid var(--border-default)", borderRadius: 3, padding: 20 }}>
+    <div className="kpi-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <SectionHeader title="ALLOCATION" />
         <div style={{ display: 'flex', gap: 12 }}>
@@ -176,12 +184,12 @@ export function DonutCard({ allocationData = [], portfolioValue }) {
         <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 24, alignItems: 'center' }}>
           <div style={{ width: 220, height: 220, position: 'relative' }}>
             {/* Inner background circle for center text area */}
-            <div style={{ position: 'absolute', inset: 30, background: 'var(--bg-surface)', borderRadius: '50%', zIndex: 0 }} />
+            <div style={{ position: 'absolute', inset: 26, background: 'var(--bg-surface)', borderRadius: '50%', zIndex: 0 }} />
             
             <ResponsiveContainer width="100%" height="100%" style={{ zIndex: 1, position: 'relative' }}>
               <PieChart>
-                <Pie data={data} dataKey="value" nameKey="name" innerRadius="70%" outerRadius="100%" paddingAngle={3} stroke="var(--bg-base)" strokeWidth={3}>
-                  {data.map((item, i) => <Cell key={`c${i}`} fill={item.color} />)}
+                <Pie data={data} dataKey="value" nameKey="name" innerRadius={84} outerRadius={110} paddingAngle={3} stroke="var(--bg-base)" strokeWidth={3}>
+                  {data.map((item, i) => <Cell key={`c${i}`} fill={item.color} stroke="var(--bg-base)" strokeWidth={3} />)}
                 </Pie>
                 <Tooltip contentStyle={{ background: 'var(--bg-overlay)', border: `1px solid var(--border-default)`, borderRadius: 3, color: 'var(--text-primary)', fontSize: 12, fontFamily: 'var(--font-sans)' }} formatter={(v, _n, pl) => [`${money(v)}`, pl?.payload?.name]} />
               </PieChart>
@@ -189,8 +197,8 @@ export function DonutCard({ allocationData = [], portfolioValue }) {
             
             {/* Center text overlay */}
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 2 }}>
-              <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{(centerVal / 100000).toFixed(1)}L</strong>
-              <span style={{ fontFamily: 'var(--font-serif)', fontSize: 8, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.16em', marginTop: 2 }}>PORTFOLIO</span>
+              <strong className="donut-center-value">{formatIndian(centerVal)}</strong>
+              <span className="donut-center-label">PORTFOLIO</span>
             </div>
           </div>
           

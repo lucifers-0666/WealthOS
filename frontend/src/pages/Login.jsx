@@ -46,7 +46,7 @@ export default function Login() {
             <Shield size={12} /> Secure access
           </div>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(2.6rem, 5vw, 5rem)', letterSpacing: '-0.06em', lineHeight: 0.95, margin: '0 0 18px', maxWidth: 10 }}>
-            WealthOS, reimagined for elite investors.
+            Arca, reimagined for elite investors.
           </h1>
           <p style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--text-secondary)', maxWidth: 640, marginBottom: 26, fontFamily: 'var(--font-sans)' }}>
             Sign in to enter a premium financial command environment with portfolio intelligence, AI analysis, and market context.

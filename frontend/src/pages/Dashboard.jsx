@@ -20,9 +20,8 @@ function pct(n) {
 function SectionHeader({ title, icon: Icon, onIconClick }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', height: 14 }}>
-        <div style={{ width: 2, height: '100%', background: 'var(--accent-gold)', marginRight: 8 }} />
-        <span className="section-header">{title}</span>
+      <div className="section-header" style={{ marginBottom: 0 }}>
+        <span className="section-header__text">{title}</span>
       </div>
       {Icon && (
         <button onClick={onIconClick} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
@@ -33,24 +32,16 @@ function SectionHeader({ title, icon: Icon, onIconClick }) {
   );
 }
 
-function StatCard({ label, value, sub, leftBorderColor, sparklineColor }) {
+function StatCard({ label, value, sub, toneClass, sparklineClass }) {
   return (
-    <div style={{
-      background: 'var(--bg-surface)',
-      border: '1px solid var(--border-default)',
-      borderRadius: 3,
-      padding: '18px 20px',
-      minHeight: 100,
-      position: 'relative'
-    }}>
-      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 2, background: leftBorderColor }} />
+    <div className={`kpi-card ${toneClass}`}>
       <div className="kpi-label" style={{ marginBottom: 8 }}>{label}</div>
-      <div className="kpi-value" style={{ marginBottom: 4, color: sparklineColor || 'var(--text-primary)' }}>{value}</div>
+      <div className={`kpi-value ${toneClass ? toneClass.replace('kpi-card--', 'kpi-value--') : ''}`} style={{ marginBottom: 4 }}>{value}</div>
       <div className="kpi-sublabel">{sub}</div>
-      {sparklineColor && (
+      {sparklineClass && (
         <div style={{ position: 'absolute', right: 20, bottom: 18, width: 48, height: 28, opacity: 0.8 }}>
           <svg width="48" height="28" viewBox="0 0 48 28" preserveAspectRatio="none">
-            <path d="M0 20 Q 12 28, 24 15 T 48 5" fill="none" stroke={sparklineColor} strokeWidth="1" />
+            <path className={sparklineClass} d="M0 20 Q 12 28, 24 15 T 48 5" fill="none" strokeWidth="1" />
           </svg>
         </div>
       )}
@@ -60,13 +51,14 @@ function StatCard({ label, value, sub, leftBorderColor, sparklineColor }) {
 
 function TickerItem({ name, value, change }) {
   const isGain = change >= 0;
-  const color = isGain ? 'var(--status-gain)' : 'var(--status-loss)';
   const valStr = typeof value === "number" ? value.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "-";
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "0 20px", borderRight: "1px solid var(--border-subtle)", height: "100%" }}>
-      <span className="ticker-index-name">{name}</span>
+    <div className="ticker-item">
+      <span className="ticker-name">{name}</span>
       <span className="ticker-value">{valStr}</span>
-      <span className="ticker-change" style={{ color }}>{isGain ? '▲' : '▼'} {Math.abs(change).toFixed(2)}%</span>
+      <span className={isGain ? 'ticker-change-up' : 'ticker-change-down'}>
+        {isGain ? '▲' : '▼'} {Math.abs(change).toFixed(2)}%
+      </span>
     </div>
   );
 }
@@ -125,27 +117,16 @@ export default function Dashboard() {
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", background: 'var(--bg-base)' }}>
       
       {/* Ticker Bar */}
-      <div style={{
-        height: 34,
-        background: 'var(--bg-surface)',
-        borderTop: '1px solid var(--border-subtle)',
-        borderBottom: '1px solid var(--border-default)',
-        display: 'flex',
-        alignItems: 'center',
-        flexShrink: 0
-      }}>
-        {/* Left Anchor */}
-        <div style={{ width: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRight: '1px solid var(--border-default)', height: '100%', flexShrink: 0 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--status-gain)' }} />
-          <span className="badge-label" style={{ color: 'var(--status-gain)' }}>LIVE</span>
+      <div className="ticker-bar">
+        <div className="ticker-live">
+          <span className="ticker-live-dot" />
+          <span className="ticker-live-text">LIVE</span>
         </div>
 
-        {/* Scrolling Ticker (Static in Figma/Code for now) */}
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', height: '100%', alignItems: 'center' }}>
           {tickerItems.map((item, i) => <TickerItem key={i} {...item} />)}
         </div>
 
-        {/* Right Anchor */}
         <div style={{ width: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: '1px solid var(--border-default)', height: '100%', flexShrink: 0 }}>
           <span className="nav-section-label">MARKETS OPEN 09:15 – 15:30</span>
         </div>
@@ -155,31 +136,47 @@ export default function Dashboard() {
         
         {/* Concentration Banner */}
         {isConcentrated && !dismissed && (
-          <div style={{
-            height: 34, background: 'rgba(210,167,109,0.08)',
-            borderLeft: '2px solid var(--status-warning)', borderRadius: 2,
-            display: 'flex', alignItems: 'center', padding: '0 12px 0 10px',
-            marginBottom: -4
-          }}>
-            <Warning size={14} color="var(--status-warning)" weight="fill" style={{ marginRight: 8 }} />
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)' }}>Concentration Notice:</span>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', margin: '0 4px' }}>{topHolding.ticker}</span>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)' }}>represents</span>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'var(--status-warning)', margin: '0 4px' }}>{topHolding.weight.toFixed(1)}%</span>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)' }}>of your portfolio.</span>
-            
-            <button onClick={() => setDismissed(true)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
-              <X size={14} color="var(--text-muted)" />
+          <div className="concentration-banner">
+            <Warning weight="fill" className="concentration-banner__icon" />
+            <div className="concentration-banner__text">
+              Concentration Notice: <strong>{topHolding.ticker}</strong> represents <em>{topHolding.weight.toFixed(1)}%</em> of your portfolio.
+            </div>
+            <button onClick={() => setDismissed(true)} className="concentration-banner__dismiss" style={{ background: 'none', border: 'none' }}>
+              <X size={14} />
             </button>
           </div>
         )}
 
         {/* KPI Row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-          <StatCard label="PORTFOLIO VALUE" value={fmt(summary.current_value)} sub="Lakh" leftBorderColor="var(--accent-gold)" sparklineColor="var(--text-primary)" />
-          <StatCard label="TOTAL INVESTED" value={fmt(summary.total_invested)} sub="Lakh" leftBorderColor="var(--border-strong)" sparklineColor="var(--text-secondary)" />
-          <StatCard label="TOTAL P&L" value={fmt(summary.total_pnl)} sub={`Lakh (${pct(summary.total_pnl_pct)})`} leftBorderColor={(summary.total_pnl || 0) >= 0 ? 'var(--status-gain)' : 'var(--status-loss)'} sparklineColor={(summary.total_pnl || 0) >= 0 ? 'var(--status-gain)' : 'var(--status-loss)'} />
-          <StatCard label="TODAY'S CHANGE" value={pct(summary.day_change_pct)} sub={`${fmt(summary.day_change)} today`} leftBorderColor="var(--accent-blue)" sparklineColor="var(--accent-blue)" />
+          <StatCard 
+            label="PORTFOLIO VALUE" 
+            value={fmt(summary.current_value)} 
+            sub="Lakh" 
+            toneClass="kpi-card--portfolio" 
+            sparklineClass="sparkline-neutral" 
+          />
+          <StatCard 
+            label="TOTAL INVESTED" 
+            value={fmt(summary.total_invested)} 
+            sub="Lakh" 
+            toneClass="kpi-card--invested" 
+            sparklineClass="sparkline-neutral" 
+          />
+          <StatCard 
+            label="TOTAL P&L" 
+            value={fmt(summary.total_pnl)} 
+            sub={`Lakh (${pct(summary.total_pnl_pct)})`} 
+            toneClass={(summary.total_pnl || 0) >= 0 ? 'kpi-card--pnl positive' : 'kpi-card--pnl negative'} 
+            sparklineClass={(summary.total_pnl || 0) >= 0 ? 'sparkline-positive' : 'sparkline-negative'} 
+          />
+          <StatCard 
+            label="TODAY'S CHANGE" 
+            value={pct(summary.day_change_pct)} 
+            sub={`${fmt(summary.day_change)} today`} 
+            toneClass="kpi-card--change" 
+            sparklineClass="sparkline-neutral" 
+          />
         </div>
 
         {/* Main Grid */}
@@ -250,23 +247,18 @@ export default function Dashboard() {
                   { type: 'BUY', tick: 'HDFC', meta: '25 shares @ ₹1,650', time: 'June 12, 2026 · 11:45 AM' },
                   { type: 'BUY', tick: 'TCS', meta: '15 shares @ ₹3,820', time: 'June 10, 2026 · 9:20 AM' },
                 ].map((act, i) => (
-                  <div key={i} style={{ background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 2, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <div style={{
-                        background: act.type === 'BUY' ? 'var(--fill-gain)' : 'var(--fill-loss)',
-                        border: `1px solid ${act.type === 'BUY' ? 'var(--border-gain)' : 'var(--border-loss)'}`,
-                        borderRadius: 2, padding: '2px 6px', height: 'fit-content',
-                        display: 'flex', alignItems: 'center', gap: 4
-                      }}>
-                        {act.type === 'BUY' ? <ArrowUp size={10} color="var(--status-gain)" /> : <ArrowDown size={10} color="var(--status-loss)" />}
-                        <span className="badge-label" style={{ color: act.type === 'BUY' ? 'var(--status-gain)' : 'var(--status-loss)' }}>{act.type}</span>
-                      </div>
-                      <div>
-                        <div className="activity-ticker">{act.tick}</div>
-                        <div className="activity-meta" style={{ marginTop: 2 }}>{act.meta}</div>
+                  <div key={i} className="activity-row">
+                    <div className="activity-row__badge">
+                      <div className={act.type === 'BUY' ? 'badge-buy' : 'badge-sell'}>
+                        {act.type === 'BUY' ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+                        {act.type}
                       </div>
                     </div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: 'var(--text-muted)' }}>{act.time}</div>
+                    <div className="activity-row__body">
+                      <div className="activity-row__ticker">{act.tick}</div>
+                      <div className="activity-row__meta">{act.meta}</div>
+                    </div>
+                    <div className="activity-row__time">{act.time}</div>
                   </div>
                 ))}
               </div>
@@ -282,20 +274,18 @@ export default function Dashboard() {
                   { t: 'HDFCLIFE', n: 'HDFC Life', p: '₹645.80', c: '+1.12%' },
                   { t: 'BHARTIARTL', n: 'Bharti Airtel', p: '₹1,156.30', c: '+0.65%' },
                 ].map((w, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 32 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Star size={14} color="var(--accent-gold)" />
-                      <div>
-                        <div className="watchlist-ticker">{w.t}</div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'var(--text-muted)' }}>{w.n}</div>
-                      </div>
+                  <div key={i} className="watchlist-row">
+                    <Star size={14} className="watchlist-star" />
+                    <div className="watchlist-info">
+                      <span className="watchlist-ticker">{w.t}</span>
+                      <span className="watchlist-company">{w.n}</span>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-primary)' }}>{w.p}</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: w.c.startsWith('+') ? 'var(--status-gain)' : 'var(--status-loss)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
+                    <div className="watchlist-price-block">
+                      <span className="watchlist-price">{w.p}</span>
+                      <span className={w.c.startsWith('+') ? 'watchlist-change-up' : 'watchlist-change-down'}>
                         {w.c.startsWith('+') ? <ArrowUp size={8} /> : <ArrowDown size={8} />}
                         {w.c}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 ))}

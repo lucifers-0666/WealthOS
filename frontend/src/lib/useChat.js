@@ -1,5 +1,5 @@
 /**
- * WealthOS — useChat hook
+ * Arca — useChat hook
  * Manages AI CFO conversation state, session persistence, streaming UI.
  */
 
@@ -7,7 +7,7 @@ import { useState, useRef, useCallback } from 'react';
 import { sendChatMessage, getChatHistory } from './api.js';
 import { getPortfolioHoldings } from './portfolioStore.js';
 
-const SESSION_KEY = 'wealthos:advisor-session';
+const SESSION_KEY = 'arca:advisor-session';
 
 function withPortfolioContext(text) {
   const holdings = getPortfolioHoldings();
@@ -22,7 +22,7 @@ function withPortfolioContext(text) {
     asset_class: holding.asset_class,
   }));
 
-  return `${text}\n\nPortfolio context from the current WealthOS workspace:\n${JSON.stringify(compact)}`;
+  return `${text}\n\nPortfolio context from the current Arca workspace:\n${JSON.stringify(compact)}`;
 }
 
 function buildFallbackReply(text) {

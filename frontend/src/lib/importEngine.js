@@ -1,5 +1,5 @@
 /**
- * ImportEngine — Intelligent import normalization for WealthOS
+ * ImportEngine — Intelligent import normalization for Arca
  * Supports: CSV, broker exports (Zerodha, Groww, Upstox, Angel, HDFC Sec)
  * Features: symbol mapping, duplicate detection, confidence scoring, audit log, rollback
  */
@@ -202,7 +202,7 @@ export async function parseImport(file, existingHoldings = []) {
 }
 
 // ---- Audit log ----
-const AUDIT_KEY = 'wealthos_import_audit';
+const AUDIT_KEY = 'arca_import_audit';
 
 export function recordImportAudit(entry) {
   try {
@@ -212,12 +212,12 @@ export function recordImportAudit(entry) {
       ...existing,
     ].slice(0, 50); // keep last 50
     // Use in-memory fallback since localStorage is blocked in sandboxed iframes
-    window.__wealthos_import_audit = updated;
+    window.__arca_import_audit = updated;
   } catch {}
 }
 
 export function getImportAudit() {
-  return window.__wealthos_import_audit || [];
+  return window.__arca_import_audit || [];
 }
 
 export function rollbackImport(importId, currentHoldings, setHoldings) {

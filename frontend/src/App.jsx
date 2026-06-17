@@ -25,12 +25,12 @@ function ProtectedRoute({ children }) {
     return (
       <div className="auth-loading">
         <div className="auth-loading-inner">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-label="WealthOS">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-label="Arca">
             <rect x="2" y="2" width="28" height="28" rx="6" stroke="#7DD3FC" strokeWidth="1.5"/>
             <path d="M8 22L13 12L18 18L22 10" stroke="#7DD3FC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             <circle cx="22" cy="10" r="2" fill="#A78BFA"/>
           </svg>
-          <span>Initialising WealthOS...</span>
+          <span>Initialising Arca...</span>
         </div>
       </div>
     );

@@ -1,5 +1,5 @@
 /**
- * WealthOS — Supabase Auth helper
+ * Arca — Supabase Auth helper
  * Wraps supabase-js auth methods and manages token in api.js
  */
 
@@ -13,7 +13,7 @@ export const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY) && !isDemoMode;
 
 if (!isSupabaseConfigured && !isDemoMode) {
-  console.warn('[WealthOS] Supabase env vars missing. Auth features are disabled until VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in frontend/.env');
+  console.warn('[Arca] Supabase env vars missing. Auth features are disabled until VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in frontend/.env');
 }
 
 export const supabase = isSupabaseConfigured

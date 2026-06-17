@@ -92,12 +92,12 @@ export default function Layout() {
   }, []);
 
   return (
-    <div className="app-shell" style={{ display: 'flex', overflow: 'hidden', minHeight: '100dvh', background: 'var(--bg-base)' }}>
+    <div className="layout-wrapper app-shell" style={{ display: 'flex', overflow: 'hidden', height: '100%', background: 'var(--bg-base)' }}>
       {/* ── Sidebar ── */}
-      <aside style={{
+      <aside className="sidebar" style={{
         width: 180,
         flexShrink: 0,
-        height: '100dvh',
+        height: '100%',
         background: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border-default)',
         position: 'relative',
@@ -113,7 +113,7 @@ export default function Layout() {
             </svg>
           </div>
           <div style={{ marginTop: 10 }}>
-            <div className="brand-logo-name">ANTIGRAVITY</div>
+            <div className="brand-logo-name">ARCA</div>
             <div className="brand-logo-tagline">PRIVATE TERMINAL</div>
           </div>
         </div>
@@ -170,10 +170,10 @@ export default function Layout() {
       </aside>
 
       {/* ── Main content ── */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
         
         {/* ── Topbar ── */}
-        <header style={{
+        <header className="topbar" style={{
           height: 48,
           flexShrink: 0,
           background: 'var(--bg-secondary)',
@@ -245,7 +245,7 @@ export default function Layout() {
         </header>
 
         {/* ── Content Area ── */}
-        <main style={{ flex: 1, overflowY: 'auto' }}>
+        <main className="main-content">
           <Outlet />
         </main>
       </div>

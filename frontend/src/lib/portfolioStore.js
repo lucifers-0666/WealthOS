@@ -1,6 +1,6 @@
 import { HOLDINGS } from './data'
 
-const KEY = 'wealthos:recognized-portfolio'
+const KEY = 'arca:recognized-portfolio'
 
 export function getPortfolioHoldings() {
   if (typeof window === 'undefined') return HOLDINGS
@@ -19,7 +19,7 @@ export function getPortfolioHoldings() {
 export function savePortfolioHoldings(holdings) {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(KEY, JSON.stringify(holdings))
-  window.dispatchEvent(new CustomEvent('wealthos:portfolio-updated', { detail: holdings }))
+  window.dispatchEvent(new CustomEvent('arca:portfolio-updated', { detail: holdings }))
 }
 
 export function removePortfolioHolding(idOrTicker) {
@@ -29,7 +29,7 @@ export function removePortfolioHolding(idOrTicker) {
     return String(id) !== String(idOrTicker) && String(holding.ticker) !== String(idOrTicker)
   })
   window.localStorage.setItem(KEY, JSON.stringify(next))
-  window.dispatchEvent(new CustomEvent('wealthos:portfolio-updated', { detail: next }))
+  window.dispatchEvent(new CustomEvent('arca:portfolio-updated', { detail: next }))
   return next
 }
 
@@ -40,12 +40,12 @@ export function upsertPortfolioHolding(holding) {
   const next = current.filter((item) => String(item.id ?? item.holding_id ?? item.ticker) !== key && String(item.ticker) !== String(holding.ticker))
   next.unshift(holding)
   window.localStorage.setItem(KEY, JSON.stringify(next))
-  window.dispatchEvent(new CustomEvent('wealthos:portfolio-updated', { detail: next }))
+  window.dispatchEvent(new CustomEvent('arca:portfolio-updated', { detail: next }))
   return next
 }
 
 export function clearPortfolioHoldings() {
   if (typeof window === 'undefined') return
   window.localStorage.removeItem(KEY)
-  window.dispatchEvent(new CustomEvent('wealthos:portfolio-updated', { detail: HOLDINGS }))
+  window.dispatchEvent(new CustomEvent('arca:portfolio-updated', { detail: HOLDINGS }))
 }

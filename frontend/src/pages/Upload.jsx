@@ -133,7 +133,7 @@ export default function Upload() {
           <div style={{ maxWidth: 740 }}>
             <div className="section-label" style={{ color: 'var(--text-faint)' }}>Secure ingestion</div>
             <h2 className="editorial-title" style={{ margin: '8px 0 0', fontSize: 'clamp(2rem, 3vw, 3rem)', fontFamily: 'var(--font-serif)', color: 'var(--parchment)' }}>Import holdings with a calm, enterprise-grade workflow.</h2>
-            <p style={{ margin: '10px 0 0', color: 'var(--text-secondary)', lineHeight: 1.65 }}>Upload broker exports or screenshots. WealthOS validates, parses, and surfaces the result in a clean preview.</p>
+            <p style={{ margin: '10px 0 0', color: 'var(--text-secondary)', lineHeight: 1.65 }}>Upload broker exports or screenshots. Arca validates, parses, and surfaces the result in a clean preview.</p>
           </div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, border: `1px solid var(--border)`, color: 'var(--text-secondary)' }}>
             <UploadCloud size={15} /> OCR ready

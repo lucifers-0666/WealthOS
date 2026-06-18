@@ -270,7 +270,7 @@ export default function Profile() {
             preferencesQuery.refetch();
             activityQuery.refetch();
           }}
-          style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12, padding: '10px 14px', background: 'linear-gradient(180deg, #f0e6c8, #d4a017)', color: '#1a1206', fontWeight: 600, cursor: 'pointer', width: 'fit-content' }}
+          style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3, padding: '10px 14px', background: 'linear-gradient(180deg, #f0e6c8, var(--accent-gold))', color: '#1a1206', fontWeight: 600, cursor: 'pointer', width: 'fit-content' }}
         >
           Retry
         </button>
@@ -319,7 +319,7 @@ export default function Profile() {
             ['Total Invested', `₹${Number(metrics.total_invested || 0).toLocaleString('en-IN')}`],
             ['Unrealized P&L', `₹${Number(metrics.unrealized_pnl || 0).toLocaleString('en-IN')}`],
           ].map(([label, value]) => (
-            <div key={label} style={{ border: `1px solid var(--border)`, borderRadius: 12, padding: '10px 12px' }}>
+            <div key={label} style={{ border: `1px solid var(--border)`, borderRadius: 3, padding: '10px 12px' }}>
               <div style={{ color: 'var(--text-faint)', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</div>
               <div style={{ color: 'var(--parchment)', fontWeight: 600, marginTop: 4, fontFamily: 'var(--font-serif)' }}>{value}</div>
             </div>
@@ -382,8 +382,8 @@ export default function Profile() {
             </div>
             {securityNotice && <div style={{ marginTop: 12, color: 'var(--greek-gold)', fontSize: 13 }}>{securityNotice}</div>}
             <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-              <button onClick={handlePasswordReset} style={{ border: `1px solid var(--border-subtle)`, borderRadius: 12, padding: '10px 14px', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}>Reset password</button>
-              <button onClick={handleLogoutAll} style={{ border: 0, borderRadius: 12, padding: '10px 14px', background: 'rgba(212,160,23,0.12)', color: 'var(--greek-gold)', cursor: 'pointer' }}>Logout all devices</button>
+              <button onClick={handlePasswordReset} style={{ border: `1px solid var(--border-subtle)`, borderRadius: 3, padding: '10px 14px', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}>Reset password</button>
+              <button onClick={handleLogoutAll} style={{ border: 0, borderRadius: 3, padding: '10px 14px', background: 'rgba(212,160,23,0.12)', color: 'var(--greek-gold)', cursor: 'pointer' }}>Logout all devices</button>
             </div>
           </div>
         </div>
@@ -432,13 +432,13 @@ export default function Profile() {
             <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Latest activity</h3>
             {activityQuery.isLoading && (
               <div style={{ display: 'grid', gap: 8 }}>
-                {[1, 2, 3].map((n) => <div key={n} style={{ height: 46, borderRadius: 12, background: 'rgba(255,255,255,0.04)' }} />)}
+                {[1, 2, 3].map((n) => <div key={n} style={{ height: 46, borderRadius: 3, background: 'rgba(255,255,255,0.04)' }} />)}
               </div>
             )}
             {activity.length ? (
               <div style={{ display: 'grid', gap: 10 }}>
                 {activity.map((item) => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 12px', borderRadius: 12, border: `1px solid ${theme.colors.border}` }}>
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 12px', borderRadius: 3, border: `1px solid ${theme.colors.border}` }}>
                     <div>
                       <div style={{ fontWeight: 700 }}>{item.title}</div>
                       <div style={{ fontSize: 12, color: theme.colors.textMuted }}>{item.event_type?.replaceAll('_', ' ') || ''}</div>
@@ -462,14 +462,14 @@ export default function Profile() {
           <div style={{ color: saveState === 'error' ? 'var(--terracotta)' : 'var(--text-secondary)', fontSize: 12 }}>
             {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'error' ? 'Save failed' : 'Idle'}
           </div>
-          <button onClick={handleSaveAll} disabled={saveState === 'saving' || !hasUnsavedChanges} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12, padding: '12px 16px', background: 'linear-gradient(180deg, #f0e6c8, #d4a017)', color: '#1a1206', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, opacity: hasUnsavedChanges ? 1 : 0.6 }}>
+          <button onClick={handleSaveAll} disabled={saveState === 'saving' || !hasUnsavedChanges} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3, padding: '12px 16px', background: 'linear-gradient(180deg, #f0e6c8, var(--accent-gold))', color: '#1a1206', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, opacity: hasUnsavedChanges ? 1 : 0.6 }}>
             <Save size={15} /> {saveState === 'saving' ? 'Saving…' : 'Save profile'}
           </button>
         </div>
       </section>
 
       {toast && (
-        <div style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 60, padding: '10px 14px', borderRadius: 12, border: `1px solid var(--border)`, background: toast.tone === 'error' ? 'rgba(107,46,46,0.2)' : 'rgba(74,138,106,0.2)', color: 'var(--text-primary)', display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 60, padding: '10px 14px', borderRadius: 3, border: `1px solid var(--border)`, background: toast.tone === 'error' ? 'rgba(107,46,46,0.2)' : 'rgba(74,138,106,0.2)', color: 'var(--text-primary)', display: 'inline-flex', gap: 8, alignItems: 'center' }}>
           {toast.tone === 'error' ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
           {toast.message}
         </div>

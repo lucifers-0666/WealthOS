@@ -21,7 +21,7 @@ export default function DeleteConfirmModal({ title, message, onConfirm, onClose,
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <AlertTriangle size={22} color="var(--color-error,#f87171)" />
-            <h3 style={{ margin: 0, fontSize: 17, fontFamily: 'Space Grotesk, sans-serif' }}>
+            <h3 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-serif)' }}>
               {title || 'Confirm delete'}
             </h3>
           </div>

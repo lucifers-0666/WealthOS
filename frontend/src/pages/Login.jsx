@@ -59,7 +59,7 @@ export default function Login() {
               ['Portfolio intelligence', 'Live holdings, allocation, and risk'],
               ['AI advisor', 'Portfolio-aware financial analysis'],
             ].map(([title, text]) => (
-              <div key={title} style={{ padding: 18, borderRadius: 12, border: `1px solid var(--border)`, background: 'rgba(212,160,23,0.02)' }}>
+              <div key={title} style={{ padding: 18, borderRadius: 3, border: `1px solid var(--border)`, background: 'rgba(212,160,23,0.02)' }}>
                 <div style={{ fontWeight: 600, marginBottom: 6, fontFamily: 'var(--font-serif)' }}>{title}</div>
                 <div style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.55 }}>{text}</div>
               </div>
@@ -93,7 +93,7 @@ export default function Login() {
                   border: `1px solid ${mode === value ? 'var(--border)' : 'var(--border-subtle)'}`,
                   background: mode === value ? 'rgba(212,160,23,0.08)' : 'transparent',
                   color: mode === value ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  borderRadius: 12,
+                  borderRadius: 3,
                   padding: '11px 12px',
                   cursor: 'pointer',
                   fontWeight: 600,
@@ -136,7 +136,7 @@ export default function Login() {
             {error && <div style={{ color: 'var(--terracotta)', fontSize: 13, lineHeight: 1.5 }}>{error}</div>}
             {info && <div style={{ color: 'var(--aegean-green)', fontSize: 13, lineHeight: 1.5 }}>{info}</div>}
 
-            <button type="submit" disabled={loading} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12, minHeight: 46, background: 'linear-gradient(180deg, #f0e6c8, #d4a017)', color: '#1a1206', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <button type="submit" disabled={loading} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3, minHeight: 46, background: 'linear-gradient(180deg, #f0e6c8, var(--accent-gold))', color: '#1a1206', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
               {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : mode === 'reset' ? 'Send reset link' : 'Create account'}
               {!loading && <ArrowRight size={16} />}
             </button>

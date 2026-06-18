@@ -82,7 +82,7 @@ export default function ImportModal({ existingHoldings = [], onImport, onClose }
             <div
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
-              style={{ border: `2px dashed ${theme.colors.border}`, borderRadius: 12, padding: '48px 24px',
+              style={{ border: `2px dashed ${theme.colors.border}`, borderRadius: 3, padding: '48px 24px',
                 textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.15s' }}
               onClick={() => document.getElementById('import-file-input').click()}
             >

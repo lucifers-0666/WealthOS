@@ -41,7 +41,7 @@ export default function PriceAlertModal({ ticker, currentPrice, onSave, onClose,
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Bell size={18} color="var(--color-primary,#4f98a3)" />
-            <h3 style={{ margin: 0, fontSize: 17, fontFamily: 'Space Grotesk,sans-serif' }}>Set alert — {ticker}</h3>
+            <h3 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-serif)' }}>Set alert — {ticker}</h3>
           </div>
           <button onClick={onClose} style={{ color: theme.colors.textMuted, padding: 4 }} aria-label="Close">
             <X size={18} />

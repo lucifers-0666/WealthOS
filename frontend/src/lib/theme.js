@@ -7,8 +7,8 @@ export const theme = {
     text: '#f0e6c8',
     textSoft: '#e8d8a8',
     textMuted: '#c4b48a',
-    accent: '#d4a017',
-    gold: '#d4a017',
+    accent: 'var(--accent-gold)',
+    gold: 'var(--accent-gold)',
     success: '#4a8a6a',
     warning: '#b8960a',
     error: '#6b2e2e',
@@ -26,7 +26,7 @@ export const theme = {
 export function panelStyle(extra = {}) {
   return {
     background:
-      'linear-gradient(180deg, rgba(212,160,23,0.03), rgba(212,160,23,0.01)), linear-gradient(180deg, rgba(34,24,8,0.96), rgba(26,18,6,0.92))',
+      'linear-gradient(180deg, rgba(212,160,23,0.03), rgba(212,160,23,0.01)), linear-gradient(180deg, rgba(34,24,8,0.96), var(--bg-base))',
     border: `1px solid rgba(212,160,23,0.15)`,
     borderRadius: theme.radius.md,
     boxShadow: theme.shadow,
@@ -40,9 +40,9 @@ export function fieldStyle(extra = {}) {
   return {
     width: '100%',
     minHeight: 42,
-    borderRadius: 12,
+    borderRadius: 3,
     border: `1px solid ${theme.colors.border}`,
-    background: 'rgba(26,18,6,0.75)',
+    background: 'var(--bg-base)',
     color: theme.colors.text,
     padding: '11px 14px',
     outline: 'none',

@@ -286,13 +286,13 @@ export default function Portfolio() {
           <LiveIndicator wsStatus={wsStatus} updatedAt={updatedAt} />
           <button
             onClick={() => setEditTarget({})}
-            style={{ background: 'var(--greek-gold)', color: '#1a1206', border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12,
+            style={{ background: 'var(--greek-gold)', color: '#1a1206', border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3,
               padding: '10px 16px', fontWeight: 600, cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14 }}
           ><PlusCircle size={15} /> Add holding</button>
           <button
             onClick={handleRefresh}
-            style={{ border: `1px solid var(--border)`, borderRadius: 12, padding: '10px 14px',
+            style={{ border: `1px solid var(--border)`, borderRadius: 3, padding: '10px 14px',
               background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14 }}
           ><RefreshCw size={15} /> Refresh</button>

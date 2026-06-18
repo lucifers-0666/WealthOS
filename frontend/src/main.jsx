@@ -24,7 +24,7 @@ createRoot(document.getElementById('root')).render(
           <div style={{
             maxWidth: 480, background: '#141417',
             border: '1px solid rgba(255,255,255,0.07)',
-            borderRadius: 12, padding: '36px 32px',
+            borderRadius: 3, padding: '36px 32px',
           }}>
             <div style={{ height: 3, background: '#e05263', borderRadius: '12px 12px 0 0', marginBottom: 20 }} />
             <h2 style={{ color: '#e2e2e4', fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Critical startup error</h2>

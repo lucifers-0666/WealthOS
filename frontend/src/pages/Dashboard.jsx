@@ -1,10 +1,12 @@
 import React, { useMemo, Suspense, useEffect, useState } from "react";
 import { usePortfolio } from "../lib/usePortfolio.js";
 import { useMarketData } from "../lib/MarketDataContext.jsx";
+import { useMarketStatus } from "../lib/useMarketStatus.js";
 import { PageLoadingState, PageErrorState, EmptyState } from "../components/PageStates.jsx";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { request } from "../services/api.js";
 import { DonutCard, InsightsCard, PositionWeightsCard } from "../components/DashboardCharts.jsx";
+import { PortfolioIntelligence } from "../components/PortfolioIntelligence.jsx";
 import { ArrowsClockwise, Warning, X, ArrowUp, ArrowDown, Star, Clock } from "@phosphor-icons/react";
 
 function fmt(n) {
@@ -66,6 +68,8 @@ function TickerItem({ name, value, change }) {
 export default function Dashboard() {
   const { portfolio, transactions, loading, error } = usePortfolio();
   const { holdings: liveHoldings, watchlist: liveWatchlist } = useMarketData();
+  const { status: marketStatus } = useMarketStatus();
+  const isMarketOpen = marketStatus?.is_open;
 
   const [sparkData, setSparkData] = useState([]);
   const [tickerItems, setTickerItems] = useState([
@@ -78,6 +82,7 @@ export default function Dashboard() {
   ]);
 
   const [dismissed, setDismissed] = useState(false);
+  const [activityFilter, setActivityFilter] = useState('ALL');
 
   useEffect(() => {
     request("GET", "/api/portfolio/history", null, { days: 7 })
@@ -124,11 +129,15 @@ export default function Dashboard() {
         </div>
 
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', height: '100%', alignItems: 'center' }}>
-          {tickerItems.map((item, i) => <TickerItem key={i} {...item} />)}
+          <div className={`ticker-track ${!isMarketOpen ? 'paused' : ''}`}>
+            {[...tickerItems, ...tickerItems].map((item, i) => <TickerItem key={i} {...item} />)}
+          </div>
         </div>
 
         <div style={{ width: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: '1px solid var(--border-default)', height: '100%', flexShrink: 0 }}>
-          <span className="nav-section-label">MARKETS OPEN 09:15 – 15:30</span>
+          <span className="nav-section-label" style={{ color: isMarketOpen ? 'var(--status-gain)' : 'var(--text-muted)' }}>
+            {marketStatus?.label || 'MARKETS OPEN'} {marketStatus?.current_time_ist || ''}
+          </span>
         </div>
       </div>
 
@@ -237,16 +246,34 @@ export default function Dashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <PositionWeightsCard topPositions={topPositions} />
             
+            <PortfolioIntelligence holdings={holdings} summary={summary} />
+
             {/* Activity Feed Hardcoded Mockup from Spec */}
             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 3, padding: 20 }}>
-              <SectionHeader title="ACTIVITY FEED" icon={Clock} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <div className="section-header" style={{ marginBottom: 0 }}>
+                  <Clock size={14} style={{ marginRight: 8, color: 'var(--text-muted)' }} />
+                  <span className="section-header__text">ACTIVITY FEED</span>
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  {['ALL', 'BUY', 'SELL'].map(v => (
+                    <button key={v} onClick={() => setActivityFilter(v)} style={{
+                      fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 500,
+                      background: 'none', border: 'none', cursor: 'pointer', paddingBottom: 4,
+                      borderBottom: activityFilter === v ? '1px solid var(--accent-gold)' : '1px solid transparent',
+                      color: activityFilter === v ? 'var(--text-primary)' : 'var(--text-muted)'
+                    }}>{v}</button>
+                  ))}
+                </div>
+              </div>
+              
               <div style={{ display: 'grid', gap: 6 }}>
                 {[
                   { type: 'BUY', tick: 'INFY', meta: '50 shares @ ₹1,425', time: 'June 15, 2026 · 10:32 AM' },
                   { type: 'SELL', tick: 'ITC', meta: '100 shares @ ₹412', time: 'June 14, 2026 · 2:15 PM' },
                   { type: 'BUY', tick: 'HDFC', meta: '25 shares @ ₹1,650', time: 'June 12, 2026 · 11:45 AM' },
                   { type: 'BUY', tick: 'TCS', meta: '15 shares @ ₹3,820', time: 'June 10, 2026 · 9:20 AM' },
-                ].map((act, i) => (
+                ].filter(a => activityFilter === 'ALL' || a.type === activityFilter).map((act, i) => (
                   <div key={i} className="activity-row">
                     <div className="activity-row__badge">
                       <div className={act.type === 'BUY' ? 'badge-buy' : 'badge-sell'}>
@@ -286,6 +313,7 @@ export default function Dashboard() {
                         {w.c.startsWith('+') ? <ArrowUp size={8} /> : <ArrowDown size={8} />}
                         {w.c}
                       </span>
+                      <MiniSparkline positive={w.c.startsWith('+')} width={40} height={12} />
                     </div>
                   </div>
                 ))}
@@ -296,5 +324,16 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+function MiniSparkline({ positive, width = 48, height = 16 }) {
+  const d = positive
+    ? `M0,${height} L${width*0.3},${height*0.5} L${width*0.6},${height*0.7} L${width},0`
+    : `M0,0 L${width*0.3},${height*0.5} L${width*0.6},${height*0.3} L${width},${height}`;
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible', flexShrink: 0, marginLeft: 12 }}>
+      <path d={d} fill="none" stroke={positive ? 'var(--status-gain)' : 'var(--status-loss)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

@@ -36,7 +36,7 @@ function ArticleCard({ article }) {
           <span className="section-label" style={{ letterSpacing: '0.1em' }}>{article.source?.name || domain}</span>
           <span style={{ color: theme.colors.textMuted, fontSize: 12 }}>{pub}</span>
         </div>
-        <h3 style={{ margin: 0, fontFamily: 'Space Grotesk, Inter, sans-serif', fontSize: 19, lineHeight: 1.35 }}>{article.title}</h3>
+        <h3 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontSize: 19, lineHeight: 1.35 }}>{article.title}</h3>
         {article.description && <p style={{ margin: 0, color: theme.colors.textSoft, lineHeight: 1.65, fontSize: 14 }}>{article.description}</p>}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ border: `1px solid ${theme.colors.border}`, color: sentimentTone(article.sentiment), borderRadius: 999, padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>{article.sentiment || 'Neutral'}</span>
@@ -112,7 +112,7 @@ export default function News() {
             <h2 className="editorial-title" style={{ margin: '8px 0 0', fontSize: 'clamp(2rem, 3vw, 3rem)' }}>Editorial market feed tied to your holdings and signals.</h2>
             <p style={{ margin: '10px 0 0', color: theme.colors.textSoft, lineHeight: 1.65 }}>Search live financial news and scan the feed through a calm, institutional lens.</p>
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, color: theme.colors.textSoft }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 3, border: `1px solid ${theme.colors.border}`, color: theme.colors.textSoft }}>
             <RadioTower size={15} /> {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Live feed'}
           </div>
         </div>
@@ -120,7 +120,7 @@ export default function News() {
 
       <section style={{ ...panelStyle({ padding: 18 }) }}>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, minWidth: 280, flex: '1 1 320px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', borderRadius: 3, border: `1px solid ${theme.colors.border}`, minWidth: 280, flex: '1 1 320px' }}>
             <Search size={15} color={theme.colors.textMuted} />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search market news…" style={{ ...fieldStyle({ border: '0', background: 'transparent', padding: '12px 0', minHeight: 44 }) }} />
           </div>

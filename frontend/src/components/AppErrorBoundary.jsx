@@ -154,7 +154,7 @@ const styles = {
     width: '100%',
     background: 'var(--color-surface, #141417)',
     border: '1px solid var(--color-border, rgba(255,255,255,0.07))',
-    borderRadius: 12,
+    borderRadius: 3,
     padding: '36px 32px',
     position: 'relative',
     overflow: 'hidden',

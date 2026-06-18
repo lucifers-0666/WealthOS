@@ -82,7 +82,7 @@ export default function EditHoldingModal({ holding, onSave, onClose, loading = f
     <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={modal}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-          <h3 style={{ margin: 0, fontSize: 18, fontFamily: 'Space Grotesk, sans-serif' }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontFamily: 'var(--font-serif)' }}>
             {holding?.id ? 'Edit holding' : 'Add holding'}
           </h3>
           <button onClick={onClose} style={{ color: theme.colors.textMuted, padding: 4 }} aria-label="Close">

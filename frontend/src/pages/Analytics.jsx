@@ -417,7 +417,7 @@ export default function Analytics() {
                 <XAxis dataKey="date" tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
                 <Tooltip
-                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-primary)' }}
+                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 3, color: 'var(--text-primary)' }}
                 />
                 <Line type="monotone" dataKey="portfolio" stroke="var(--greek-gold)" strokeWidth={2.5} dot={false} />
                 <Line type="monotone" dataKey="benchmark" stroke="var(--amber-gold)" strokeWidth={2} dot={false} strokeDasharray="5 4" />
@@ -443,7 +443,7 @@ export default function Analytics() {
               <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
               <XAxis dataKey="date" tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
-              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-primary)' }} />
+              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 3, color: 'var(--text-primary)' }} />
               <Area type="monotone" dataKey="drawdown" stroke="var(--terracotta)" fill="url(#drawdownFill)" strokeWidth={2} dot={false} />
             </AreaChart>
           </ResponsiveContainer>

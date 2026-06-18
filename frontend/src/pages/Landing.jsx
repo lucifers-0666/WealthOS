@@ -44,9 +44,9 @@ export default function Landing() {
               onClick={() => navigate(isAuthenticated ? '/app/dashboard' : '/login')}
               style={{
                 border: '1px solid rgba(212,160,23,0.5)',
-                borderRadius: 12,
+                borderRadius: 3,
                 padding: '11px 16px',
-                background: 'linear-gradient(180deg, #f0e6c8, #d4a017)',
+                background: 'linear-gradient(180deg, #f0e6c8, var(--accent-gold))',
                 color: '#1a1206',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -89,7 +89,7 @@ export default function Landing() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 26 }}>
                 <button
                   onClick={() => navigate(isAuthenticated ? '/app/dashboard' : '/login')}
-                  style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12, padding: '13px 18px', background: 'linear-gradient(180deg, #f0e6c8, #d4a017)', color: '#1a1206', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                  style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3, padding: '13px 18px', background: 'linear-gradient(180deg, #f0e6c8, var(--accent-gold))', color: '#1a1206', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
                 >
                   Enter dashboard <ArrowRight size={16} />
                 </button>
@@ -121,7 +121,7 @@ export default function Landing() {
               <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.colors.textMuted, marginBottom: 10 }}>What it does</div>
               <div style={{ display: 'grid', gap: 12 }}>
                 {features.map(({ title, icon: Icon, text }) => (
-                  <div key={title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: 14, borderRadius: 12, border: `1px solid var(--border-subtle)`, background: 'rgba(212,160,23,0.01)' }}>
+                  <div key={title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: 14, borderRadius: 3, border: `1px solid var(--border-subtle)`, background: 'rgba(212,160,23,0.01)' }}>
                     <div style={{ width: 30, height: 30, borderRadius: 10, display: 'grid', placeItems: 'center', background: 'rgba(212,160,23,0.12)', color: 'var(--greek-gold)', flexShrink: 0 }}>
                       <Icon size={15} />
                     </div>
@@ -138,7 +138,7 @@ export default function Landing() {
               <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.colors.textMuted, marginBottom: 10 }}>Operational stack</div>
               <div style={{ display: 'grid', gap: 10 }}>
                 {stack.map(({ name, detail }) => (
-                  <div key={name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 12px', borderRadius: 12, border: `1px solid ${theme.colors.border}`, color: theme.colors.textSoft }}>
+                  <div key={name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 12px', borderRadius: 3, border: `1px solid ${theme.colors.border}`, color: theme.colors.textSoft }}>
                     <span>{name}</span>
                     <span style={{ fontSize: 11, color: theme.colors.gold, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{detail}</span>
                   </div>

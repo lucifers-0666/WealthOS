@@ -85,7 +85,7 @@ function WatchCard({ item, alerts, onAlert, onRemove }) {
       {/* Price + sparkline */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <div style={{ fontFamily: 'Space Grotesk,Inter,sans-serif', fontSize: 24, fontWeight: 700,
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, fontWeight: 700,
             letterSpacing: '-0.03em', lineHeight: 1 }}>
             <LivePrice value={item.current_price} />
           </div>
@@ -218,12 +218,12 @@ export default function Watchlist() {
       <div style={{ ...panelStyle({ padding: '22px 26px' }), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
         <div>
           <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.colors.textMuted, marginBottom: 6 }}>Market attention set</div>
-          <h2 style={{ margin: 0, fontFamily: 'Space Grotesk,Inter,sans-serif', fontSize: 'clamp(1.6rem,2.5vw,2.4rem)', letterSpacing: '-0.04em', lineHeight: 1.05 }}>Watchlist</h2>
+          <h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontSize: 'clamp(1.6rem,2.5vw,2.4rem)', letterSpacing: '-0.04em', lineHeight: 1.05 }}>Watchlist</h2>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <LiveIndicator wsStatus={wsStatus} updatedAt={updatedAt} />
           <button onClick={() => { refresh(); forceRefresh(); }}
-            style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 12, padding: '10px 14px',
+            style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 3, padding: '10px 14px',
               background: 'transparent', color: theme.colors.text, cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14 }}
           ><RefreshCw size={15} /> Refresh</button>
@@ -278,7 +278,7 @@ export default function Watchlist() {
             placeholder="Search by ticker or sector\u2026"
             style={{
               width: '100%', background: 'rgba(255,255,255,0.04)',
-              border: `1px solid ${theme.colors.border}`, borderRadius: 12,
+              border: `1px solid ${theme.colors.border}`, borderRadius: 3,
               padding: '11px 14px 11px 36px', color: theme.colors.text,
               fontSize: 14, outline: 'none', transition: 'border-color 0.15s', boxSizing: 'border-box',
             }}
@@ -293,7 +293,7 @@ export default function Watchlist() {
           placeholder="Add ticker (e.g. INFY)"
           style={{
             background: 'rgba(255,255,255,0.04)', border: `1px solid ${theme.colors.border}`,
-            borderRadius: 12, padding: '11px 14px', color: theme.colors.text,
+            borderRadius: 3, padding: '11px 14px', color: theme.colors.text,
             fontSize: 14, outline: 'none', width: 180,
           }}
           onFocus={(e) => e.target.style.borderColor = 'var(--color-primary,#4f98a3)'}
@@ -302,7 +302,7 @@ export default function Watchlist() {
         <button
           onClick={handleAdd} disabled={addLoading || !addTicker.trim()}
           style={{
-            background: 'var(--color-primary,#01696f)', color: '#fff', border: 'none', borderRadius: 12,
+            background: 'var(--color-primary,#01696f)', color: '#fff', border: 'none', borderRadius: 3,
             padding: '11px 18px', fontWeight: 700, cursor: addLoading ? 'not-allowed' : 'pointer',
             display: 'inline-flex', alignItems: 'center', gap: 8, opacity: addLoading ? 0.7 : 1,
             fontSize: 14, whiteSpace: 'nowrap',
@@ -371,7 +371,7 @@ export default function Watchlist() {
         <div style={{
           position: 'fixed', bottom: 28, right: 28, zIndex: 2000,
           background: 'var(--color-primary,#01696f)', color: '#fff',
-          padding: '12px 20px', borderRadius: 14, fontSize: 14, fontWeight: 600,
+          padding: '12px 20px', borderRadius: 3, fontSize: 14, fontWeight: 600,
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
           animation: 'modal-in 0.2s cubic-bezier(0.16,1,0.3,1)',
           display: 'flex', alignItems: 'center', gap: 10,

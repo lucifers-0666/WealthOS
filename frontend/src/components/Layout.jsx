@@ -24,7 +24,7 @@ const NAV = [
   { to: '/market-watch', label: 'Market Watch', icon: TrendUp, group: 'CORE' },
   { to: '/transactions', label: 'Transactions', icon: ArrowsLeftRight, group: 'CORE' },
   { to: '/advisor', label: 'Advisor', icon: Brain, group: 'INTELLIGENCE' },
-  { to: '/news', label: 'Signals', icon: Broadcast, group: 'INTELLIGENCE' },
+  { to: '/signals', label: 'Signals', icon: Broadcast, group: 'INTELLIGENCE' },
   { to: '/watchlist', label: 'Watchlist', icon: Star, group: 'INTELLIGENCE' },
   { to: '/settings', label: 'Settings', icon: Gear, group: 'CONTROL' },
   { to: '/profile', label: 'Profile', icon: UserCircle, group: 'CONTROL' },
@@ -42,11 +42,28 @@ const titles = {
   '/market-watch': ['Market Watch', 'Live indices and sentiment'],
   '/transactions': ['Transactions', 'Trade history and activity'],
   '/advisor': ['AI Advisor', 'Portfolio-aware financial reasoning'],
-  '/news': ['Signals', 'Editorial intelligence feed'],
+  '/signals': ['Signals', 'Editorial intelligence feed'],
   '/watchlist': ['Watchlist', 'Tracked symbols and price targets'],
   '/settings': ['Settings', 'Keys, targets, and preferences'],
   '/profile': ['Client Profile', 'Account settings'],
 };
+
+// Nav item component
+const NavItem = ({ to, icon: Icon, label }) => (
+  <NavLink
+    to={to}
+    className={({ isActive }) =>
+      `nav-item ${isActive ? 'nav-item--active' : ''}`
+    }
+  >
+    {({ isActive }) => (
+      <>
+        <Icon size={16} weight={isActive ? 'fill' : 'regular'} />
+        <span>{label}</span>
+      </>
+    )}
+  </NavLink>
+);
 
 export default function Layout() {
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -59,7 +76,7 @@ export default function Layout() {
   const navigate = useNavigate();
   const { holdings, watchlist, refresh } = usePortfolio();
   
-  const path = location.pathname.replace('/app', '');
+  const path = location.pathname;
   const [title, sub] = titles[path] || ['Command Center', 'Portfolio intelligence cockpit'];
 
   // Command palette logic...
@@ -69,7 +86,7 @@ export default function Layout() {
       label: item.label,
       description: `Navigate to ${item.label.toLowerCase()}`,
       keywords: [item.label, item.group, item.to],
-      action: () => navigate(`/app${item.to}`),
+      action: () => navigate(item.to),
     }));
   }, [navigate]);
 
@@ -83,9 +100,8 @@ export default function Layout() {
     const onKeyDown = (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        setPaletteOpen((value) => !value);
+        paletteInputRef.current?.focus();
       }
-      if (event.key === 'Escape') setPaletteOpen(false);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -124,36 +140,9 @@ export default function Layout() {
             <div key={group} style={{ marginBottom: 16 }}>
               <div className="nav-section-label" style={{ marginTop: 20, paddingLeft: 16, marginBottom: 8 }}>{group}</div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {items.map(({ to, label, icon: Icon }) => {
-                  // If current path matches, or if it's /dashboard and path is empty
-                  const isActive = path === to || (to === '/dashboard' && (path === '' || path === '/'));
-                  return (
-                    <NavLink key={to} to={to.startsWith('/dashboard') ? '/' : `/app${to}`} style={{ textDecoration: 'none' }}>
-                      <div style={{
-                        height: 36,
-                        display: 'flex',
-                        alignItems: 'center',
-                        paddingLeft: 16,
-                        position: 'relative',
-                        background: isActive ? 'var(--accent-gold-dim)' : 'transparent',
-                        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        transition: 'background 150ms ease-out, color 150ms ease-out'
-                      }}>
-                        {isActive && (
-                          <motion.div
-                            initial={{ x: -2 }}
-                            animate={{ x: 0 }}
-                            style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 2, background: 'var(--accent-gold)' }}
-                          />
-                        )}
-                        <Icon size={16} weight={isActive ? "fill" : "regular"} style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }} />
-                        <span className={isActive ? 'nav-item-active' : 'nav-item-inactive'} style={{ marginLeft: 12 }}>
-                          {label}
-                        </span>
-                      </div>
-                    </NavLink>
-                  );
-                })}
+                {items.map(({ to, label, icon: Icon }) => (
+                  <NavItem key={to} to={to} icon={Icon} label={label} />
+                ))}
               </div>
             </div>
           ))}
@@ -196,23 +185,53 @@ export default function Layout() {
           </div>
 
           {/* Center zone */}
-          <div style={{ position: 'relative' }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', width: 320, height: 30,
-              background: 'var(--bg-base)', border: '1px solid var(--border-default)', borderRadius: 3,
-              padding: '0 8px'
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'var(--bg-base)',
+            border: '1px solid var(--border-default)',
+            borderRadius: '3px',
+            padding: '0 10px',
+            height: '30px',
+            width: '320px',
+            flexShrink: 0,
+          }}>
+            {/* MagnifyingGlass icon */}
+            <MagnifyingGlass size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            
+            <input
+              ref={paletteInputRef}
+              type="text"
+              value={topSearch}
+              onChange={(e) => setTopSearch(e.target.value)}
+              placeholder="Search holdings, watchlist, no..."
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: '12px',
+                lineHeight: 1,
+              }}
+            />
+
+            {/* CTRL K badge */}
+            <span style={{
+              background: 'var(--bg-overlay)',
+              border: '1px solid var(--border-default)',
+              borderRadius: '2px',
+              padding: '2px 5px',
+              fontSize: '10px',
+              color: 'var(--text-muted)',
+              fontFamily: 'var(--font-sans)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}>
-              <MagnifyingGlass size={14} color="var(--text-muted)" />
-              <input
-                value={topSearch}
-                onChange={(e) => setTopSearch(e.target.value)}
-                placeholder="Search holdings, watchlist, no..."
-                style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-primary)', fontSize: 12, marginLeft: 8, fontFamily: 'var(--font-sans)' }}
-              />
-              <div style={{ background: 'var(--bg-overlay)', border: '1px solid var(--border-default)', borderRadius: 2, padding: '2px 5px', fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
-                CTRL K
-              </div>
-            </div>
+              CTRL K
+            </span>
           </div>
 
           {/* Right zone */}

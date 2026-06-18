@@ -28,7 +28,7 @@ function DropZone({ label, accept, onFile, status, result, icon, hint }) {
       aria-label={`Upload ${label}`}
       style={{
         padding: 18,
-        borderRadius: 14,
+        borderRadius: 3,
         border: `1px solid ${dragging ? 'var(--greek-gold)' : 'var(--border)'}`,
         background: dragging ? 'rgba(212,160,23,0.06)' : 'rgba(212,160,23,0.02)',
         minHeight: 240,
@@ -135,7 +135,7 @@ export default function Upload() {
             <h2 className="editorial-title" style={{ margin: '8px 0 0', fontSize: 'clamp(2rem, 3vw, 3rem)', fontFamily: 'var(--font-serif)', color: 'var(--parchment)' }}>Import holdings with a calm, enterprise-grade workflow.</h2>
             <p style={{ margin: '10px 0 0', color: 'var(--text-secondary)', lineHeight: 1.65 }}>Upload broker exports or screenshots. Arca validates, parses, and surfaces the result in a clean preview.</p>
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, border: `1px solid var(--border)`, color: 'var(--text-secondary)' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 3, border: `1px solid var(--border)`, color: 'var(--text-secondary)' }}>
             <UploadCloud size={15} /> OCR ready
           </div>
         </div>
@@ -171,7 +171,7 @@ export default function Upload() {
             <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Recent actions</h3>
             <div style={{ display: 'grid', gap: 10 }}>
               {history.length ? history.map((item) => (
-                <div key={`${item.ts}-${item.kind}`} style={{ padding: 14, borderRadius: 12, border: `1px solid var(--border)`, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <div key={`${item.ts}-${item.kind}`} style={{ padding: 14, borderRadius: 3, border: `1px solid var(--border)`, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <div>
                     <div style={{ fontWeight: 600 }}>{item.kind}</div>
                     <div style={{ color: 'var(--text-faint)', fontSize: 12, marginTop: 4 }}>{item.detail}</div>
@@ -188,13 +188,13 @@ export default function Upload() {
             <div style={{ ...panelStyle({ padding: 20 }) }}>
               <div className="section-label">Preview</div>
               <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Captured screenshot</h3>
-              <img src={preview} alt="Uploaded screenshot" style={{ width: '100%', borderRadius: 12, border: `1px solid var(--border)` }} />
+              <img src={preview} alt="Uploaded screenshot" style={{ width: '100%', borderRadius: 3, border: `1px solid var(--border)` }} />
               {imgStatus === 'success' && imgResult?.holdings && (
                 <div style={{ marginTop: 14 }}>
                   <div className="section-label" style={{ marginBottom: 10 }}>Recognized holdings</div>
                   <div style={{ display: 'grid', gap: 8 }}>
                     {imgResult.holdings.map((h, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 12, border: `1px solid var(--border)` }}>
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 3, border: `1px solid var(--border)` }}>
                         <span className="badge badge-gold">{h.ticker}</span>
                         <span style={{ color: 'var(--text-secondary)' }}>{h.quantity} units @ {h.avg_buy_price}</span>
                       </div>

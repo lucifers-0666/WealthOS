@@ -56,7 +56,7 @@ export function WSHealthMonitor() {
           : isStaleData ? 'rgba(160,80,0,0.3)'
           : 'rgba(200,0,50,0.3)'
         }`,
-        color: isReconnecting ? '#d4a017' : isStaleData ? '#c07000' : '#cc2244',
+        color: isReconnecting ? 'var(--accent-gold)' : isStaleData ? '#c07000' : '#cc2244',
       }}
       role="status"
       aria-live="polite"

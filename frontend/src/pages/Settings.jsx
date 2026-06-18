@@ -96,7 +96,7 @@ export default function Settings() {
             <h2 className="editorial-title" style={{ margin: '8px 0 0', fontSize: 'clamp(2rem, 3vw, 3rem)' }}>Profile, preferences, and allocation policy.</h2>
             <p style={{ margin: '10px 0 0', color: 'var(--text-secondary)', lineHeight: 1.65, fontFamily: 'var(--font-sans)' }}>Keep your system profile, strategy, and account controls in one quiet place.</p>
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, border: `1px solid var(--border-subtle)`, color: 'var(--text-secondary)' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 3, border: `1px solid var(--border-subtle)`, color: 'var(--text-secondary)' }}>
             <ShieldCheck size={15} /> Protected
           </div>
         </div>
@@ -111,7 +111,7 @@ export default function Settings() {
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span>Email</span><span style={{ color: 'var(--text-primary)' }}>{user?.email || '—'}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span>User ID</span><span className="mono" style={{ color: 'var(--text-primary)' }}>{user?.id?.slice(0, 16) || '—'}...</span></div>
             </div>
-            <button onClick={handleSignOut} style={{ marginTop: 16, border: '1px solid var(--border)', borderRadius: 12, padding: '11px 14px', background: 'rgba(107,46,46,0.12)', color: 'var(--terracotta)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={handleSignOut} style={{ marginTop: 16, border: '1px solid var(--border)', borderRadius: 3, padding: '11px 14px', background: 'rgba(107,46,46,0.12)', color: 'var(--terracotta)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <LogOut size={15} /> Sign out
             </button>
           </div>
@@ -211,10 +211,10 @@ export default function Settings() {
             <strong style={{ color: valid ? 'var(--text-primary)' : 'var(--terracotta)' }}>{total.toFixed(1)}%</strong>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-            <button onClick={handleSaveProfile} disabled={saving} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12, padding: '12px 16px', background: 'linear-gradient(180deg, #f0e6c8, #d4a017)', color: '#1a1206', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={handleSaveProfile} disabled={saving} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3, padding: '12px 16px', background: 'linear-gradient(180deg, #f0e6c8, var(--accent-gold))', color: '#1a1206', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <CheckCircle2 size={15} /> {saving ? 'Saving…' : profileSaved ? 'Profile saved' : 'Save profile'}
             </button>
-            <button onClick={handleSave} disabled={saving || (!valid && total > 0)} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', background: 'rgba(212,160,23,0.05)', color: 'var(--greek-gold)', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={handleSave} disabled={saving || (!valid && total > 0)} style={{ border: '1px solid var(--border)', borderRadius: 3, padding: '12px 16px', background: 'rgba(212,160,23,0.05)', color: 'var(--greek-gold)', fontWeight: 600, cursor: 'pointer' }}>
               {saving ? 'Saving…' : saved ? 'Saved' : 'Save allocation'}
             </button>
           </div>

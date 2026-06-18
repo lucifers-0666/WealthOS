@@ -23,7 +23,7 @@ export default function Onboarding() {
             <div style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--text-faint)' }}>Secure onboarding</div>
             <h1 style={{ margin: '8px 0 0', fontFamily: 'var(--font-serif)', fontSize: 'clamp(2rem, 4vw, 3.4rem)', letterSpacing: '-0.05em' }}>Set up your institutional workspace.</h1>
           </div>
-          <button onClick={() => navigate('/app/dashboard')} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12, padding: '11px 16px', background: 'var(--greek-gold)', color: '#1a1206', fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => navigate('/app/dashboard')} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3, padding: '11px 16px', background: 'var(--greek-gold)', color: '#1a1206', fontWeight: 600, cursor: 'pointer' }}>
             Skip for now
           </button>
         </div>
@@ -39,7 +39,7 @@ export default function Onboarding() {
             </div>
             <div style={{ display: 'grid', gap: 10 }}>
               {steps.map((step, index) => (
-                <div key={step} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 14, borderRadius: 12, border: `1px solid var(--border)`, background: 'rgba(212,160,23,0.02)' }}>
+                <div key={step} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 14, borderRadius: 3, border: `1px solid var(--border)`, background: 'rgba(212,160,23,0.02)' }}>
                   <div style={{ width: 24, height: 24, borderRadius: 999, border: `1px solid var(--border)`, display: 'grid', placeItems: 'center', color: 'var(--greek-gold)', flexShrink: 0, marginTop: 1 }}>{index + 1}</div>
                   <div style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>{step}</div>
                 </div>
@@ -67,7 +67,7 @@ export default function Onboarding() {
                 ['Data import', 'CSV, XLSX, screenshot OCR'],
                 ['Command layer', 'Advisor, signals, and allocation'],
               ].map(([title, text]) => (
-                <div key={title} style={{ padding: 16, borderRadius: 12, border: `1px solid var(--border)`, background: 'rgba(212,160,23,0.02)' }}>
+                <div key={title} style={{ padding: 16, borderRadius: 3, border: `1px solid var(--border)`, background: 'rgba(212,160,23,0.02)' }}>
                   <div style={{ fontWeight: 600, marginBottom: 6, fontFamily: 'var(--font-serif)' }}>{title}</div>
                   <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--text-secondary)' }}>{text}</div>
                 </div>
@@ -75,17 +75,17 @@ export default function Onboarding() {
             </div>
 
             <div style={{ display: 'grid', gap: 14 }}>
-              <div style={{ padding: 18, borderRadius: 12, border: `1px solid var(--border)`, background: 'rgba(212,160,23,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: 18, borderRadius: 3, border: `1px solid var(--border)`, background: 'rgba(212,160,23,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontWeight: 600, marginBottom: 6, fontFamily: 'var(--font-serif)' }}>Upload portfolio snapshot</div>
                   <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Bring in holdings to unlock richer analytics.</div>
                 </div>
                 <Upload size={18} color="var(--greek-gold)" />
               </div>
-              <button onClick={() => navigate('/app/upload')} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 12, padding: '13px 16px', background: 'linear-gradient(180deg, #f0e6c8, #d4a017)', color: '#1a1206', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer' }}>
+              <button onClick={() => navigate('/app/upload')} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3, padding: '13px 16px', background: 'linear-gradient(180deg, #f0e6c8, var(--accent-gold))', color: '#1a1206', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer' }}>
                 Continue to import <ArrowRight size={16} />
               </button>
-              <button onClick={() => navigate('/app/dashboard')} style={{ border: `1px solid var(--border)`, borderRadius: 12, padding: '13px 16px', background: 'transparent', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={() => navigate('/app/dashboard')} style={{ border: `1px solid var(--border)`, borderRadius: 3, padding: '13px 16px', background: 'transparent', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>
                 Enter dashboard without setup
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-faint)', fontSize: 12 }}>

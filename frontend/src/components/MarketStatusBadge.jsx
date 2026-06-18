@@ -45,7 +45,7 @@ export default function MarketStatusBadge({ showClock = true, showNextOpen = tru
     return (
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
-        padding: '7px 11px', borderRadius: 12,
+        padding: '7px 11px', borderRadius: 3,
         border: '1px solid var(--border-subtle)',
         background: 'transparent',
         fontSize: 12, color: 'var(--text-faint)',
@@ -63,7 +63,7 @@ export default function MarketStatusBadge({ showClock = true, showNextOpen = tru
       title={`${status.exchange} · ${status.timezone}${status.next_open_label ? ' · ' + status.next_open_label : ''}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 7,
-        padding: '7px 11px', borderRadius: 12,
+        padding: '7px 11px', borderRadius: 3,
         border: `1px solid ${s.border}`,
         background: s.bg,
         fontSize: 12, fontWeight: 700,

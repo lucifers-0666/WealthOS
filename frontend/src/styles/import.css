@@ -270,7 +270,7 @@
 
 .preview-table-wrap {
   overflow-x: auto;
-  border-radius: 12px;
+  border-radius: 3px;
   border: 1px solid var(--border);
   background: var(--bg-card);
 }
@@ -372,7 +372,7 @@
   padding: 1rem;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 3px;
 }
 .merge-label { color: var(--text-secondary); font-size: 0.85rem; white-space: nowrap; }
 .merge-options { display: flex; flex-wrap: wrap; gap: 0.5rem; }

@@ -108,12 +108,9 @@ export default function Layout() {
   }, []);
 
   return (
-    <div className="layout-wrapper app-shell" style={{ display: 'flex', overflow: 'hidden', height: '100%', background: 'var(--bg-base)' }}>
+    <div className="layout-shell app-shell">
       {/* ── Sidebar ── */}
-      <aside className="sidebar" style={{
-        width: 180,
-        flexShrink: 0,
-        height: '100%',
+      <aside className="layout-sidebar" style={{
         background: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border-default)',
         position: 'relative',
@@ -159,12 +156,10 @@ export default function Layout() {
       </aside>
 
       {/* ── Main content ── */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div className="layout-body">
         
         {/* ── Topbar ── */}
-        <header className="topbar" style={{
-          height: 48,
-          flexShrink: 0,
+        <header className="layout-topbar" style={{
           background: 'var(--bg-secondary)',
           borderBottom: '1px solid var(--border-default)',
           display: 'flex',
@@ -264,7 +259,7 @@ export default function Layout() {
         </header>
 
         {/* ── Content Area ── */}
-        <main className="main-content">
+        <main className="layout-main">
           <Outlet />
         </main>
       </div>

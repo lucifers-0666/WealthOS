@@ -4,6 +4,7 @@
  * Also shows a human-readable "Updated X seconds ago" label.
  */
 import React, { useEffect, useState } from 'react';
+import { getISTMarketStatus } from '../lib/marketTime.js';
 
 const STYLES = {
   wrapper: {
@@ -64,7 +65,10 @@ function useSecondsAgo(updatedAt) {
 export default function LiveIndicator({ wsStatus, updatedAt, className }) {
   const secs = useSecondsAgo(updatedAt);
 
-  const label =
+  const marketInfo = getISTMarketStatus();
+  const isMarketOpen = marketInfo.status === 'open' || marketInfo.status === 'preopen';
+
+  const label = !isMarketOpen ? 'Market Closed' :
     wsStatus === 'open'
       ? secs === null ? 'Live'
         : secs < 5     ? 'Just updated'
@@ -72,11 +76,13 @@ export default function LiveIndicator({ wsStatus, updatedAt, className }) {
     : wsStatus === 'connecting' ? 'Connecting…'
     : 'Disconnected';
 
+  const effectiveStatus = !isMarketOpen ? 'closed' : wsStatus;
+
   return (
     <>
       <style>{KEYFRAMES}</style>
       <span style={STYLES.wrapper} className={className} title={label}>
-        <span style={STYLES.dot(wsStatus)} aria-hidden="true" />
+        <span style={STYLES.dot(effectiveStatus)} aria-hidden="true" />
         <span style={STYLES.label}>{label}</span>
       </span>
     </>

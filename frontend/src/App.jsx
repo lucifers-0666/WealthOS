@@ -44,7 +44,7 @@ export default function App() {
   return (
     <Suspense fallback={<div style={{padding:24}}>Loading…</div>}>
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route
           path="/onboarding"
@@ -75,7 +75,7 @@ export default function App() {
         </Route>
         {/* Legacy redirects */}
         <Route path="/app/*" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

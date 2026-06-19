@@ -1,7 +1,7 @@
 import React, { useMemo, Suspense, useEffect, useState } from "react";
 import { usePortfolio } from "../lib/usePortfolio.js";
 import { useMarketData } from "../lib/MarketDataContext.jsx";
-import { useMarketStatus } from "../lib/useMarketStatus.js";
+import { getISTMarketStatus } from "../lib/marketTime.js";
 import { PageLoadingState, PageErrorState, EmptyState } from "../components/PageStates.jsx";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { request } from "../services/api.js";
@@ -68,8 +68,14 @@ function TickerItem({ name, value, change }) {
 export default function Dashboard() {
   const { portfolio, transactions, loading, error } = usePortfolio();
   const { holdings: liveHoldings, watchlist: liveWatchlist } = useMarketData();
-  const { status: marketStatus } = useMarketStatus();
-  const isMarketOpen = marketStatus?.is_open;
+  const [marketStatus, setMarketStatus] = useState(getISTMarketStatus);
+
+  useEffect(() => {
+    const id = setInterval(() => setMarketStatus(getISTMarketStatus()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const isMarketOpen = marketStatus.status === 'open' || marketStatus.status === 'preopen';
 
   const [sparkData, setSparkData] = useState([]);
   const [tickerItems, setTickerItems] = useState([
@@ -119,16 +125,20 @@ export default function Dashboard() {
   if (error && !liveHoldings.length) return <PageErrorState title="Command center unavailable" message={error} />;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", background: 'var(--bg-base)' }}>
+    <div style={{ display: "flex", flexDirection: "column", background: 'var(--bg-base)' }}>
       
       {/* Ticker Bar */}
       <div className="ticker-bar">
         <div className="ticker-live">
-          <span className="ticker-live-dot" />
-          <span className="ticker-live-text">LIVE</span>
+          <span className="ticker-live-dot" style={{
+            background: isMarketOpen ? 'var(--status-gain)' : 'var(--text-muted)',
+            boxShadow: isMarketOpen ? '0 0 0 0 var(--status-gain)' : 'none',
+            animation: isMarketOpen ? 'ws-pulse 2s infinite' : 'none'
+          }} />
+          <span className="ticker-live-text">{isMarketOpen ? 'LIVE' : 'CLOSED'}</span>
         </div>
 
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', height: '100%', alignItems: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
           <div className={`ticker-track ${!isMarketOpen ? 'paused' : ''}`}>
             {[...tickerItems, ...tickerItems].map((item, i) => <TickerItem key={i} {...item} />)}
           </div>
@@ -136,7 +146,7 @@ export default function Dashboard() {
 
         <div style={{ width: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: '1px solid var(--border-default)', height: '100%', flexShrink: 0 }}>
           <span className="nav-section-label" style={{ color: isMarketOpen ? 'var(--status-gain)' : 'var(--text-muted)' }}>
-            {marketStatus?.label || 'MARKETS OPEN'} {marketStatus?.current_time_ist || ''}
+            {marketStatus.label}
           </span>
         </div>
       </div>

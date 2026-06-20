@@ -87,19 +87,73 @@ const Navbar = () => {
         </div>
         <div className="nav-right">
           <button className="btn-nav-ghost" onClick={() => navigate('/login')}>Sign In</button>
-          <button className="btn-primary" onClick={() => navigate('/onboarding')}>
-            Start Free <span className="arrow">→</span>
+          {/* FIX 04 — nav primary CTA, border-radius: 2px, solid gold */}
+          <button className="nav-cta-primary" onClick={() => navigate('/onboarding')}>
+            Start Free <span className="btn-arrow">→</span>
           </button>
         </div>
       </div>
-      <div className="meander-strip"></div>
+      {/* FIX 10 — Meander strip as inline SVG pattern (not CSS background) */}
+      <div style={{ height: '4px', width: '100%', overflow: 'hidden', flexShrink: 0, background: 'transparent' }}>
+        <svg width="100%" height="4" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="meander" x="0" y="0" width="40" height="4" patternUnits="userSpaceOnUse">
+              <path d="M0 2 H6 V0 H14 V4 H22 V2 H28 V0 H36 V2 H40"
+                stroke="rgba(200,179,142,0.18)" strokeWidth="1" fill="none" strokeLinecap="square"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="4" fill="url(#meander)" />
+        </svg>
+      </div>
     </div>
   );
 };
 
-// Section 01 — HERO CODED DASHBOARD
+// FIX 07 — Real donut chart with 7 coloured arc segments
+const DonutChart = () => {
+  const segments = [
+    { pct: 18.5, color: '#C8B38E' },
+    { pct: 15.2, color: '#6FAE8D' },
+    { pct: 12.8, color: '#A07840' },
+    { pct: 11.3, color: '#869FC4' },
+    { pct: 9.7,  color: '#B66A6A' },
+    { pct: 8.4,  color: '#5A7A6A' },
+    { pct: 24.1, color: '#3D4D47' },
+  ];
+  const r = 52, cx = 64, cy = 64;
+  const circ = 2 * Math.PI * r;
+  let offset = 0;
+  return (
+    <svg width="128" height="128" viewBox="0 0 128 128">
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#172923" strokeWidth="20" />
+      {segments.map((seg, i) => {
+        const dash = (seg.pct / 100) * circ;
+        const gap = circ - dash;
+        const rotate = (offset / 100) * 360 - 90;
+        offset += seg.pct;
+        return (
+          <circle key={i} cx={cx} cy={cy} r={r}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth="20"
+            strokeDasharray={`${dash} ${gap}`}
+            strokeDashoffset={0}
+            transform={`rotate(${rotate}, ${cx}, ${cy})`}
+          />
+        );
+      })}
+      <text x={cx} y={cy - 4} textAnchor="middle"
+        fontFamily="JetBrains Mono" fontSize="11" fontWeight="700" fill="#ECE0CC">7</text>
+      <text x={cx} y={cy + 9} textAnchor="middle"
+        fontFamily="Inter" fontSize="7" fill="#7B7C70" letterSpacing="1">STOCKS</text>
+    </svg>
+  );
+};
+
+// Section 01 — HERO CODED DASHBOARD  (FIX 07 donut + FIX 08 ticker + watchlist)
 const HeroDashboard = () => (
   <div className="hero-dashboard-render">
+    {/* Browser chrome */}
     <div className="db-chrome">
       <div className="db-chrome-dots">
         <div className="db-chrome-dot" style={{background: '#B66A6A'}}></div>
@@ -108,7 +162,8 @@ const HeroDashboard = () => (
       </div>
       <span className="db-chrome-url">app.antigravity.in/terminal</span>
     </div>
-    
+
+    {/* Topbar */}
     <div className="db-topbar">
       <span className="db-title">ANTIGRAVITY TERMINAL</span>
       <div className="db-status-pill">
@@ -116,7 +171,23 @@ const HeroDashboard = () => (
         MARKETS OPEN
       </div>
     </div>
-    
+
+    {/* FIX 08 — Ticker bar between topbar and KPIs */}
+    <div className="db-ticker-bar">
+      <span className="db-ticker-name">NIFTY 50</span>
+      <span className="db-ticker-val">22,419</span>
+      <span className="db-ticker-chg gain">+1.24%</span>
+      <span className="db-ticker-div">|</span>
+      <span className="db-ticker-name">SENSEX</span>
+      <span className="db-ticker-val">73,806</span>
+      <span className="db-ticker-chg gain">+0.45%</span>
+      <span className="db-ticker-div">|</span>
+      <span className="db-ticker-name">GOLD</span>
+      <span className="db-ticker-val">₹71,200</span>
+      <span className="db-ticker-chg gain">+1.2%</span>
+    </div>
+
+    {/* KPI 2×2 grid */}
     <div className="db-kpi-grid">
       <div className="db-kpi-card gold-border">
         <div className="db-kpi-label">PORTFOLIO VALUE</div>
@@ -134,104 +205,133 @@ const HeroDashboard = () => (
         <div className="db-kpi-sub neutral">Base</div>
       </div>
       <div className="db-kpi-card">
-        <div className="db-kpi-label">CASH BALANCE</div>
-        <div className="db-kpi-val">₹1,45,000</div>
-        <div className="db-kpi-sub neutral">Available</div>
+        <div className="db-kpi-label">AI CONFIDENCE</div>
+        <div className="db-kpi-val">94.2%</div>
+        <div className="db-kpi-sub neutral">High signal</div>
       </div>
     </div>
-    
+
+    {/* Donut + Activity row */}
     <div className="db-main-content">
-      {/* Donut Chart area */}
+      {/* FIX 07 — Real donut with arc segments */}
       <div className="db-donut-area">
-        <svg width="120" height="120" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="50" fill="none" stroke="#2D3C37" strokeWidth="18" />
-          <circle cx="60" cy="60" r="50" fill="none" stroke="#C8B38E" strokeWidth="18" strokeDasharray="314" strokeDashoffset="100" />
-          <circle cx="60" cy="60" r="50" fill="none" stroke="#6FAE8D" strokeWidth="18" strokeDasharray="314" strokeDashoffset="240" />
-          <text x="60" y="65" textAnchor="middle" fill="#ECE0CC" fontSize="14" fontFamily="JetBrains Mono" fontWeight="bold">7</text>
-        </svg>
+        <DonutChart />
       </div>
-      
+
       {/* Activity Feed */}
       <div className="db-activity-feed">
         <div className="db-section-title">ACTIVITY FEED</div>
         <div className="db-feed-item">
           <span className="db-feed-pill buy">BUY</span>
-          <span className="db-feed-text">INFY 50 shares @ ₹1,425</span>
+          <span className="db-feed-text">INFY 50 @ ₹1,425</span>
         </div>
         <div className="db-feed-item">
           <span className="db-feed-pill sell">SELL</span>
-          <span className="db-feed-text">ITC 100 shares @ ₹412</span>
+          <span className="db-feed-text">ITC 100 @ ₹412</span>
         </div>
         <div className="db-feed-item">
           <span className="db-feed-pill buy">BUY</span>
-          <span className="db-feed-text">HDFC 25 shares @ ₹1,650</span>
+          <span className="db-feed-text">HDFC 25 @ ₹1,650</span>
         </div>
+      </div>
+    </div>
+
+    {/* FIX 08 — Watchlist strip at the bottom */}
+    <div className="db-watchlist-strip">
+      <div className="db-watchlist-item">
+        <span className="db-wl-ticker">BAJFIN</span>
+        <span className="db-wl-price">₹7,245</span>
+        <span className="db-wl-chg gain">+2.3%</span>
+      </div>
+      <div className="db-watchlist-item">
+        <span className="db-wl-ticker">ASIANPT</span>
+        <span className="db-wl-price">₹2,892</span>
+        <span className="db-wl-chg loss">-0.8%</span>
+      </div>
+      <div className="db-watchlist-item">
+        <span className="db-wl-ticker">AIRTEL</span>
+        <span className="db-wl-price">₹1,156</span>
+        <span className="db-wl-chg gain">+0.6%</span>
       </div>
     </div>
   </div>
 );
 
+// FIX 11 — Hero restructured: grid has left+right, metrics strip sits below the grid
 const HeroSection = () => {
   const navigate = useNavigate();
   return (
     <section className="hero-section">
       <div className="hero-bg-gradient"></div>
       <div className="hero-noise"></div>
-      
-      <div className="hero-left">
-        <div className="hero-pre-title">PRIVATE WEALTH INTELLIGENCE</div>
-        <h1 className="hero-heading">
-          Intelligence<br/>
-          for Private<br/>
-          Wealth<span className="hero-heading-gold-dot">.</span>
-        </h1>
-        <p className="hero-subtitle">
-          Antigravity is the intelligence layer built for serious investors — real-time data, AI-powered decisions, and institutional-grade portfolio oversight. In one terminal.
-        </p>
-        
-        <div className="hero-cta-row">
-          <button className="btn-hero-primary" onClick={() => navigate('/onboarding')}>
-            Open Terminal <span className="arrow">→</span>
-          </button>
-          <button className="btn-hero-secondary">
-            <PlayCircle size={14} color="#7B7C70" /> Watch 90-sec demo
-          </button>
-        </div>
-        
-        <div className="hero-social-proof">
-          <div className="hero-avatars">
-            <div className="hero-avatar"></div>
-            <div className="hero-avatar"></div>
-            <div className="hero-avatar"></div>
+
+      {/* FIX 06 — Two-column grid, vertically centred */}
+      <div className="hero-grid">
+        <div className="hero-left">
+          <div className="hero-pre-title">PRIVATE WEALTH INTELLIGENCE</div>
+          {/* FIX 01 — Title Case heading, no text-transform uppercase */}
+          <h1 className="hero-heading">
+            Intelligence<br/>
+            for Private<br/>
+            <span>Wealth<span style={{color:'#C8B38E'}}>.</span></span>
+          </h1>
+          <p className="hero-subtitle">
+            Antigravity is the intelligence layer built for serious investors — real-time data, AI-powered decisions, and institutional-grade portfolio oversight. In one terminal.
+          </p>
+
+          {/* FIX 02 & 03 — Primary solid gold, secondary ghost */}
+          <div className="hero-cta-row">
+            <button className="btn-primary" onClick={() => navigate('/onboarding')}>
+              Open Terminal <span className="btn-arrow">→</span>
+            </button>
+            <button className="btn-secondary">
+              <PlayCircle size={14} color="#7B7C70" /> Watch 90-sec demo
+            </button>
           </div>
-          <span className="hero-social-text">Join 2,400+ investors managing ₹120Cr+ on the platform <span className="hero-social-text-dot">·</span></span>
-        </div>
-        
-        <div className="hero-metrics-strip">
-          <div className="hero-metric-item hero-metric-item-1">
-            <span className="hero-metric-label">PORTFOLIO INDEX</span>
-            <span className="hero-metric-val-mono">₹25.7L</span>
-            <span className="hero-metric-change-gain">+16.47% all-time</span>
-          </div>
-          <div className="hero-metric-sep"></div>
-          <div className="hero-metric-item hero-metric-item-2">
-            <span className="hero-metric-label">MARKET STATUS</span>
-            <span className="hero-metric-val-cinzel">OPEN</span>
-            <span className="hero-metric-change-muted">09:15 – 15:30 IST</span>
-          </div>
-          <div className="hero-metric-sep"></div>
-          <div className="hero-metric-item hero-metric-item-3">
-            <span className="hero-metric-label">AI CONFIDENCE</span>
-            <span className="hero-metric-val-mono">
-              <span className="animate-on-scroll" data-count-to="94.2" data-is-pct>0</span>
+
+          {/* FIX 05 — Avatar circles overlap with initials and negative margins */}
+          <div className="hero-social-proof">
+            <div className="hero-avatars">
+              {['R', 'A', 'S'].map((initial, i) => (
+                <div
+                  key={i}
+                  className="hero-avatar"
+                  style={{ marginLeft: i === 0 ? 0 : '-10px', zIndex: 3 - i }}
+                >
+                  {initial}
+                </div>
+              ))}
+            </div>
+            <span className="hero-social-text">
+              Join 2,400+ investors managing ₹120Cr+ on the platform
             </span>
-            <span className="hero-metric-change-sec">signal strength</span>
           </div>
+        </div>
+
+        <div className="hero-right">
+          <HeroDashboard />
         </div>
       </div>
-      
-      <div className="hero-right">
-        <HeroDashboard />
+
+      {/* FIX 11 — Metrics strip is BELOW the grid, not inside left column */}
+      <div className="hero-metrics">
+        <div className="hero-metric-item hero-metric-item-1">
+          <span className="hero-metric-label">PORTFOLIO INDEX</span>
+          <span className="hero-metric-val-mono">₹25.7L</span>
+          <span className="hero-metric-change-gain">+16.47% all-time</span>
+        </div>
+        <div className="hero-metric-sep"></div>
+        <div className="hero-metric-item hero-metric-item-2">
+          <span className="hero-metric-label">MARKET STATUS</span>
+          <span className="hero-metric-val-cinzel">OPEN</span>
+          <span className="hero-metric-change-muted">09:15 – 15:30 IST</span>
+        </div>
+        <div className="hero-metric-sep"></div>
+        <div className="hero-metric-item hero-metric-item-3">
+          <span className="hero-metric-label">AI CONFIDENCE</span>
+          <span className="hero-metric-val-mono">94.2%</span>
+          <span className="hero-metric-change-sec">signal strength</span>
+        </div>
       </div>
     </section>
   );
@@ -888,21 +988,31 @@ const Footer = () => {
 export default function Landing() {
   useScrollAnimations();
 
-  // Custom Cursor Logic
+  // FIX 09 — Custom cursor starts invisible, fades in on first mouse move
   useEffect(() => {
-    const cursor = document.getElementById('custom-cursor');
+    const cursor = document.querySelector('.custom-cursor');
     if (!cursor) return;
 
+    let cursorVisible = false;
+
     const moveCursor = (e) => {
-      cursor.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
+      cursor.style.left = e.clientX + 'px';
+      cursor.style.top = e.clientY + 'px';
+      if (!cursorVisible) {
+        cursor.style.opacity = '1';
+        cursorVisible = true;
+      }
     };
 
+    const hideCursor = () => { cursor.style.opacity = '0'; };
+    const showCursor = () => { if (cursorVisible) cursor.style.opacity = '1'; };
     const addHover = () => cursor.classList.add('hovering');
     const removeHover = () => cursor.classList.remove('hovering');
 
-    window.addEventListener('mousemove', moveCursor);
+    document.addEventListener('mousemove', moveCursor);
+    document.addEventListener('mouseleave', hideCursor);
+    document.addEventListener('mouseenter', showCursor);
 
-    // Add hovering effect to interactive elements
     const interactives = document.querySelectorAll('button, a, .t-card, .sec-card, .pricing-card, .bento-card');
     interactives.forEach(el => {
       el.addEventListener('mouseenter', addHover);
@@ -910,7 +1020,9 @@ export default function Landing() {
     });
 
     return () => {
-      window.removeEventListener('mousemove', moveCursor);
+      document.removeEventListener('mousemove', moveCursor);
+      document.removeEventListener('mouseleave', hideCursor);
+      document.removeEventListener('mouseenter', showCursor);
       interactives.forEach(el => {
         el.removeEventListener('mouseenter', addHover);
         el.removeEventListener('mouseleave', removeHover);
@@ -920,8 +1032,8 @@ export default function Landing() {
 
   return (
     <div className="landing-page">
-      <div id="custom-cursor" className="custom-cursor"></div>
-      
+      <div className="custom-cursor"></div>
+
       <Navbar />
       <HeroSection />
       <TrustBar />

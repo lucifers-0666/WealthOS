@@ -1,0 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=IM+Fell+English:ital@1&display=swap');
+
+/* ─── Antigravity Color Tokens ────────────────────────────────── */
+:root {
+  --font-display:   'Cinzel', 'Georgia', serif;
+  --font-body:      'Space Grotesk', 'Inter', sans-serif;
+  --font-italic:    'IM Fell English', 'Georgia', serif;
+
+  --ag-canvas:       #0B1F12;
+  --ag-panel-left:   #071A0E;
+  --ag-panel-right:  #0F2518;
+  --ag-surface:      #142B19;
+  --ag-input:        #132115;
+  --ag-input-focus:  #162818;
+  --ag-gold:         #D4A017;
+  --ag-gold-hover:   #C4900F;
+  --ag-gold-active:  #B07F0D;
+  --ag-cream:        #F9F3E6;
+  --ag-error:        #E05252;
+  --ag-success:      #1E4A1E;
+  --ag-success-text: #6FAE8D;
+}
+
+/* ─── Scrollbar Hide ───────────────────────────────────────────── */
+.login-page-root {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.login-page-root::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Base Input Styles ───────────────────────────────────────── */
+.ag-input {
+  width: 100%;
+  height: 48px;
+  background: var(--ag-input);
+  border: 1px solid rgba(212, 160, 23, 0.22);
+  border-radius: 6px;
+  padding: 0 16px;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ag-cream);
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.ag-input::placeholder {
+  color: rgba(249, 243, 230, 0.32);
+  transition: color 150ms ease;
+}
+
+/* ─── Input Focus State ──────────────────────────────────────── */
+.ag-input:focus {
+  border-color: rgba(212, 160, 23, 0.80);
+  background: var(--ag-input-focus);
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.08),
+              inset 0 1px 3px rgba(0, 0, 0, 0.30);
+}
+
+.ag-input:focus::placeholder {
+  color: rgba(249, 243, 230, 0.18);
+}
+
+/* ─── Input Error State ──────────────────────────────────────── */
+.ag-input.ag-input--error {
+  border-color: rgba(224, 82, 82, 0.80);
+  box-shadow: 0 0 0 3px rgba(224, 82, 82, 0.08),
+              inset 0 1px 3px rgba(0, 0, 0, 0.30);
+}
+
+/* ─── Password Input (extra right padding for eye icon) ─────── */
+.ag-input--password {
+  padding-right: 44px;
+}
+
+/* ─── Label Active (gold shift on focus) ────────────────────── */
+.ag-label {
+  display: block;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(249, 243, 230, 0.52);
+  margin-bottom: 7px;
+  transition: color 150ms ease;
+}
+
+.ag-label--active {
+  color: rgba(212, 160, 23, 0.90);
+}
+
+/* ─── Primary Button ─────────────────────────────────────────── */
+.ag-btn-primary {
+  width: 100%;
+  height: 52px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: var(--ag-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.20em;
+  color: #1C1508;
+  text-transform: uppercase;
+  transition: background 150ms ease, transform 100ms ease;
+  transform: translateY(0);
+}
+
+.ag-btn-primary:hover:not(:disabled):not(.ag-btn-primary--loading):not(.ag-btn-primary--success) {
+  background: var(--ag-gold-hover);
+  transform: translateY(-1px);
+}
+
+.ag-btn-primary:active:not(:disabled):not(.ag-btn-primary--success) {
+  background: var(--ag-gold-active);
+  transform: translateY(0);
+}
+
+.ag-btn-primary:disabled,
+.ag-btn-primary--loading {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ag-btn-primary--success {
+  background: var(--ag-success) !important;
+  transform: translateY(0) !important;
+  cursor: default;
+}
+
+/* ─── Feature Card Title ─────────────────────────────────────── */
+.login-card-title {
+  font-variant: small-caps;
+  font-family: 'Cinzel', 'Georgia', serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #F9F3E6;
+  margin-bottom: 8px;
+}
+
+/* ─── Tab Active Underline ───────────────────────────────────── */
+.login-tab-active-underline {
+  display: inline-block;
+  border-bottom: 2px solid #D4A017;
+  padding-bottom: 9px;
+}

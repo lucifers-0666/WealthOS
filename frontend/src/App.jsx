@@ -13,7 +13,7 @@ const Advisor = lazy(() => import('./pages/AIAdvisor.jsx'));
 const News = lazy(() => import('./pages/News.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
-const Login = lazy(() => import('./pages/Login.jsx'));
+const LoginPage = lazy(() => import('./pages/LoginPage.jsx'));
 const Analytics = lazy(() => import('./pages/Analytics.jsx'));
 const Watchlist = lazy(() => import('./pages/Watchlist.jsx'));
 const Signals = lazy(() => import('./pages/Signals.jsx'));
@@ -45,7 +45,7 @@ export default function App() {
     <Suspense fallback={<div style={{padding:24}}>Loading…</div>}>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route
           path="/onboarding"
           element={

@@ -8,7 +8,26 @@ export default {
         bg2: '#0B1120',
         accent: '#3B82F6',
         cyan: '#22D3EE',
-        violet: '#8B5CF6'
+        violet: '#8B5CF6',
+        ag: {
+          // v2 — updated panel contrast
+          'canvas':        '#0B1F12',
+          'panel-left':    '#071A0E',
+          'panel-right':   '#0F2518',
+          'surface':       '#142B19',
+          'input':         '#132115',
+          'input-focus':   '#162818',
+          'border':        '#2A3C35',
+          'cream':         '#F9F3E6',
+          'muted':         '#B0A890',
+          'faint':         '#72776A',
+          'gold':          '#D4A017',
+          'gold-hover':    '#C4900F',
+          'gold-active':   '#B07F0D',
+          'error':         '#E05252',
+          'success':       '#1E4A1E',
+          'success-text':  '#6FAE8D',
+        }
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

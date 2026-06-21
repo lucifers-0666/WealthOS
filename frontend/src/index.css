@@ -9,7 +9,7 @@
 
   :root {
   /* ═══════════════════════════════════════════════
-     ANTIGRAVITY COMMAND CENTER
+     ARCA COMMAND CENTER
      Concept: Dark Forest Teal, Cinematic editorial fintech terminal
      ═══════════════════════════════════════════════ */
 
@@ -186,7 +186,7 @@
     background: var(--bg-base);
   }
 
-  /* Scrollbar styling — match Antigravity dark theme */
+  /* Scrollbar styling — match ARCA dark theme */
   .layout-main::-webkit-scrollbar {
     width: 5px;
   }
@@ -328,7 +328,7 @@
     min-height: 30px;
     padding: 6px 12px;
     border: 1px solid var(--border-default);
-    border-radius: 3px;                          /* Antigravity spec: 3px max */
+    border-radius: 3px;                          /* ARCA spec: 3px max */
     color: var(--text-primary);
     background: var(--bg-base);                  /* #0A201F — correct dark forest */
     outline: none;

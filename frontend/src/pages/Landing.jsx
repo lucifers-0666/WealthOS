@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  PlayCircle, LockSimple, ShieldCheck, EyeSlash, FileX, 
-  Check, CheckCircle, TwitterLogo, LinkedinLogo, GithubLogo 
+  Play, LockSimple, ShieldCheck, Check, TwitterLogo, 
+  LinkedinLogo, GithubLogo, Eye, Lock, UserMinus, 
+  Warning, TrendUp, Star
 } from '@phosphor-icons/react';
 import './Landing.css';
 
@@ -18,27 +19,25 @@ const useScrollAnimations = () => {
             // Counter animation
             if (entry.target.hasAttribute('data-count-to')) {
               const target = parseFloat(entry.target.getAttribute('data-count-to'));
+              const prefix = entry.target.getAttribute('data-prefix') || '';
+              const suffix = entry.target.getAttribute('data-suffix') || '';
+              const decimals = parseInt(entry.target.getAttribute('data-decimals') || '0', 10);
               const duration = 1400; // 1.4s
               const start = performance.now();
-              const isPct = entry.target.hasAttribute('data-is-pct');
               
               const updateCounter = (currentTime) => {
                 const elapsed = currentTime - start;
                 const progress = Math.min(elapsed / duration, 1);
                 // easeOutQuart
                 const easeOut = 1 - Math.pow(1 - progress, 4);
-                const current = (target * easeOut).toFixed(1);
+                const current = (target * easeOut).toFixed(decimals);
                 
-                if (isPct) {
-                  entry.target.textContent = `+${current}%`;
-                } else {
-                  entry.target.textContent = current;
-                }
+                entry.target.textContent = `${prefix}${current}${suffix}`;
                 
                 if (progress < 1) {
                   requestAnimationFrame(updateCounter);
                 } else {
-                  entry.target.textContent = isPct ? `+${target}%` : target;
+                  entry.target.textContent = `${prefix}${target}${suffix}`;
                 }
               };
               requestAnimationFrame(updateCounter);
@@ -66,51 +65,47 @@ const Navbar = () => {
     <div className="nav-wrapper">
       <div className="fixed-navbar">
         <div className="nav-left">
-          <svg width="20" height="20" viewBox="0 0 26 26" fill="none" stroke="#C8B38E">
-            <circle cx="13" cy="13" r="12" strokeWidth="1"/>
-            <circle cx="10" cy="11" r="2.5" strokeWidth="1"/>
-            <circle cx="16" cy="11" r="2.5" strokeWidth="1"/>
-            <circle cx="10" cy="11" r="1" fill="#C8B38E"/>
-            <circle cx="16" cy="11" r="1" fill="#C8B38E"/>
-            <path d="M9 16 Q13 19 17 16" strokeWidth="1" fill="none" strokeLinecap="round"/>
-            <path d="M11 7 L9 5 M15 7 L17 5" strokeWidth="1.2" strokeLinecap="round"/>
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="#C8B38E" strokeWidth="1.5">
+            <path d="M6 22 A10 10 0 0 1 10 8" strokeLinecap="round" />
+            <path d="M6 18 C5 17 7 16 7 16" />
+            <path d="M8 14 C7 13 9 12 9 12" />
+            <path d="M10 10 C9 9 11 8 11 8" />
+            <path d="M26 22 A10 10 0 0 0 22 8" strokeLinecap="round" />
+            <path d="M26 18 C27 17 25 16 25 16" />
+            <path d="M24 14 C25 13 23 12 23 12" />
+            <path d="M22 10 C23 9 21 8 21 8" />
+            <circle cx="13" cy="13" r="2.5" strokeWidth="1.2" />
+            <circle cx="19" cy="13" r="2.5" strokeWidth="1.2" />
+            <circle cx="13" cy="13" r="0.8" fill="#C8B38E" />
+            <circle cx="19" cy="13" r="0.8" fill="#C8B38E" />
+            <path d="M16 14.5 L15 16.5 L17 16.5 Z" fill="#C8B38E" stroke="none" />
+            <path d="M11 10.5 C12 9.5 14 9.5 16 10 C18 9.5 20 9.5 21 10.5 L21.5 13.5 C21.5 18 19 21 16 21 C13 21 10.5 18 10.5 13.5 Z" strokeWidth="1.2" strokeLinejoin="round" />
+            <path d="M11 14 C12 16 12.5 18 13.5 19.5" strokeWidth="1" />
+            <path d="M21 14 C20 16 19.5 18 18.5 19.5" strokeWidth="1" />
           </svg>
-          <span className="nav-logo-text">ANTIGRAVITY</span>
+          <span className="nav-logo-text">ARCA</span>
           <div className="nav-separator"></div>
           <span className="nav-subtitle">PRIVATE TERMINAL</span>
         </div>
         <div className="nav-center">
-          <a href="#features" className="nav-link">Features</a>
           <a href="#intelligence" className="nav-link">Intelligence</a>
+          <a href="#features" className="nav-link">Portfolio</a>
           <a href="#security" className="nav-link">Security</a>
           <a href="#pricing" className="nav-link">Pricing</a>
         </div>
         <div className="nav-right">
-          <button className="btn-nav-ghost" onClick={() => navigate('/login')}>Sign In</button>
-          {/* FIX 04 — nav primary CTA, border-radius: 2px, solid gold */}
-          <button className="nav-cta-primary" onClick={() => navigate('/onboarding')}>
-            Start Free <span className="btn-arrow">→</span>
+          <button className="nav-cta-primary" onClick={() => navigate('/onboarding')} aria-label="Open ARCA Terminal">
+            REQUEST ACCESS →
           </button>
         </div>
       </div>
-      {/* FIX 10 — Meander strip as inline SVG pattern (not CSS background) */}
-      <div style={{ height: '4px', width: '100%', overflow: 'hidden', flexShrink: 0, background: 'transparent' }}>
-        <svg width="100%" height="4" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="meander" x="0" y="0" width="40" height="4" patternUnits="userSpaceOnUse">
-              <path d="M0 2 H6 V0 H14 V4 H22 V2 H28 V0 H36 V2 H40"
-                stroke="rgba(200,179,142,0.18)" strokeWidth="1" fill="none" strokeLinecap="square"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="4" fill="url(#meander)" />
-        </svg>
-      </div>
+      <div className="meander-strip" />
     </div>
   );
 };
 
-// FIX 07 — Real donut chart with 7 coloured arc segments
-const DonutChart = () => {
+// Coded Donut Chart component supporting multiple sizes
+const DonutChart = ({ size = 128, strokeWidth = 20 }) => {
   const segments = [
     { pct: 18.5, color: '#C8B38E' },
     { pct: 15.2, color: '#6FAE8D' },
@@ -120,12 +115,14 @@ const DonutChart = () => {
     { pct: 8.4,  color: '#5A7A6A' },
     { pct: 24.1, color: '#3D4D47' },
   ];
-  const r = 52, cx = 64, cy = 64;
+  const r = size / 2.5;
+  const cx = size / 2;
+  const cy = size / 2;
   const circ = 2 * Math.PI * r;
   let offset = 0;
   return (
-    <svg width="128" height="128" viewBox="0 0 128 128">
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#172923" strokeWidth="20" />
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#172923" strokeWidth={strokeWidth} />
       {segments.map((seg, i) => {
         const dash = (seg.pct / 100) * circ;
         const gap = circ - dash;
@@ -135,129 +132,72 @@ const DonutChart = () => {
           <circle key={i} cx={cx} cy={cy} r={r}
             fill="none"
             stroke={seg.color}
-            strokeWidth="20"
+            strokeWidth={strokeWidth}
             strokeDasharray={`${dash} ${gap}`}
             strokeDashoffset={0}
             transform={`rotate(${rotate}, ${cx}, ${cy})`}
           />
         );
       })}
-      <text x={cx} y={cy - 4} textAnchor="middle"
-        fontFamily="JetBrains Mono" fontSize="11" fontWeight="700" fill="#ECE0CC">7</text>
-      <text x={cx} y={cy + 9} textAnchor="middle"
-        fontFamily="Inter" fontSize="7" fill="#7B7C70" letterSpacing="1">STOCKS</text>
+      <text x={cx} y={cy - (size * 0.03)} textAnchor="middle"
+        fontFamily="JetBrains Mono" fontSize={size * 0.09} fontWeight="700" fill="#ECE0CC">7</text>
+      <text x={cx} y={cy + (size * 0.08)} textAnchor="middle"
+        fontFamily="Inter" fontSize={size * 0.055} fill="#7B7C70" letterSpacing="1">HOLDINGS</text>
     </svg>
   );
 };
 
-// Section 01 — HERO CODED DASHBOARD  (FIX 07 donut + FIX 08 ticker + watchlist)
+// Section 01 — HERO CODED DASHBOARD
 const HeroDashboard = () => (
-  <div className="hero-dashboard-render">
-    {/* Browser chrome */}
-    <div className="db-chrome">
-      <div className="db-chrome-dots">
-        <div className="db-chrome-dot" style={{background: '#B66A6A'}}></div>
-        <div className="db-chrome-dot" style={{background: '#D2A76D'}}></div>
-        <div className="db-chrome-dot" style={{background: '#6FAE8D'}}></div>
+  <div className="hero-dashboard-card">
+    {/* Top row: 3 mini KPI chips in gold/teal */}
+    <div className="hero-db-kpis">
+      <div className="hero-db-kpi">
+        <span className="hero-db-kpi-label">PORTFOLIO</span>
+        <span className="hero-db-kpi-val">₹25,74,000</span>
       </div>
-      <span className="db-chrome-url">app.antigravity.in/terminal</span>
-    </div>
-
-    {/* Topbar */}
-    <div className="db-topbar">
-      <span className="db-title">ANTIGRAVITY TERMINAL</span>
-      <div className="db-status-pill">
-        <div className="db-status-dot"></div>
-        MARKETS OPEN
+      <div className="hero-db-kpi gold-border">
+        <span className="hero-db-kpi-label">TODAY'S CHANGE</span>
+        <span className="hero-db-kpi-val gain">+2.34%</span>
+      </div>
+      <div className="hero-db-kpi">
+        <span className="hero-db-kpi-label">AI CONFIDENCE</span>
+        <span className="hero-db-kpi-val">94.2%</span>
       </div>
     </div>
 
-    {/* FIX 08 — Ticker bar between topbar and KPIs */}
-    <div className="db-ticker-bar">
-      <span className="db-ticker-name">NIFTY 50</span>
-      <span className="db-ticker-val">22,419</span>
-      <span className="db-ticker-chg gain">+1.24%</span>
-      <span className="db-ticker-div">|</span>
-      <span className="db-ticker-name">SENSEX</span>
-      <span className="db-ticker-val">73,806</span>
-      <span className="db-ticker-chg gain">+0.45%</span>
-      <span className="db-ticker-div">|</span>
-      <span className="db-ticker-name">GOLD</span>
-      <span className="db-ticker-val">₹71,200</span>
-      <span className="db-ticker-chg gain">+1.2%</span>
-    </div>
-
-    {/* KPI 2×2 grid */}
-    <div className="db-kpi-grid">
-      <div className="db-kpi-card gold-border">
-        <div className="db-kpi-label">PORTFOLIO VALUE</div>
-        <div className="db-kpi-val">₹25,74,000</div>
-        <div className="db-kpi-sub gain">+16.47% All-time</div>
+    {/* Center: donut chart + Right sidebar: holdings */}
+    <div className="hero-db-body">
+      <div className="hero-db-chart">
+        <DonutChart size={160} strokeWidth={18} />
       </div>
-      <div className="db-kpi-card">
-        <div className="db-kpi-label">TODAY'S CHANGE</div>
-        <div className="db-kpi-val">+2.34%</div>
-        <div className="db-kpi-sub gain">+₹58,200</div>
-      </div>
-      <div className="db-kpi-card">
-        <div className="db-kpi-label">TOTAL INVESTED</div>
-        <div className="db-kpi-val">₹22,10,000</div>
-        <div className="db-kpi-sub neutral">Base</div>
-      </div>
-      <div className="db-kpi-card">
-        <div className="db-kpi-label">AI CONFIDENCE</div>
-        <div className="db-kpi-val">94.2%</div>
-        <div className="db-kpi-sub neutral">High signal</div>
-      </div>
-    </div>
-
-    {/* Donut + Activity row */}
-    <div className="db-main-content">
-      {/* FIX 07 — Real donut with arc segments */}
-      <div className="db-donut-area">
-        <DonutChart />
-      </div>
-
-      {/* Activity Feed */}
-      <div className="db-activity-feed">
-        <div className="db-section-title">ACTIVITY FEED</div>
-        <div className="db-feed-item">
-          <span className="db-feed-pill buy">BUY</span>
-          <span className="db-feed-text">INFY 50 @ ₹1,425</span>
+      <div className="hero-db-sidebar">
+        <div className="hero-db-hold">
+          <span className="hero-db-hold-name">HDFCBANK</span>
+          <span className="hero-db-hold-pct">18.5%</span>
         </div>
-        <div className="db-feed-item">
-          <span className="db-feed-pill sell">SELL</span>
-          <span className="db-feed-text">ITC 100 @ ₹412</span>
-        </div>
-        <div className="db-feed-item">
-          <span className="db-feed-pill buy">BUY</span>
-          <span className="db-feed-text">HDFC 25 @ ₹1,650</span>
+        <div className="hero-db-hold">
+          <span className="hero-db-hold-name">RELIANCE</span>
+          <span className="hero-db-hold-pct">12.8%</span>
         </div>
       </div>
     </div>
 
-    {/* FIX 08 — Watchlist strip at the bottom */}
-    <div className="db-watchlist-strip">
-      <div className="db-watchlist-item">
-        <span className="db-wl-ticker">BAJFIN</span>
-        <span className="db-wl-price">₹7,245</span>
-        <span className="db-wl-chg gain">+2.3%</span>
+    {/* Bottom: 2 activity pills */}
+    <div className="hero-db-footer">
+      <div className="hero-db-act-pill">
+        <span className="badge buy">BUY</span>
+        <span className="text">INFY 50 @ ₹1,425</span>
       </div>
-      <div className="db-watchlist-item">
-        <span className="db-wl-ticker">ASIANPT</span>
-        <span className="db-wl-price">₹2,892</span>
-        <span className="db-wl-chg loss">-0.8%</span>
-      </div>
-      <div className="db-watchlist-item">
-        <span className="db-wl-ticker">AIRTEL</span>
-        <span className="db-wl-price">₹1,156</span>
-        <span className="db-wl-chg gain">+0.6%</span>
+      <div className="hero-db-act-pill">
+        <span className="badge sell">SELL</span>
+        <span className="text">ITC 100 @ ₹412</span>
       </div>
     </div>
   </div>
 );
 
-// FIX 11 — Hero restructured: grid has left+right, metrics strip sits below the grid
+// Section 02 — HERO
 const HeroSection = () => {
   const navigate = useNavigate();
   return (
@@ -265,72 +205,34 @@ const HeroSection = () => {
       <div className="hero-bg-gradient"></div>
       <div className="hero-noise"></div>
 
-      {/* FIX 06 — Two-column grid, vertically centred */}
       <div className="hero-grid">
         <div className="hero-left">
-          <div className="hero-pre-title">PRIVATE WEALTH INTELLIGENCE</div>
-          {/* FIX 01 — Title Case heading, no text-transform uppercase */}
+          <div className="hero-pre-title">WEALTH INTELLIGENCE PLATFORM</div>
           <h1 className="hero-heading">
-            Intelligence<br/>
-            for Private<br/>
-            <span>Wealth<span style={{color:'#C8B38E'}}>.</span></span>
+            Intelligence for Private Wealth.
           </h1>
           <p className="hero-subtitle">
-            Antigravity is the intelligence layer built for serious investors — real-time data, AI-powered decisions, and institutional-grade portfolio oversight. In one terminal.
+            Built for investors who manage real money across equities, bonds, and alternatives — not for casual app users.
           </p>
 
-          {/* FIX 02 & 03 — Primary solid gold, secondary ghost */}
-          <div className="hero-cta-row">
-            <button className="btn-primary" onClick={() => navigate('/onboarding')}>
-              Open Terminal <span className="btn-arrow">→</span>
-            </button>
-            <button className="btn-secondary">
-              <PlayCircle size={14} color="#7B7C70" /> Watch 90-sec demo
-            </button>
+          <div className="hero-social-proof">
+            <span className="hero-social-text">
+              (Illustrative preview — not live trading data)
+            </span>
           </div>
 
-          {/* FIX 05 — Avatar circles overlap with initials and negative margins */}
-          <div className="hero-social-proof">
-            <div className="hero-avatars">
-              {['R', 'A', 'S'].map((initial, i) => (
-                <div
-                  key={i}
-                  className="hero-avatar"
-                  style={{ marginLeft: i === 0 ? 0 : '-10px', zIndex: 3 - i }}
-                >
-                  {initial}
-                </div>
-              ))}
-            </div>
-            <span className="hero-social-text">
-              Join 2,400+ investors managing ₹120Cr+ on the platform
-            </span>
+          <div className="hero-cta-row">
+            <button className="btn-primary" onClick={() => navigate('/onboarding')} aria-label="Open ARCA Terminal">
+              OPEN TERMINAL →
+            </button>
+            <button className="btn-secondary">
+              <span className="play-icon">▶</span> Watch 90-sec Demo
+            </button>
           </div>
         </div>
 
         <div className="hero-right">
           <HeroDashboard />
-        </div>
-      </div>
-
-      {/* FIX 11 — Metrics strip is BELOW the grid, not inside left column */}
-      <div className="hero-metrics">
-        <div className="hero-metric-item hero-metric-item-1">
-          <span className="hero-metric-label">PORTFOLIO INDEX</span>
-          <span className="hero-metric-val-mono">₹25.7L</span>
-          <span className="hero-metric-change-gain">+16.47% all-time</span>
-        </div>
-        <div className="hero-metric-sep"></div>
-        <div className="hero-metric-item hero-metric-item-2">
-          <span className="hero-metric-label">MARKET STATUS</span>
-          <span className="hero-metric-val-cinzel">OPEN</span>
-          <span className="hero-metric-change-muted">09:15 – 15:30 IST</span>
-        </div>
-        <div className="hero-metric-sep"></div>
-        <div className="hero-metric-item hero-metric-item-3">
-          <span className="hero-metric-label">AI CONFIDENCE</span>
-          <span className="hero-metric-val-mono">94.2%</span>
-          <span className="hero-metric-change-sec">signal strength</span>
         </div>
       </div>
     </section>
@@ -340,9 +242,9 @@ const HeroSection = () => {
 // Section 02 — MARQUEE TRUST BAR
 const TrustBar = () => {
   const items = [
-    "BSE Certified", "SEBI Compliant", "256-bit AES Encrypted", 
-    "No Third-Party Data Sharing", "22ms Execution Latency", 
-    "INR-Native", "99.98% Uptime", "ISO 27001 Secured"
+    "Read-Only Access", "TLS 1.3 Protocol", "256-bit AES Encrypted", 
+    "No Third-Party Data Sharing", "Target Latency < 25ms", 
+    "INR-Native", "99.98% Uptime", "OAuth Token Based"
   ];
   return (
     <section className="marquee-section">
@@ -366,39 +268,34 @@ const ProblemStatement = () => {
   return (
     <section className="problem-section">
       <div className="problem-sticky">
-        <div className="problem-label animate-on-scroll">THE PROBLEM</div>
-        <h2 className="problem-heading">
-          <span className="animate-on-scroll" style={{display: 'block'}}>Your portfolio deserves</span>
-          <span className="animate-on-scroll" style={{display: 'block', transitionDelay: '0.2s'}}>
-            better than a <span className="gold-word">spreadsheet.</span>
-          </span>
+        <span className="section-label center animate-on-scroll">THE PROBLEM</span>
+        <h2 className="problem-heading animate-on-scroll">
+          Your Portfolio Deserves Better Than a Spreadsheet.
         </h2>
         
-        <div className="problem-divider animate-on-scroll" style={{transitionDelay: '0.3s'}}></div>
+        <div className="problem-divider animate-on-scroll"></div>
         
-        <p className="problem-body animate-on-scroll" style={{transitionDelay: '0.4s'}}>
-          Most investors manage wealth through PDFs, Excel, and fragmented broker apps. Data is stale. Decisions are reactive. Opportunities are invisible.
-          <br/><br/>
-          Antigravity changes that — giving you live intelligence, AI-driven signals, and a unified terminal that thinks faster than any spreadsheet ever could.
+        <p className="problem-body animate-on-scroll">
+          Most investors manage wealth through PDFs, Excel, and fragmented broker apps. Lack of data, slow tools, and missed opportunities are costing you clarity — and potentially, returns.
         </p>
         
-        <div className="problem-stats animate-on-scroll" style={{transitionDelay: '0.5s'}}>
+        <div className="problem-stats animate-on-scroll">
           <div className="problem-stat">
-            <span className="p-stat-val">₹120Cr+</span>
-            <span className="p-stat-label">Assets tracked on platform</span>
-            <span className="p-stat-sub">and growing</span>
+            <span className="problem-stat-value animate-on-scroll" data-count-to="25" data-prefix="< " data-suffix="ms" data-decimals="0">&lt; 25ms</span>
+            <span className="problem-stat-label">TARGET DATA LATENCY</span>
+            <span className="problem-stat-sub">designed for real-time</span>
           </div>
           <div className="p-stat-sep"></div>
           <div className="problem-stat">
-            <span className="p-stat-val">22ms</span>
-            <span className="p-stat-label">Average data latency</span>
-            <span className="p-stat-sub">real-time feeds</span>
+            <span className="problem-stat-value animate-on-scroll" data-count-to="100" data-suffix="%" data-decimals="0">100%</span>
+            <span className="problem-stat-label">READ-ONLY BY DESIGN</span>
+            <span className="problem-stat-sub">we never touch your capital</span>
           </div>
           <div className="p-stat-sep"></div>
           <div className="problem-stat">
-            <span className="p-stat-val">94.2%</span>
-            <span className="p-stat-label">AI signal accuracy</span>
-            <span className="p-stat-sub">over 12 months</span>
+            <span className="problem-stat-value animate-on-scroll" data-count-to="0" data-decimals="0">0</span>
+            <span className="problem-stat-label">THIRD-PARTY DATA SOLD</span>
+            <span className="problem-stat-sub">your data stays yours</span>
           </div>
         </div>
       </div>
@@ -410,136 +307,186 @@ const ProblemStatement = () => {
 const FeaturesSection = () => {
   return (
     <section className="features-section" id="features">
-      <span className="section-top-label animate-on-scroll">WHAT YOU GET</span>
-      <h2 className="section-top-heading animate-on-scroll">
-        A complete intelligence layer for your wealth.
+      <span className="section-label animate-on-scroll">THE FEATURES</span>
+      <h2 className="features-heading animate-on-scroll">
+        A Complete Intelligence Layer for Your Wealth.
       </h2>
+      <p className="features-subtext animate-on-scroll">
+        Every tool you need. Nothing you don't.
+      </p>
       
       <div className="bento-grid">
-        {/* CARD A */}
-        <div className="bento-card card-a animate-on-scroll" style={{transitionDelay: '0ms'}}>
-          <div className="bento-header">| INSTITUTIONAL DASHBOARD</div>
-          <div style={{display: 'flex', gap: '32px', height: '100%'}}>
-            <div style={{flex: 1}}>
-              <div className="card-a-title">Your command center</div>
-              <div className="card-a-desc">
-                Unified view across all holdings, accounts, and brokers — consolidated in one terminal.
+        {/* CARD A — YOUR COMMAND CENTER */}
+        <div className="bento-card card-a bento-card-hero animate-on-scroll" style={{transitionDelay: '0ms'}}>
+          <div className="bento-header">YOUR COMMAND CENTER</div>
+          <div className="card-a-title">Your Command Center</div>
+          <div className="card-a-desc">
+            Live P&L, allocation donut, AI brief — your entire portfolio at a glance. Updated in real time.
+          </div>
+          
+          <div className="card-a-visual">
+            <div className="card-a-bar-row">
+              <div className="bar-labels">
+                <span className="bar-name">HDFC Bank</span>
+                <span className="bar-val">18.5%</span>
               </div>
-              <div className="bento-chip-row">
-                <span className="bento-chip">Live data</span>
-                <span className="bento-chip">Multi-broker</span>
-                <span className="bento-chip">Consolidated</span>
+              <div className="bar-track">
+                <div className="bar-fill" style={{ width: '18.5%', background: '#C8B38E' }}></div>
               </div>
             </div>
-            <div style={{flex: 1, display: 'flex', alignItems: 'center'}}>
-              {/* Mini dashboard render */}
-              <div style={{width: '100%', background: '#102321', border: '1px solid #2D3C37', borderRadius: '4px', padding: '16px'}}>
-                <div style={{display: 'flex', gap: '8px', marginBottom: '16px'}}>
-                  <div style={{flex: 1, background: '#172923', border: '1px solid #2D3C37', padding: '8px', borderRadius: '2px'}}>
-                    <div style={{fontSize: '8px', color: '#7B7C70', marginBottom: '4px'}}>VALUE</div>
-                    <div style={{fontSize: '12px', color: '#ECE0CC', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>₹18.5L</div>
-                  </div>
-                  <div style={{flex: 1, background: '#172923', border: '1px solid #2D3C37', padding: '8px', borderRadius: '2px'}}>
-                    <div style={{fontSize: '8px', color: '#7B7C70', marginBottom: '4px'}}>P&L</div>
-                    <div style={{fontSize: '12px', color: '#6FAE8D', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>+14.2%</div>
-                  </div>
-                </div>
-                {/* Horizontal Bar */}
-                <div style={{display: 'flex', height: '12px', borderRadius: '2px', overflow: 'hidden', marginBottom: '16px'}}>
-                  <div style={{width: '40%', background: '#C8B38E'}}></div>
-                  <div style={{width: '35%', background: '#869FC4'}}></div>
-                  <div style={{width: '25%', background: '#6FAE8D'}}></div>
-                </div>
-                {/* Sparklines */}
-                <div style={{display: 'flex', gap: '8px'}}>
-                  <div style={{flex: 1, height: '24px', border: '1px solid #2D3C37', borderRadius: '2px', position: 'relative'}}>
-                    <svg width="100%" height="100%" preserveAspectRatio="none"><path d="M0 20 L20 10 L40 15 L60 5" stroke="#C8B38E" fill="none"/></svg>
-                  </div>
-                  <div style={{flex: 1, height: '24px', border: '1px solid #2D3C37', borderRadius: '2px', position: 'relative'}}>
-                     <svg width="100%" height="100%" preserveAspectRatio="none"><path d="M0 20 L20 15 L40 5 L60 10" stroke="#6FAE8D" fill="none"/></svg>
-                  </div>
-                </div>
+            <div className="card-a-bar-row">
+              <div className="bar-labels">
+                <span className="bar-name">Infosys</span>
+                <span className="bar-val">12.8%</span>
+              </div>
+              <div className="bar-track">
+                <div className="bar-fill" style={{ width: '12.8%', background: '#869FC4' }}></div>
+              </div>
+            </div>
+            <div className="card-a-bar-row">
+              <div className="bar-labels">
+                <span className="bar-name">Reliance</span>
+                <span className="bar-val">9.7%</span>
+              </div>
+              <div className="bar-track">
+                <div className="bar-fill" style={{ width: '9.7%', background: 'rgba(200,179,142,0.4)' }}></div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* CARD B */}
+        {/* CARD B — AI ADVISORY */}
         <div className="bento-card card-b animate-on-scroll" style={{transitionDelay: '80ms'}}>
-          <div className="bento-header">| AI ADVISORY LAYER</div>
-          <div className="card-b-quote">
-            "Your concentration in Financials has drifted above your 35% target. Consider rebalancing before earnings season — volatility window opens in 6 days."
+          <div className="bento-header">AI ADVISORY</div>
+          <div className="card-b-title">Advisory</div>
+          <p className="card-b-body-text">
+            Plain-language portfolio analysis generated for your specific holdings.
+          </p>
+          <div className="ai-pills-stack">
+            <div className="ai-status-pill warn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={{marginRight: 6}}><path d="M8 2 L14 13 H2 Z M8 5 V9 M8 11 H8.01" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Rebalance suggested
+            </div>
+            <div className="ai-status-pill gain">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={{marginRight: 6}}><path d="M2 13 L6 9 L10 11 L14 6 M14 9 V6 H11" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Tech overweight
+            </div>
           </div>
-          <div className="insight-pills">
-            <span className="insight-pill warn">⚠ Concentration</span>
-            <span className="insight-pill gain">↗ Rebalance signal</span>
-          </div>
-          <div className="animated-line"></div>
         </div>
 
-        {/* CARD C */}
+        {/* CARD C — LIVE MARKET DATA */}
         <div className="bento-card card-c animate-on-scroll" style={{transitionDelay: '160ms'}}>
-          <div className="bento-header">| PREMIUM IMPORT FLOW</div>
-          <div className="card-c-desc">
-            One-click imports: Zerodha, Groww, HDFC, ICICI, and 40+ others. Syncs every 30 seconds automatically.
-          </div>
-          <div className="broker-logos">
-            <span className="broker-logo">ZERODHA</span>
-            <span className="broker-logo">GROWW</span>
-            <span className="broker-logo">HDFC SEC</span>
-            <span className="broker-logo">ICICI</span>
-            <span className="broker-logo">+40</span>
+          <div className="bento-header">LIVE MARKET DATA</div>
+          <div className="card-c-title">Market Feeds</div>
+          <p className="card-c-body-text">
+            NSE/BSE data flowing directly into your portfolio positions.
+          </p>
+          <div className="mini-ticker-table">
+            <div className="ticker-row">
+              <span className="tick-name">NIFTY 50</span>
+              <span className="tick-val">22,419</span>
+              <span className="tick-chg gain">+0.42%</span>
+            </div>
+            <div className="ticker-row">
+              <span className="tick-name">SENSEX</span>
+              <span className="tick-val">73,806</span>
+              <span className="tick-chg gain">+0.45%</span>
+            </div>
+            <div className="ticker-row">
+              <span className="tick-name">USD/INR</span>
+              <span className="tick-val">83.24</span>
+              <span className="tick-chg loss">-0.12%</span>
+            </div>
           </div>
         </div>
 
-        {/* CARD D */}
+        {/* CARD D — TRANSACTION LOG */}
         <div className="bento-card card-d animate-on-scroll" style={{transitionDelay: '240ms'}}>
-          <div className="bento-header">| MARKET INTELLIGENCE</div>
-          <div className="card-d-desc">
-            Always-on feeds linked to your portfolio. Earnings alerts, ratings changes, and sentiment signals.
-          </div>
-          <div className="news-pill">
-            <span className="news-pill-ticker">[NIFTY IT]</span>
-            <span className="news-pill-text">4578 PT TARGET — Reuters 10m</span>
-          </div>
-          <div className="news-pill">
-            <span className="news-pill-ticker">[HDFCBANK]</span>
-            <span className="news-pill-text">Q3 EARNINGS BEAT — Bloomberg</span>
+          <div className="bento-header">TRANSACTION LOG</div>
+          <div className="card-d-title">Activity Log</div>
+          <p className="card-d-body-text">
+            Every buy, sell, and dividend — automatically categorised.
+          </p>
+          <div className="tx-log-table">
+            <div className="tx-row">
+              <span className="tx-badge buy">BUY</span>
+              <span className="tx-symbol">INFY</span>
+              <span className="tx-details">50 @ ₹1,425</span>
+              <span className="tx-date">Jun 15</span>
+            </div>
+            <div className="tx-row">
+              <span className="tx-badge sell">SELL</span>
+              <span className="tx-symbol">ITC</span>
+              <span className="tx-details">100 @ ₹412</span>
+              <span className="tx-date">Jun 14</span>
+            </div>
+            <div className="tx-row">
+              <span className="tx-badge buy">BUY</span>
+              <span className="tx-symbol">HDFC</span>
+              <span className="tx-details">25 @ ₹1,650</span>
+              <span className="tx-date">Jun 12</span>
+            </div>
+            <div className="tx-row">
+              <span className="tx-badge buy">BUY</span>
+              <span className="tx-symbol">TCS</span>
+              <span className="tx-details">15 @ ₹3,820</span>
+              <span className="tx-date">Jun 10</span>
+            </div>
+            <div className="tx-row">
+              <span className="tx-badge buy">BUY</span>
+              <span className="tx-symbol">INFY</span>
+              <span className="tx-details">30 @ ₹1,390</span>
+              <span className="tx-date">Jun 8</span>
+            </div>
           </div>
         </div>
 
-        {/* CARD E */}
+        {/* CARD E — WATCHLIST */}
         <div className="bento-card card-e animate-on-scroll" style={{transitionDelay: '320ms'}}>
-          <div>
-            <div className="card-e-text">More intelligence. Coming soon.</div>
-            <div className="card-e-sub">ROADMAP · 2026</div>
+          <div className="bento-header">WATCHLIST</div>
+          <div className="card-e-title">Watchlist</div>
+          <p className="card-e-body-text">
+            Track stocks before you commit.
+          </p>
+          <div className="wl-rows">
+            <div className="wl-row">
+              <span className="wl-icon">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#C8B38E" strokeWidth="1.5"><path d="M8 1.5 L10.2 6 L15 6.5 L11.3 9.7 L12.5 14.5 L8 12 L3.5 14.5 L4.7 9.7 L1 6.5 L5.8 6 Z" strokeLinejoin="round" fill="none"/></svg>
+              </span>
+              <span className="wl-ticker">BAJFINANCE</span>
+              <span className="wl-price">₹7,245</span>
+              <span className="wl-chg gain">↑ +2.34%</span>
+            </div>
+            <div className="wl-row">
+              <span className="wl-icon">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#C8B38E" strokeWidth="1.5"><path d="M8 1.5 L10.2 6 L15 6.5 L11.3 9.7 L12.5 14.5 L8 12 L3.5 14.5 L4.7 9.7 L1 6.5 L5.8 6 Z" strokeLinejoin="round" fill="none"/></svg>
+              </span>
+              <span className="wl-ticker">ASIANPAINT</span>
+              <span className="wl-price">₹2,892</span>
+              <span className="wl-chg loss">↓ -0.87%</span>
+            </div>
+            <div className="wl-row">
+              <span className="wl-icon">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#C8B38E" strokeWidth="1.5"><path d="M8 1.5 L10.2 6 L15 6.5 L11.3 9.7 L12.5 14.5 L8 12 L3.5 14.5 L4.7 9.7 L1 6.5 L5.8 6 Z" strokeLinejoin="round" fill="none"/></svg>
+              </span>
+              <span className="wl-ticker">HDFCLIFE</span>
+              <span className="wl-price">₹645</span>
+              <span className="wl-chg gain">↑ +1.12%</span>
+            </div>
           </div>
         </div>
 
-        {/* CARD F */}
+        {/* CARD F — CONCENTRATION ALERTS */}
         <div className="bento-card card-f animate-on-scroll" style={{transitionDelay: '400ms'}}>
-          <div className="card-f-header">
-            <div className="bento-header" style={{margin: 0}}>| LIVE MARKET WATCH</div>
-            <div className="market-watch-ticker">NIFTY 50  22,419.95  +1.24%</div>
+          <div className="bento-header">CONCENTRATION ALERTS</div>
+          <div className="card-f-title">Risk Alerts</div>
+          <p className="card-f-body-text">
+            Know when a holding dominates beyond your target limit.
+          </p>
+          <div className="warn-banner">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={{marginRight: 8, flexShrink: 0}}><path d="M8 2 L14 13 H2 Z M8 5 V9 M8 11 H8.01" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span className="warn-text">Financials: 33.7% — above your 30% target</span>
           </div>
-          <table className="market-table">
-            <thead>
-              <tr>
-                <th style={{width: '30%'}}>NAME</th>
-                <th style={{width: '20%'}}>PRICE</th>
-                <th style={{width: '20%'}}>CHANGE</th>
-                <th style={{width: '15%'}}>WEIGHT</th>
-                <th style={{width: '15%'}}>P&L</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td className="mt-name">RELIANCE</td><td className="mt-val">₹2,945.80</td><td className="mt-val mt-val-gain">+1.24%</td><td className="mt-val">18.5%</td><td className="mt-val mt-val-gain">+₹2,840</td></tr>
-              <tr><td className="mt-name">HDFCBANK</td><td className="mt-val">₹1,650.40</td><td className="mt-val mt-val-gain">+0.85%</td><td className="mt-val">15.2%</td><td className="mt-val mt-val-gain">+₹1,240</td></tr>
-              <tr><td className="mt-name">INFY</td><td className="mt-val">₹1,425.20</td><td className="mt-val mt-val-gain">+2.18%</td><td className="mt-val">12.8%</td><td className="mt-val mt-val-gain">+₹3,640</td></tr>
-              <tr><td className="mt-name">TCS</td><td className="mt-val">₹3,820.60</td><td className="mt-val mt-val-loss">-0.34%</td><td className="mt-val">11.3%</td><td className="mt-val mt-val-loss">-₹480</td></tr>
-              <tr><td className="mt-name">ICICIBANK</td><td className="mt-val">₹1,168.30</td><td className="mt-val mt-val-gain">+0.56%</td><td className="mt-val">9.7%</td><td className="mt-val mt-val-gain">+₹610</td></tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </section>
@@ -551,108 +498,115 @@ const ProductPreview = () => {
   return (
     <section className="preview-section" id="intelligence">
       <div className="preview-top">
-        <span className="section-top-label animate-on-scroll">INSIDE THE TERMINAL</span>
+        <span className="section-label center animate-on-scroll">THE PREVIEW</span>
         <h2 className="preview-heading animate-on-scroll">
-          See exactly<br/>what you get.
+          See Exactly What You Get.
         </h2>
         <p className="preview-subtitle animate-on-scroll">
-          This is the actual Command Center. Not a mockup. Not a marketing slide. The real interface — yours after onboarding.
+          The actual interface — not marketing illustrations. The same view real users open every morning.
         </p>
       </div>
 
-      <div className="browser-window animate-on-scroll">
+      <div className="preview-dashboard-wrapper animate-on-scroll">
         <div className="browser-chrome">
           <div className="browser-dots">
             <div className="b-dot r"></div>
             <div className="b-dot y"></div>
             <div className="b-dot g"></div>
           </div>
-          <span className="browser-url">app.antigravity.in/terminal</span>
+          <span className="browser-url">app.arca.finance/dashboard</span>
           <LockSimple size={12} color="#6FAE8D" style={{marginLeft: 'auto'}} />
         </div>
         <div className="dashboard-frame-wrapper">
           <div className="dashboard-scale-container">
-            {/* Very detailed mockup of the full dashboard UI layout */}
-            <div style={{display: 'flex', height: '600px', background: '#0A201F'}}>
-              {/* Sidebar */}
-              <div style={{width: '52px', borderRight: '1px solid #2D3C37', background: '#102321', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '16px'}}>
-                <div style={{width: '20px', height: '20px', borderRadius: '50%', border: '1px solid #C8B38E', marginBottom: '24px'}}></div>
-                <div style={{width: '16px', height: '16px', background: '#2D3C37', borderRadius: '2px', marginBottom: '16px'}}></div>
-                <div style={{width: '16px', height: '16px', background: '#2D3C37', borderRadius: '2px', marginBottom: '16px'}}></div>
-                <div style={{width: '16px', height: '16px', background: '#2D3C37', borderRadius: '2px', marginBottom: '16px'}}></div>
+            {/* Coded mockup of the full dashboard UI layout */}
+            <div style={{display: 'flex', height: '420px', background: '#0A201F'}}>
+              {/* Sidebar (120px) */}
+              <div style={{width: '120px', borderRight: '1px solid #2D3C37', background: '#102321', display: 'flex', flexDirection: 'column', padding: '16px 12px'}}>
+                <div style={{display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '24px'}}>
+                  <div style={{width: '16px', height: '16px', borderRadius: '50%', border: '1px solid #C8B38E'}}></div>
+                  <span style={{fontFamily: 'Cinzel', fontSize: '10px', fontWeight: 'bold', color: '#ECE0CC'}}>ARCA</span>
+                </div>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                  {['Dashboard', 'Watchlist', 'Analytics', 'Alerts', 'Settings'].map((item, i) => (
+                    <div key={i} style={{fontSize: '9px', fontFamily: 'Inter', color: i === 0 ? '#ECE0CC' : '#7B7C70', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                      <div style={{width: '6px', height: '6px', background: i === 0 ? '#C8B38E' : 'transparent', borderRadius: '50%'}}></div>
+                      {item}
+                    </div>
+                  ))}
+                </div>
               </div>
               
               <div style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
                 {/* Topbar */}
-                <div style={{height: '44px', borderBottom: '1px solid #2D3C37', background: '#102321', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px'}}>
-                  <div style={{fontFamily: 'Cinzel', fontSize: '11px', color: '#ECE0CC'}}>COMMAND CENTER</div>
+                <div style={{height: '36px', borderBottom: '1px solid #2D3C37', background: '#102321', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px'}}>
+                  <div style={{fontFamily: 'Cinzel', fontSize: '9px', color: '#ECE0CC'}}>COMMAND CENTER</div>
                   <div className="db-status-pill"><div className="db-status-dot"></div>MARKETS OPEN</div>
                 </div>
                 
-                {/* Ticker */}
-                <div style={{height: '34px', borderBottom: '1px solid #2D3C37', display: 'flex', alignItems: 'center', padding: '0 24px'}}>
-                  <span style={{fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#ACA492'}}>NIFTY 50  <span style={{color: '#6FAE8D'}}>+0.42%</span></span>
-                  <span style={{margin: '0 12px', color: '#2D3C37'}}>|</span>
-                  <span style={{fontFamily: 'JetBrains Mono', fontSize: '11px', color: '#ACA492'}}>SENSEX  <span style={{color: '#6FAE8D'}}>+0.45%</span></span>
-                </div>
-                
-                {/* Main Content Area */}
-                <div style={{flex: 1, padding: '24px', overflow: 'hidden'}}>
-                  <div className="db-kpi-grid" style={{padding: 0, marginBottom: '24px'}}>
-                    <div className="db-kpi-card gold-border">
-                      <div className="db-kpi-label">PORTFOLIO VALUE</div>
-                      <div className="db-kpi-val">₹25,74,000</div>
+                {/* Main Dashboard Workspace */}
+                <div style={{flex: 1, padding: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                  {/* Top: 4 KPI cards */}
+                  <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px'}}>
+                    <div className="db-kpi-card gold-border" style={{padding: '8px 12px'}}>
+                      <div style={{fontSize: '7px', color: '#7B7C70', textTransform: 'uppercase'}}>PORTFOLIO VALUE</div>
+                      <div style={{fontSize: '13px', color: '#ECE0CC', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>₹25,74,000</div>
                     </div>
-                    <div className="db-kpi-card">
-                      <div className="db-kpi-label">TOTAL P&L</div>
-                      <div className="db-kpi-val" style={{color: '#6FAE8D'}}>+₹3,64,000</div>
+                    <div className="db-kpi-card" style={{padding: '8px 12px'}}>
+                      <div style={{fontSize: '7px', color: '#7B7C70', textTransform: 'uppercase'}}>TOTAL INVESTED</div>
+                      <div style={{fontSize: '13px', color: '#ECE0CC', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>₹22,10,000</div>
                     </div>
-                    <div className="db-kpi-card">
-                      <div className="db-kpi-label">TODAY'S CHANGE</div>
-                      <div className="db-kpi-val" style={{color: '#6FAE8D'}}>+2.34%</div>
+                    <div className="db-kpi-card" style={{padding: '8px 12px'}}>
+                      <div style={{fontSize: '7px', color: '#7B7C70', textTransform: 'uppercase'}}>TOTAL P&L</div>
+                      <div style={{fontSize: '13px', color: '#6FAE8D', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>+₹3,64,000</div>
                     </div>
-                    <div className="db-kpi-card">
-                      <div className="db-kpi-label">AI CONFIDENCE</div>
-                      <div className="db-kpi-val">HIGH</div>
+                    <div className="db-kpi-card" style={{padding: '8px 12px'}}>
+                      <div style={{fontSize: '7px', color: '#7B7C70', textTransform: 'uppercase'}}>TODAY'S CHANGE</div>
+                      <div style={{fontSize: '13px', color: '#6FAE8D', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>+2.34%</div>
                     </div>
                   </div>
                   
-                  <div style={{display: 'flex', gap: '24px'}}>
-                    {/* Left Column */}
-                    <div style={{flex: 2, display: 'flex', flexDirection: 'column', gap: '24px'}}>
-                      <div style={{background: '#172923', border: '1px solid #2D3C37', borderRadius: '4px', padding: '20px'}}>
-                        <div className="db-section-title">AI ADVISORY BRIEF</div>
-                        <div style={{fontFamily: 'EB Garamond', fontStyle: 'italic', color: '#ACA492', fontSize: '14px', lineHeight: 1.6}}>
-                          Your portfolio showed resilient growth this week, with tech holdings leading gains at +3.2%. Consider rebalancing — your concentration in financials has drifted above your 35% target threshold.
-                        </div>
-                      </div>
-                      <div style={{background: '#172923', border: '1px solid #2D3C37', borderRadius: '4px', padding: '20px', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                         {/* Donut placeholder */}
-                         <svg width="140" height="140" viewBox="0 0 140 140">
-                            <circle cx="70" cy="70" r="60" fill="none" stroke="#2D3C37" strokeWidth="20" />
-                            <circle cx="70" cy="70" r="60" fill="none" stroke="#C8B38E" strokeWidth="20" strokeDasharray="376" strokeDashoffset="120" />
-                         </svg>
+                  {/* Middle Row */}
+                  <div style={{display: 'flex', gap: '12px', flex: 1}}>
+                    {/* Middle-left: Donut */}
+                    <div style={{flex: 3, background: '#172923', border: '1px solid #2D3C37', borderRadius: '3px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px'}}>
+                      <DonutChart size={100} strokeWidth={14} />
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                        <div style={{fontSize: '9px', color: '#ECE0CC', fontFamily: 'Cinzel', fontWeight: 'bold'}}>Allocation</div>
+                        <div style={{fontSize: '8px', color: '#7B7C70'}}>7 major holdings across financials, technology, and energy sectors.</div>
                       </div>
                     </div>
-                    {/* Right Column */}
-                    <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '24px'}}>
-                      <div style={{background: '#172923', border: '1px solid #2D3C37', borderRadius: '4px', padding: '20px', flex: 1}}>
-                         <div className="db-section-title">ACTIVITY</div>
-                         <div className="db-feed-item"><span className="db-feed-pill buy">BUY</span><span className="db-feed-text">INFY</span></div>
-                         <div className="db-feed-item"><span className="db-feed-pill sell">SELL</span><span className="db-feed-text">ITC</span></div>
+                    {/* Middle-right: Position Weights */}
+                    <div style={{flex: 2, background: '#172923', border: '1px solid #2D3C37', borderRadius: '3px', padding: '12px'}}>
+                      <div style={{fontSize: '8px', color: '#7B7C70', textTransform: 'uppercase', marginBottom: '8px'}}>POSITION WEIGHTS</div>
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'JetBrains Mono', color: '#ECE0CC'}}>
+                          <span>HDFCBANK</span><span>18.5%</span>
+                        </div>
+                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'JetBrains Mono', color: '#ECE0CC'}}>
+                          <span>RELIANCE</span><span>12.8%</span>
+                        </div>
+                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'JetBrains Mono', color: '#ECE0CC'}}>
+                          <span>INFY</span><span>11.3%</span>
+                        </div>
                       </div>
-                      <div style={{background: '#172923', border: '1px solid #2D3C37', borderRadius: '4px', padding: '20px', flex: 1}}>
-                         <div className="db-section-title">WATCHLIST</div>
-                         <div className="db-feed-item" style={{justifyContent: 'space-between'}}><span className="db-feed-text">BAJFINANCE</span><span style={{color: '#6FAE8D', fontFamily: 'JetBrains Mono', fontSize: '11px'}}>+2.3%</span></div>
-                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom: Activity Feed */}
+                  <div style={{background: '#172923', border: '1px solid #2D3C37', borderRadius: '3px', padding: '10px 12px'}}>
+                    <div style={{fontSize: '8px', color: '#7B7C70', textTransform: 'uppercase', marginBottom: '4px'}}>ACTIVITY FEED</div>
+                    <div style={{display: 'flex', gap: '16px', fontSize: '9px', fontFamily: 'JetBrains Mono'}}>
+                      <div style={{color: '#6FAE8D'}}>[BUY] INFY 50 @ ₹1,425</div>
+                      <div style={{color: '#B66A6A'}}>[SELL] ITC 100 @ ₹412</div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <div className="preview-bottom-fade"></div>
         </div>
+        <div className="preview-fade-mask" />
       </div>
     </section>
   );
@@ -662,52 +616,63 @@ const ProductPreview = () => {
 const Testimonials = () => {
   const testimonials = [
     {
-      quote: "Finally, a terminal that thinks the way I do. The AI brief alone saved me from exiting my top performer app on a panic day.",
-      author: "R.K.", title: "Private Investor · Mumbai", stat: "+₹4.2L in 3 months",
-      hasStat: true
+      quote: "The portfolio view I've always wanted. Everything visible in one place — I stopped using 3 separate apps the day I tried this.",
+      author: "R.M.",
+      title: "Independent Equity Investor · Mumbai"
     },
     {
-      quote: "The concentration alerts caught a drift in my Midcap allocation I had completely missed. Paid for itself in one week.",
-      author: "A.M.", title: "Chartered Accountant · Bangalore",
-      hasStat: false
+      quote: "The AI brief actually reads my portfolio, not some generic advice. That alone is worth the subscription.",
+      author: "P.K.",
+      title: "Retired CFO · Bengaluru"
     },
     {
-      quote: "The import flow handled my ZERODHA export in under 2 minutes. Clean data, clean interface, clean thinking.",
-      author: "S.T.", title: "Entrepreneur · New Delhi", stat: "₹1.8Cr managed",
-      hasStat: true
+      quote: "I've been investing for 22 years. This is the first tool that feels built for serious investors, not beginners.",
+      author: "S.A.",
+      title: "HNI Investor · Delhi NCR"
     }
   ];
 
   return (
     <section className="testimonials-section">
-      <span className="section-top-label animate-on-scroll">FROM THE TERMINAL</span>
-      <h2 className="section-top-heading animate-on-scroll">
-        Built for people who take<br/>their wealth seriously.
-      </h2>
+      <div className="testimonials-header">
+        <span className="section-label center animate-on-scroll">THE TESTIMONIALS</span>
+        <h2 className="section-top-heading animate-on-scroll" style={{ margin: '0 auto 16px auto', maxWidth: '580px', textAlign: 'center' }}>
+          Built for People Who Take Their Wealth Seriously.
+        </h2>
+        <p style={{
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '11px',
+          color: 'var(--text-muted)',
+          textAlign: 'center',
+          marginTop: '12px',
+          marginBottom: '0',
+          fontStyle: 'italic'
+        }}>
+          Testimonials are illustrative and do not represent verified financial results.
+        </p>
+      </div>
 
       <div className="testimonials-grid">
         {testimonials.map((t, idx) => (
           <div key={idx} className="t-card animate-on-scroll" style={{transitionDelay: `${idx * 100}ms`}}>
-            <div className="t-stars">★★★★★</div>
+            <div className="testimonial-stars">
+              {[...Array(5)].map((_, i) => (
+                <span key={i} className="testimonial-star">★</span>
+              ))}
+            </div>
             <span className="t-quote-mark">"</span>
-            <div className="t-quote">{t.quote}</div>
+            <blockquote className="testimonial-quote">{t.quote}</blockquote>
             <div className="t-sep"></div>
             
             <div className="t-author-row">
-              <div className="t-avatar">{t.author.replace('.', '')}</div>
+              <div className="t-avatar">
+                {t.author.replace(/\./g, '')}
+              </div>
               <div className="t-author-info">
-                <span className="t-author-name">{t.author}</span>
-                <span className="t-author-title">{t.title}</span>
+                <span className="testimonial-author-name">{t.author}</span>
+                <span className="testimonial-author-title">{t.title}</span>
               </div>
-              <div className="t-verified">VERIFIED</div>
             </div>
-            
-            {t.hasStat && (
-              <div className="t-stat">
-                <span className="t-stat-label">Portfolio {idx === 0 ? 'P&L' : 'Value'}</span>
-                <span className="t-stat-val">{t.stat}</span>
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -719,49 +684,47 @@ const Testimonials = () => {
 const HowItWorks = () => {
   return (
     <section className="how-section">
-      <span className="section-top-label animate-on-scroll">ONBOARDING</span>
-      <h2 className="section-top-heading animate-on-scroll">
-        Three steps. Then you're in.
+      <span className="section-label animate-on-scroll">HOW IT WORKS</span>
+      <h2 className="section-top-heading animate-on-scroll" style={{ marginBottom: '48px' }}>
+        Three Steps. Then You're In.
       </h2>
 
-      <div className="timeline-wrapper">
-        <div className="timeline-track"></div>
-        
-        <div className="timeline-step animate-on-scroll">
-          <div className="step-bubble">01</div>
+      <div className="how-steps-container">
+        <div className="how-step animate-on-scroll">
+          <div className="how-step-number">01</div>
           <div className="step-content">
-            <h3 className="step-title">Import your holdings</h3>
-            <p className="step-body">Upload a Zerodha, Groww, or HDFC statement, or connect via our live broker API. We parse and organize everything automatically. Setup takes under 3 minutes.</p>
-            <div className="bento-chip-row" style={{paddingTop: 0}}>
-              <span className="bento-chip">CSV Upload</span>
-              <span className="bento-chip">Live API</span>
-              <span className="bento-chip">40+ Brokers</span>
+            <h3 className="step-title">Import Your Holdings</h3>
+            <p className="step-body">Connect your broker via CSV upload or our secure API integration. Your data imports in under 60 seconds.</p>
+            <div className="how-step-chips">
+              <span className="how-step-chip">CSV Upload</span>
+              <span className="how-step-chip">Live API</span>
+              <span className="how-step-chip">Manual Entry</span>
             </div>
           </div>
         </div>
 
-        <div className="timeline-step animate-on-scroll">
-          <div className="step-bubble">02</div>
+        <div className="how-step animate-on-scroll">
+          <div className="how-step-number">02</div>
           <div className="step-content">
-            <h3 className="step-title">Set your preferences</h3>
-            <p className="step-body">Define your target allocation, risk tolerance, notification thresholds, and sector limits. The system learns your style and calibrates alerts accordingly.</p>
-            <div className="bento-chip-row" style={{paddingTop: 0}}>
-              <span className="bento-chip">Risk Profile</span>
-              <span className="bento-chip">Alert Rules</span>
-              <span className="bento-chip">Sector Limits</span>
+            <h3 className="step-title">Set Your Preferences</h3>
+            <p className="step-body">Define your risk profile, target allocation, and alert thresholds. ARCA learns your investment style.</p>
+            <div className="how-step-chips">
+              <span className="how-step-chip">Risk Profile</span>
+              <span className="how-step-chip">Sector Limits</span>
+              <span className="how-step-chip">Alerts</span>
             </div>
           </div>
         </div>
 
-        <div className="timeline-step animate-on-scroll">
-          <div className="step-bubble">03</div>
+        <div className="how-step animate-on-scroll">
+          <div className="how-step-number">03</div>
           <div className="step-content">
-            <h3 className="step-title">Open the terminal</h3>
-            <p className="step-body">Your Command Center is ready. AI Briefs populate within seconds. Live data activates. Every holding tracked, every opportunity surfaced.</p>
-            <div className="bento-chip-row" style={{paddingTop: 0}}>
-              <span className="bento-chip">Live in &lt;5min</span>
-              <span className="bento-chip">AI Ready</span>
-              <span className="bento-chip">Zero Config</span>
+            <h3 className="step-title">Open the Terminal</h3>
+            <p className="step-body">Your personalised Command Center is ready. Live data, AI brief, alerts — everything in one view.</p>
+            <div className="how-step-chips">
+              <span className="how-step-chip">Live Dashboard</span>
+              <span className="how-step-chip">AI Brief</span>
+              <span className="how-step-chip">Alerts Active</span>
             </div>
           </div>
         </div>
@@ -771,47 +734,43 @@ const HowItWorks = () => {
   );
 };
 
-// Section 08 — SECURITY
+// Section 08 — TRUST
 const SecuritySection = () => {
   return (
     <section className="security-section" id="security">
-      <div style={{textAlign: 'center', marginBottom: '56px'}}>
-        <span className="section-top-label animate-on-scroll" style={{display: 'inline-block', marginBottom: '16px'}}>SECURITY</span>
-        <h2 className="section-top-heading animate-on-scroll" style={{margin: '0 auto 16px auto', maxWidth: 'none'}}>
-          Your data lives by your rules.
+      <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+        <span className="section-label center animate-on-scroll">THE TRUST</span>
+        <h2 className="section-top-heading animate-on-scroll" style={{ margin: '0 auto 16px auto', maxWidth: 'none', textAlign: 'center' }}>
+          Your Data Lives By Your Rules.
         </h2>
-        <p className="preview-subtitle animate-on-scroll" style={{margin: '0 auto', maxWidth: '480px'}}>
-          Antigravity is read-only by design. We see your portfolio. We never touch your capital.
+        <p className="preview-subtitle animate-on-scroll" style={{ margin: '0 auto', maxWidth: '500px', textAlign: 'center' }}>
+          Read-only access. No credentials stored. Your data is never shared.
         </p>
       </div>
 
       <div className="sec-grid">
         <div className="sec-card animate-on-scroll">
-          <LockSimple size={20} className="sec-icon" weight="bold" />
-          <h3 className="sec-title">Bank-grade encryption</h3>
-          <p className="sec-body">Private endpoints with AES-256 encryption at rest and in transit. The same standard used by institutional financial infrastructure.</p>
-          <div className="sec-badge"><span>AES-256 + TLS 1.3</span></div>
+          <Eye size={24} className="sec-icon" />
+          <h3 className="sec-title">READ-ONLY API INTEGRATION</h3>
+          <p className="sec-body">We connect to your broker in read-only mode. ARCA can view your data — never move funds, place orders, or execute any transaction.</p>
         </div>
         
         <div className="sec-card animate-on-scroll">
-          <ShieldCheck size={20} className="sec-icon" weight="bold" />
-          <h3 className="sec-title">No third-party data sharing</h3>
-          <p className="sec-body">Your portfolio data never leaves our encrypted infrastructure. We do not sell, share, or license your financial information.</p>
-          <div className="sec-badge"><span>Zero data resale</span></div>
+          <ShieldCheck size={24} className="sec-icon" />
+          <h3 className="sec-title">NO THIRD-PARTY DATA SHARING</h3>
+          <p className="sec-body">Your holdings, transactions, and portfolio data are never shared with, sold to, or accessed by any external party.</p>
         </div>
         
         <div className="sec-card animate-on-scroll">
-          <EyeSlash size={20} className="sec-icon" weight="bold" />
-          <h3 className="sec-title">Seamless secure backend</h3>
-          <p className="sec-body">You authenticate once. Your data stays encrypted server-side. No credentials stored. No sensitive fields exposed in transit.</p>
-          <div className="sec-badge"><span>OAuth 2.0 · Zero storage</span></div>
+          <Lock size={24} className="sec-icon" />
+          <h3 className="sec-title">FINANCIAL-GRADE ENCRYPTION</h3>
+          <p className="sec-body">All data transmitted between you and ARCA is encrypted using AES-256 and TLS 1.3 — the same standards used by major financial institutions.</p>
         </div>
 
         <div className="sec-card animate-on-scroll">
-          <FileX size={20} className="sec-icon" weight="bold" />
-          <h3 className="sec-title">No personal credentials stored</h3>
-          <p className="sec-body">We connect via broker OAuth tokens — we never see your login password, OTP, or trading PIN at any point.</p>
-          <div className="sec-badge"><span>Token-based only</span></div>
+          <UserMinus size={24} className="sec-icon" />
+          <h3 className="sec-title">NO PERSONAL CREDENTIALS STORED</h3>
+          <p className="sec-body">ARCA never stores your broker login credentials. OAuth tokens are encrypted and revocable from your broker's portal at any time.</p>
         </div>
       </div>
     </section>
@@ -823,59 +782,109 @@ const PricingSection = () => {
   const navigate = useNavigate();
   return (
     <section className="pricing-section" id="pricing">
-      <div style={{textAlign: 'center', marginBottom: '56px'}}>
-        <span className="section-top-label animate-on-scroll" style={{display: 'inline-block', marginBottom: '16px'}}>PRICING</span>
-        <h2 className="section-top-heading animate-on-scroll" style={{margin: '0 auto', maxWidth: 'none'}}>
-          One product. Two ways in.
+      <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+        <span className="section-label center animate-on-scroll">PRICING</span>
+        <h2 className="section-top-heading animate-on-scroll" style={{ margin: '0 auto 16px auto', maxWidth: 'none', textAlign: 'center' }}>
+          One Product. Two Ways In.
         </h2>
+        <p style={{ fontFamily: 'Inter', fontSize: '14px', color: 'var(--text-muted)', textAlign: 'center' }}>
+          Cancel anytime. No setup fees. No long-term contracts.
+        </p>
       </div>
 
       <div className="pricing-row">
+        {/* Card 1 — OBSERVER */}
         <div className="pricing-card animate-on-scroll">
-          <div className="p-tier">OBSERVER</div>
+          <div className="p-tier">
+            OBSERVER
+          </div>
           <div className="p-price-block">
             <span className="p-sym">₹</span>
             <span className="p-num">0</span>
-            <span className="p-mo">/month</span>
           </div>
+          <div className="p-mo">
+            forever
+          </div>
+          
           <div className="p-sep"></div>
           
-          <div className="p-feature"><Check size={14} className="p-icon" /><span className="p-text">Basic holdings dashboard</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" /><span className="p-text">Manual CSV import (monthly)</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" /><span className="p-text">Live market ticker</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" /><span className="p-text">5 watchlist stocks</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" /><span className="p-text">No AI advisory</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" /><span className="p-text">No automated sync</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '28px' }}>
+            <div className="p-feature">
+              <Check size={14} className="p-icon" style={{ color: 'var(--status-gain)' }} />
+              <span className="p-text">Portfolio value snapshot (manual entry)</span>
+            </div>
+            <div className="p-feature">
+              <Check size={14} className="p-icon" style={{ color: 'var(--status-gain)' }} />
+              <span className="p-text">Basic allocation view</span>
+            </div>
+            <div className="p-feature">
+              <Check size={14} className="p-icon" style={{ color: 'var(--status-gain)' }} />
+              <span className="p-text">7-day historical chart</span>
+            </div>
+            <div className="p-feature">
+              <Check size={14} className="p-icon" style={{ color: 'var(--status-gain)' }} />
+              <span className="p-text">Limited to 10 holdings</span>
+            </div>
+          </div>
 
-          <button className="btn-pricing-ghost" onClick={() => navigate('/onboarding')}>Start Free</button>
+          <button className="btn-pricing-ghost" onClick={() => navigate('/onboarding')}>
+            START FREE →
+          </button>
         </div>
 
+        {/* Card 2 — PRIVATE */}
         <div className="pricing-card premium animate-on-scroll">
-          <div className="p-tier">
+          <span className="p-rec">RECOMMENDED</span>
+          <div className="p-tier" style={{ marginTop: '10px' }}>
             PRIVATE
-            <span className="p-rec">RECOMMENDED</span>
           </div>
           <div className="p-price-block">
-            <span className="p-sym">₹</span>
+            <span className="p-sym" style={{ color: 'var(--accent-gold)' }}>₹</span>
             <span className="p-num">499</span>
-            <span className="p-mo">/month</span>
           </div>
+          <div className="p-mo">
+            per month, billed monthly
+          </div>
+          
           <div className="p-sep"></div>
           
-          <div className="p-feature"><Check size={14} className="p-icon" weight="bold" /><span className="p-text">Complete institutional dashboard</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" weight="bold" /><span className="p-text">Live broker sync (30-second refresh)</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" weight="bold" /><span className="p-text">AI Advisory Layer (daily briefs)</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" weight="bold" /><span className="p-text">Unlimited portfolio holdings</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" weight="bold" /><span className="p-text">Market intelligence feed</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" weight="bold" /><span className="p-text">Concentration & drift alerts</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" weight="bold" /><span className="p-text">Export reports (PDF, CSV)</span></div>
-          <div className="p-feature"><Check size={14} className="p-icon" weight="bold" /><span className="p-text">Priority support</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '28px' }}>
+            <div className="p-feature">
+              <Check size={14} className="p-icon" style={{ color: 'var(--accent-gold)' }} />
+              <span className="p-text">Unlimited holdings</span>
+            </div>
+            <div className="p-feature">
+              <Check size={14} className="p-icon" style={{ color: 'var(--accent-gold)' }} />
+              <span className="p-text">Live NSE/BSE data (15-min delay)</span>
+            </div>
+            <div className="p-feature">
+              <Check size={14} className="p-icon" style={{ color: 'var(--accent-gold)' }} />
+              <span className="p-text">Full AI advisory brief</span>
+            </div>
+            <div className="p-feature">
+              <Check size={14} className="p-icon" style={{ color: 'var(--accent-gold)' }} />
+              <span className="p-text">Concentration and drift alerts</span>
+            </div>
+            <div className="p-feature">
+              <Check size={14} className="p-icon" style={{ color: 'var(--accent-gold)' }} />
+              <span className="p-text">Watchlist with price triggers</span>
+            </div>
+            <div className="p-feature">
+              <Check size={14} className="p-icon" style={{ color: 'var(--accent-gold)' }} />
+              <span className="p-text">Transaction log and history</span>
+            </div>
+            <div className="p-feature">
+              <Check size={14} className="p-icon" style={{ color: 'var(--accent-gold)' }} />
+              <span className="p-text">Priority support</span>
+            </div>
+          </div>
 
           <button className="btn-pricing-gold" onClick={() => navigate('/onboarding')}>
-            Take Private Access <span className="arrow">→</span>
+            REQUEST ACCESS →
           </button>
-          <div style={{fontFamily: 'Inter', fontSize: '10px', color: '#7B7C70', textAlign: 'center', marginTop: '12px'}}>
-            Cancel anytime. No contracts. No setup fees.
+          
+          <div style={{ marginTop: '12px', fontFamily: 'Inter', fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center' }}>
+            Cancel anytime · No long-term commitment
           </div>
         </div>
       </div>
@@ -890,28 +899,29 @@ const FinalCTA = () => {
     <section className="cta-section">
       <div className="cta-glow"></div>
       <div className="cta-noise"></div>
-      <div className="meander-strip" style={{position: 'absolute', top: 0, opacity: 0.8}}></div>
       
       <div className="cta-content">
-        <div className="section-top-label animate-on-scroll">GET STARTED</div>
+        <span className="section-label center animate-on-scroll" style={{ marginBottom: '28px' }}>BEGIN HERE</span>
         <h2 className="cta-heading animate-on-scroll">
-          Your portfolio is<br/>waiting for<br/><span className="gold">intelligence.</span>
+          Your Portfolio Is Waiting For<br />
+          <span style={{ color: 'var(--accent-gold)' }}>Intelligence.</span>
         </h2>
         <p className="cta-body animate-on-scroll">
-          In 3 minutes: import your holdings, let AI brief your portfolio, and see your wealth the way institutional investors do.
+          Join investors who've moved beyond spreadsheets and fragmented broker apps.
         </p>
         
-        <div className="hero-cta-row animate-on-scroll" style={{justifyContent: 'center'}}>
-          <button className="btn-hero-primary" onClick={() => navigate('/onboarding')}>
-            Open Terminal <span className="arrow">→</span>
+        <div className="hero-cta-row animate-on-scroll" style={{ justifyContent: 'center', gap: '14px' }}>
+          <button className="btn-primary" onClick={() => navigate('/onboarding')} aria-label="Open ARCA Terminal">
+            OPEN TERMINAL →
           </button>
-          <button className="btn-hero-secondary" onClick={() => navigate('/dashboard')}>
-            View sample dashboard
+          <button className="btn-secondary">
+            <Play size={12} weight="fill" style={{ marginRight: '4px' }} /> Watch 90-sec Demo
           </button>
         </div>
         
         <div className="cta-sub animate-on-scroll">
-          No credit card required for Observer tier.<br/>Private tier: ₹499/mo, cancel anytime.
+          ARCA is a portfolio intelligence viewer.<br />
+          We do not provide investment advice, manage funds, or execute trades. Not SEBI registered.
         </div>
       </div>
     </section>
@@ -922,64 +932,85 @@ const FinalCTA = () => {
 const Footer = () => {
   return (
     <footer className="footer-section">
-      <div className="f-top">
-        <div className="f-left">
-          <div className="f-brand">
-            <svg width="22" height="22" viewBox="0 0 26 26" fill="none" stroke="#C8B38E">
-              <circle cx="13" cy="13" r="12" strokeWidth="1"/>
-              <circle cx="10" cy="11" r="2.5" strokeWidth="1"/>
-              <circle cx="16" cy="11" r="2.5" strokeWidth="1"/>
-              <circle cx="10" cy="11" r="1" fill="#C8B38E"/>
-              <circle cx="16" cy="11" r="1" fill="#C8B38E"/>
-              <path d="M9 16 Q13 19 17 16" strokeWidth="1" fill="none" strokeLinecap="round"/>
-              <path d="M11 7 L9 5 M15 7 L17 5" strokeWidth="1.2" strokeLinecap="round"/>
-            </svg>
-            <span className="f-brand-text">ANTIGRAVITY</span>
+      <div className="meander-strip" style={{ marginBottom: '48px' }} />
+        <div className="f-top">
+          <div className="f-left">
+            <div className="f-brand">
+              <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="#C8B38E" strokeWidth="1.5">
+                <path d="M6 22 A10 10 0 0 1 10 8" strokeLinecap="round" />
+                <path d="M6 18 C5 17 7 16 7 16" />
+                <path d="M8 14 C7 13 9 12 9 12" />
+                <path d="M10 10 C9 9 11 8 11 8" />
+                <path d="M26 22 A10 10 0 0 0 22 8" strokeLinecap="round" />
+                <path d="M26 18 C27 17 25 16 25 16" />
+                <path d="M24 14 C25 13 23 12 23 12" />
+                <path d="M22 10 C23 9 21 8 21 8" />
+                <circle cx="13" cy="13" r="2.5" strokeWidth="1.2" />
+                <circle cx="19" cy="13" r="2.5" strokeWidth="1.2" />
+                <circle cx="13" cy="13" r="0.8" fill="#C8B38E" />
+                <circle cx="19" cy="13" r="0.8" fill="#C8B38E" />
+                <path d="M16 14.5 L15 16.5 L17 16.5 Z" fill="#C8B38E" stroke="none" />
+                <path d="M11 10.5 C12 9.5 14 9.5 16 10 C18 9.5 20 9.5 21 10.5 L21.5 13.5 C21.5 18 19 21 16 21 C13 21 10.5 18 10.5 13.5 Z" strokeWidth="1.2" strokeLinejoin="round" />
+                <path d="M11 14 C12 16 12.5 18 13.5 19.5" strokeWidth="1" />
+                <path d="M21 14 C20 16 19.5 18 18.5 19.5" strokeWidth="1" />
+              </svg>
+              <span className="f-brand-text">ARCA</span>
+            </div>
+            <div className="f-tagline">
+              Intelligence for Private Wealth.
+            </div>
           </div>
-          <div className="f-tagline">PRIVATE TERMINAL</div>
-          <div className="f-desc">Institutional-grade wealth intelligence for serious private investors.</div>
+          
+          <div className="f-right">
+            <div className="f-col">
+              <span className="f-col-header">Products</span>
+              <span className="f-link">Dashboard</span>
+              <span className="f-link">Watchlist</span>
+              <span className="f-link">Analytics</span>
+              <span className="f-link">Alerts</span>
+            </div>
+            <div className="f-col">
+              <span className="f-col-header">Company</span>
+              <span className="f-link">About</span>
+              <span className="f-link">Blog</span>
+              <span className="f-link">Changelog</span>
+              <span className="f-link">Careers</span>
+            </div>
+            <div className="f-col">
+              <span className="f-col-header">Legal</span>
+              <span className="f-link">Privacy Policy</span>
+              <span className="f-link">Terms of Service</span>
+              <span className="f-link">Cookie Policy</span>
+            </div>
+            <div className="f-col">
+              <span className="f-col-header">Social</span>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <a href="https://x.com" aria-label="X / Twitter" className="f-social-icon-link">
+                  <TwitterLogo size={18} weight="fill" />
+                </a>
+                <a href="https://linkedin.com" aria-label="LinkedIn" className="f-social-icon-link">
+                  <LinkedinLogo size={18} weight="fill" />
+                </a>
+                <a href="https://github.com" aria-label="GitHub" className="f-social-icon-link">
+                  <GithubLogo size={18} weight="fill" />
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
         
-        <div className="f-right">
-          <div className="f-col">
-            <span className="f-col-header">PRODUCT</span>
-            <span className="f-link">Features</span>
-            <span className="f-link">Dashboard</span>
-            <span className="f-link">Pricing</span>
-            <span className="f-link">Changelog</span>
+        <div className="f-sep"></div>
+        
+        <div className="f-bottom">
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <span className="f-copy">© 2026 ARCA. All rights reserved.</span>
+            <span style={{ color: 'var(--border-default)' }}>·</span>
+            <span className="f-copy">Not SEBI Registered · Not AMFI Registered</span>
           </div>
-          <div className="f-col">
-            <span className="f-col-header">COMPANY</span>
-            <span className="f-link">About</span>
-            <span className="f-link">Blog</span>
-            <span className="f-link">Careers</span>
-            <span className="f-link">Press</span>
-          </div>
-          <div className="f-col">
-            <span className="f-col-header">LEGAL</span>
-            <span className="f-link">Privacy Policy</span>
-            <span className="f-link">Terms of Service</span>
-            <span className="f-link">Security</span>
+          <div className="f-copy">
+            Built in India · For serious investors.
           </div>
         </div>
-      </div>
-      
-      <div className="f-socials">
-        <div className="f-social-btn"><TwitterLogo size={14} weight="fill" /></div>
-        <div className="f-social-btn"><LinkedinLogo size={14} weight="fill" /></div>
-        <div className="f-social-btn"><GithubLogo size={14} weight="fill" /></div>
-      </div>
-      
-      <div className="f-sep"></div>
-      
-      <div className="f-bottom">
-        <span className="f-copy">© 2026 Antigravity Technologies Pvt. Ltd. · All rights reserved.</span>
-        <div className="f-badges">
-          <div className="f-badge"><CheckCircle size={10} color="#6FAE8D" weight="fill"/> SEBI Registered</div>
-          <div className="f-badge"><CheckCircle size={10} color="#6FAE8D" weight="fill"/> BSE Certified</div>
-          <div className="f-badge"><CheckCircle size={10} color="#6FAE8D" weight="fill"/> ISO 27001</div>
-        </div>
-      </div>
     </footer>
   );
 };
@@ -1059,15 +1090,25 @@ export default function Landing() {
 
       <Navbar />
       <HeroSection />
+      <div className="section-divider" />
       <TrustBar />
+      <div className="section-divider" />
       <ProblemStatement />
+      <div className="section-divider" />
       <FeaturesSection />
+      <div className="section-divider" />
       <ProductPreview />
+      <div className="section-divider" />
       <Testimonials />
+      <div className="section-divider" />
       <HowItWorks />
+      <div className="section-divider" />
       <SecuritySection />
+      <div className="section-divider" />
       <PricingSection />
+      <div className="section-divider" />
       <FinalCTA />
+      <div className="section-divider" />
       <Footer />
     </div>
   );

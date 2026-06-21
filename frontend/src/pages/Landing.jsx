@@ -65,37 +65,28 @@ const Navbar = () => {
     <div className="nav-wrapper">
       <div className="fixed-navbar">
         <div className="nav-left">
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="#C8B38E" strokeWidth="1.5">
-            <path d="M6 22 A10 10 0 0 1 10 8" strokeLinecap="round" />
-            <path d="M6 18 C5 17 7 16 7 16" />
-            <path d="M8 14 C7 13 9 12 9 12" />
-            <path d="M10 10 C9 9 11 8 11 8" />
-            <path d="M26 22 A10 10 0 0 0 22 8" strokeLinecap="round" />
-            <path d="M26 18 C27 17 25 16 25 16" />
-            <path d="M24 14 C25 13 23 12 23 12" />
-            <path d="M22 10 C23 9 21 8 21 8" />
-            <circle cx="13" cy="13" r="2.5" strokeWidth="1.2" />
-            <circle cx="19" cy="13" r="2.5" strokeWidth="1.2" />
-            <circle cx="13" cy="13" r="0.8" fill="#C8B38E" />
-            <circle cx="19" cy="13" r="0.8" fill="#C8B38E" />
-            <path d="M16 14.5 L15 16.5 L17 16.5 Z" fill="#C8B38E" stroke="none" />
-            <path d="M11 10.5 C12 9.5 14 9.5 16 10 C18 9.5 20 9.5 21 10.5 L21.5 13.5 C21.5 18 19 21 16 21 C13 21 10.5 18 10.5 13.5 Z" strokeWidth="1.2" strokeLinejoin="round" />
-            <path d="M11 14 C12 16 12.5 18 13.5 19.5" strokeWidth="1" />
-            <path d="M21 14 C20 16 19.5 18 18.5 19.5" strokeWidth="1" />
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="var(--accent-gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 24 L16 10 L24 24" />
+            <path d="M11 20 H21" strokeWidth="1.5" />
           </svg>
           <span className="nav-logo-text">ARCA</span>
           <div className="nav-separator"></div>
           <span className="nav-subtitle">PRIVATE TERMINAL</span>
         </div>
         <div className="nav-center">
+          <a href="#features" className="nav-link">Features</a>
           <a href="#intelligence" className="nav-link">Intelligence</a>
-          <a href="#features" className="nav-link">Portfolio</a>
-          <a href="#security" className="nav-link">Security</a>
           <a href="#pricing" className="nav-link">Pricing</a>
+          <a href="#security" className="nav-link">Security</a>
+          <a href="#about" className="nav-link">About</a>
         </div>
         <div className="nav-right">
+          <button className="btn-nav-ghost" onClick={() => navigate('/login')}>
+            LOG IN
+          </button>
+          <div className="nav-divider"></div>
           <button className="nav-cta-primary" onClick={() => navigate('/onboarding')} aria-label="Open ARCA Terminal">
-            REQUEST ACCESS →
+            GET ACCESS →
           </button>
         </div>
       </div>

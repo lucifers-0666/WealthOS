@@ -1,16 +1,15 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { usePortfolio } from '../lib/usePortfolio.js';
 import { useMarketData } from '../lib/MarketDataContext.jsx';
-import { theme, panelStyle } from '../lib/theme.js';
 import { useAnimatedNumber, flashClass } from '../lib/useAnimatedNumber.js';
-import { PageLoadingState, PageErrorState, EmptyState } from '../components/PageStates.jsx';
-import LiveIndicator from '../components/LiveIndicator.jsx';
+import { PageLoadingState, PageErrorState } from '../components/PageStates.jsx';
 import EditHoldingModal from '../components/EditHoldingModal.jsx';
 import DeleteConfirmModal from '../components/DeleteConfirmModal.jsx';
 import {
-  RefreshCw, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
-  Pencil, Trash2, PlusCircle, WifiOff,
-} from 'lucide-react';
+  ArrowsClockwise, Plus, ArrowUp, ArrowDown,
+  PencilSimple, Trash, Warning, X, ChartLine
+} from '@phosphor-icons/react';
+import '../styles/portfolio.css';
 
 // ---- formatters -------------------------------------------------------
 function fmt(n) {
@@ -31,52 +30,50 @@ function compact(n) {
 
 // ---- Animated KPI card ------------------------------------------------
 function KpiCard({ label, rawValue, sub, tone = 'neutral', live = false, prefix = '' }) {
-  const { value, direction } = useAnimatedNumber(rawValue || 0, 500);
-  const color = tone === 'positive' ? 'var(--aegean-green)'
-              : tone === 'negative' ? 'var(--terracotta)'
-              : 'var(--text-primary)';
+  const { value, direction } = useAnimatedNumber(rawValue || 0, 800);
+  
+  let accentClass = 'neutral';
+  if (label === 'Portfolio value') accentClass = 'gold';
+  else if (label === 'Day change') accentClass = 'blue';
+  else if (tone === 'positive') accentClass = 'gain';
+  else if (tone === 'negative') accentClass = 'loss';
+
+  let valueClass = '';
+  if (tone === 'positive' && label !== 'Portfolio value') valueClass = 'gain';
+  if (tone === 'negative' && label !== 'Portfolio value') valueClass = 'loss';
+  
+  const [flash, setFlash] = useState(false);
+  const prevVal = useRef(rawValue);
+  useEffect(() => {
+    if (rawValue !== prevVal.current) {
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 400);
+      prevVal.current = rawValue;
+      return () => clearTimeout(t);
+    }
+  }, [rawValue]);
+
   return (
-    <div style={{ ...panelStyle({ padding: 18, minHeight: 110 }) }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <div style={{ fontSize: 11, letterSpacing: '0.13em', textTransform: 'uppercase', color: 'var(--text-faint)' }}>
-          {label}
-        </div>
-        {live && (
-          <span style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase',
-            color: 'var(--aegean-green)', border: '1px solid var(--aegean-green)',
-            borderRadius: 999, padding: '1px 6px' }}>LIVE</span>
-        )}
-      </div>
-      <div
-        className={flashClass(direction)}
-        style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontVariantNumeric: 'tabular-nums',
-          lineHeight: 1, color, marginBottom: 6 }}
-      >
+    <div className={`arca-kpi-card ${accentClass}`}>
+      <div className="arca-kpi-accent" />
+      {live && <div className="arca-kpi-live-badge">Live</div>}
+      <div className="arca-kpi-label">{label}</div>
+      <div className={`arca-kpi-value ${valueClass} ${flash ? 'flash' : ''}`}>
         {prefix}{compact(value)}
       </div>
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{sub}</div>
+      <div className="arca-kpi-sublabel">{sub}</div>
+      
+      {/* Optional sparkline logic could go here, omitting for now unless needed */}
     </div>
   );
 }
 
 // ---- Single holding row -----------------------------------------------
 function HoldingRow({ holding, totalValue, onEdit, onDelete }) {
-  const prevPriceRef = useRef(holding.current_price);
-  const [flash, setFlash] = useState('');
   const { value: livePrice } = useAnimatedNumber(holding.current_price || 0, 350);
   const { value: liveValue } = useAnimatedNumber(holding.current_value || 0, 400);
   const { value: livePnl   } = useAnimatedNumber(holding.unrealised_pnl != null ? holding.unrealised_pnl
     : (holding.current_value || 0) - (holding.invested_amount || 0), 400);
-
-  useEffect(() => {
-    if (holding.current_price !== prevPriceRef.current) {
-      const dir = holding.current_price > prevPriceRef.current ? 'up' : 'down';
-      setFlash(dir);
-      prevPriceRef.current = holding.current_price;
-      const t = setTimeout(() => setFlash(''), 1400);
-      return () => clearTimeout(t);
-    }
-  }, [holding.current_price]);
 
   const invested   = holding.invested_amount || 0;
   const pnlVal     = (holding.current_value || 0) - invested;
@@ -84,97 +81,81 @@ function HoldingRow({ holding, totalValue, onEdit, onDelete }) {
   const weight     = totalValue > 0 ? ((holding.current_value || 0) / totalValue) * 100 : 0;
   const dayChange  = holding.day_change || 0;
   const dayPct     = holding.day_change_pct || 0;
+  
   const isPositive = pnlVal >= 0;
-  const isDayUp    = dayChange >= 0;
+  const isDayUp    = dayChange > 0;
+  const isDayDown  = dayChange < 0;
 
-  const cell = { padding: '14px 12px', fontSize: 13, verticalAlign: 'middle', borderBottom: `1px solid var(--border)` };
+  const tintClass = isPositive ? 'tint-gain' : 'tint-loss';
 
   return (
-    <tr style={{ transition: 'background 0.15s' }}
-      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(212,160,23,0.05)'}
-      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-      {/* Ticker + Company name */}
-      <td style={{ ...cell, fontWeight: 600, paddingLeft: 20 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>{holding.company_name || holding.name || holding.ticker}</span>
-          <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 400 }}>
-            {holding.ticker} · {holding.exchange || 'NSE'} · {holding.asset_class || 'Equity'}
-          </span>
+    <div className={`arca-tr ${tintClass}`}>
+      <div className="arca-tr-hover-bar" />
+      
+      {/* STOCK */}
+      <div className="arca-col-stock">
+        <div className="arca-cell-stock-name">{holding.company_name || holding.name || holding.ticker}</div>
+        <div className="arca-cell-stock-meta">
+          {holding.ticker} · {holding.exchange || 'NSE'} · {holding.asset_class || 'Equity'}
         </div>
-      </td>
-      {/* Qty */}
-      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--text-secondary)' }}>
-        {holding.quantity}
-      </td>
-      {/* Avg buy */}
-      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--text-secondary)' }}>
-        {fmt(holding.avg_buy_price)}
-      </td>
+      </div>
+      
+      {/* QTY */}
+      <div className="arca-col-qty">
+        <div className="arca-cell-qty">{holding.quantity}</div>
+      </div>
+      
+      {/* AVG BUY */}
+      <div className="arca-col-avgbuy">
+        <div className="arca-cell-avgbuy">
+          <span className="arca-cell-avgbuy-prefix">₹</span>{holding.avg_buy_price?.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+        </div>
+      </div>
+      
       {/* LTP */}
-      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-        <span className={flash === 'up' ? 'price-flash-up' : flash === 'down' ? 'price-flash-down' : ''}>
-          {fmt(livePrice)}
-        </span>
-        <div style={{
-          fontSize: 11, marginTop: 2,
-          color: Math.abs(dayPct) > 0.01
-            ? (isDayUp ? 'var(--aegean-green)' : 'var(--terracotta)')
-            : 'var(--text-faint)',
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
-          {Math.abs(dayPct) > 0.01 ? (isDayUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />) : null}
+      <div className="arca-col-ltp">
+        <div className="arca-cell-main-val">{fmt(livePrice)}</div>
+        <div className={`arca-cell-sub-val ${isDayUp ? 'gain' : isDayDown ? 'loss' : 'neutral'}`}>
           {pct(dayPct)}
         </div>
-      </td>
-      {/* Current value */}
-      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-        {compact(liveValue)}
-        <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
-          {weight.toFixed(1)}% of portfolio
-        </div>
-      </td>
+      </div>
+      
+      {/* VALUE */}
+      <div className="arca-col-value">
+        <div className="arca-cell-main-val">{compact(liveValue)}</div>
+        <div className="arca-cell-sub-text">{weight.toFixed(1)}% of portfolio</div>
+      </div>
+      
       {/* P&L */}
-      <td style={{ ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-        <div style={{ color: isPositive ? 'var(--aegean-green)' : 'var(--terracotta)',
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, fontWeight: 600 }}>
-          {isPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-          {compact(livePnl)}
+      <div className="arca-col-pnl">
+        <div className={`arca-cell-pnl-main ${isPositive ? 'gain' : 'loss'}`}>
+          {isPositive ? <ArrowUp size={10} weight="bold" /> : <ArrowDown size={10} weight="bold" />}
+          {compact(Math.abs(livePnl))}
         </div>
-        <div style={{ fontSize: 11, color: isPositive ? 'var(--aegean-green)' : 'var(--terracotta)',
-          textAlign: 'right', marginTop: 2 }}>
+        <div className={`arca-cell-sub-val ${isPositive ? 'gain' : 'loss'}`}>
           {pct(pnlPct)}
         </div>
-      </td>
-      {/* Actions */}
-      <td style={{ ...cell, textAlign: 'right', paddingRight: 16 }}>
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-          <button
-            onClick={() => onEdit(holding)}
-            style={{ padding: '6px 8px', borderRadius: 8, border: `1px solid var(--border)`,
-              background: 'transparent', color: 'var(--text-faint)', cursor: 'pointer',
-              transition: 'color 0.15s, border-color 0.15s' }}
-            title="Edit holding" aria-label="Edit holding"
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-faint)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-          ><Pencil size={13} /></button>
-          <button
-            onClick={() => onDelete(holding)}
-            style={{ padding: '6px 8px', borderRadius: 8, border: `1px solid var(--border)`,
-              background: 'transparent', color: 'var(--text-faint)', cursor: 'pointer',
-              transition: 'color 0.15s, border-color 0.15s' }}
-            title="Delete holding" aria-label="Delete holding"
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--terracotta)'; e.currentTarget.style.borderColor = 'var(--terracotta)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-          ><Trash2 size={13} /></button>
+      </div>
+      
+      {/* ACTIONS */}
+      <div className="arca-col-actions">
+        <div className="arca-actions-container">
+          <button className="arca-action-btn edit" onClick={() => onEdit(holding)}>
+            <PencilSimple size={15} />
+          </button>
+          <button className="arca-action-btn delete" onClick={() => onDelete(holding)}>
+            <Trash size={15} />
+          </button>
         </div>
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }
 
 // ---- Main page --------------------------------------------------------
 export default function Portfolio() {
-  const { portfolio, transactions, loading, error, refresh, updateHolding, deleteHolding } = usePortfolio();
-  const { holdings: liveHoldings, wsStatus, updatedAt, isLive, forceRefresh } = useMarketData();
+  const { portfolio, loading, error, refresh, updateHolding, deleteHolding } = usePortfolio();
+  const { holdings: liveHoldings, wsStatus, isLive, forceRefresh } = useMarketData();
 
   const [editTarget, setEditTarget]     = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -183,15 +164,17 @@ export default function Portfolio() {
   const [sortKey, setSortKey]           = useState('current_value');
   const [sortDir, setSortDir]           = useState('desc');
   const [filterClass, setFilterClass]   = useState('All');
+  const [refreshSpin, setRefreshSpin]   = useState(false);
+  const [dismissedBanner, setDismissedBanner] = useState(false);
 
   const liveHoldingsHaveValue = liveHoldings.some((h) => Number(h?.current_value || h?.current_value_inr || 0) > 0 || Number(h?.ltp || 0) > 0);
-
-  // Prefer meaningful live holdings from WS; fall back to static
   const rawHoldings = liveHoldingsHaveValue ? liveHoldings : (portfolio?.holdings || []);
 
   const assetClasses = useMemo(() => {
     const s = new Set(rawHoldings.map((h) => h.asset_class || 'Equity'));
-    return ['All', ...Array.from(s)];
+    const arr = ['All', ...Array.from(s)];
+    if (!arr.includes('ETF')) arr.push('ETF');
+    return arr;
   }, [rawHoldings]);
 
   const holdings = useMemo(() => {
@@ -204,6 +187,12 @@ export default function Portfolio() {
 
   const summary = portfolio?.summary || {};
   const totalValue = summary.totalCurrent || 0;
+
+  // Concentration Check
+  const highlyConcentratedHolding = useMemo(() => {
+    if (totalValue <= 0) return null;
+    return holdings.find(h => ((h.current_value || 0) / totalValue) > 0.25);
+  }, [holdings, totalValue]);
 
   function toggleSort(key) {
     if (sortKey === key) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
@@ -239,17 +228,12 @@ export default function Portfolio() {
     }
   }, [deleteTarget, deleteHolding, refresh, forceRefresh]);
 
-  const handleRefresh = () => { refresh(); forceRefresh(); };
-
-  const thStyle = (key) => ({
-    padding: '10px 12px', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
-    color: sortKey === key ? 'var(--text-primary)' : 'var(--text-faint)',
-    textAlign: key === 'ticker' ? 'left' : 'right',
-    paddingLeft: key === 'ticker' ? 20 : 12,
-    cursor: 'pointer', userSelect: 'none',
-    borderBottom: `1px solid var(--border)`,
-    whiteSpace: 'nowrap',
-  });
+  const handleRefresh = () => {
+    setRefreshSpin(true);
+    refresh(); 
+    forceRefresh();
+    setTimeout(() => setRefreshSpin(false), 600);
+  };
 
   if (loading && !liveHoldings.length) {
     return <PageLoadingState title="Loading portfolio\u2026" subtitle="Resolving holdings and live prices." />;
@@ -260,121 +244,127 @@ export default function Portfolio() {
 
   const kpis = [
     { label: 'Portfolio value',  rawValue: summary.totalCurrent,  sub: 'Live valuation',        tone: 'neutral',  live: isLive },
-    { label: 'Total invested',   rawValue: summary.totalInvested,  sub: 'Cost basis',            tone: 'neutral',  live: false  },
-    { label: 'Unrealised P&L',  rawValue: summary.totalPnl,       sub: pct(summary.totalPnlPct),   tone: (summary.totalPnl  || 0) >= 0 ? 'positive' : 'negative', live: isLive },
-    { label: 'Day change',       rawValue: summary.totalDayChange,      sub: pct(summary.totalDayChangePct),  tone: (summary.totalDayChange || 0) >= 0 ? 'positive' : 'negative', live: isLive },
+    { label: 'Total invested',   rawValue: summary.totalInvested, sub: 'Cost basis',            tone: 'neutral',  live: false  },
+    { label: 'Unrealised P&L',   rawValue: summary.totalPnl,      sub: pct(summary.totalPnlPct),tone: (summary.totalPnl  || 0) >= 0 ? 'positive' : 'negative', live: isLive },
+    { label: 'Day change',       rawValue: summary.totalDayChange,sub: pct(summary.totalDayChangePct),tone: (summary.totalDayChange || 0) >= 0 ? 'positive' : 'negative', live: isLive },
   ];
 
   return (
-    <div style={{ display: 'grid', gap: 18 }}>
-      {/* Header */}
-      <div style={{ ...panelStyle({ padding: '22px 26px' }), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
+    <div>
+      {/* Header Zone */}
+      <div className="arca-page-header">
         <div>
-          <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-faint)', marginBottom: 6 }}>
-            Holdings register
-          </div>
-          <h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontSize: 'clamp(1.6rem,2.5vw,2.4rem)', letterSpacing: '-0.04em', lineHeight: 1.05 }}>
-            Live portfolio
-          </h2>
+          <div className="arca-header-super">Holdings register</div>
+          <h2 className="arca-header-title">LIVE PORTFOLIO</h2>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {wsStatus === 'disconnected' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--terracotta)', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--terracotta)' }}>
-              <WifiOff size={13} /> No live feed
-            </div>
-          )}
-          <LiveIndicator wsStatus={wsStatus} updatedAt={updatedAt} />
-          <button
-            onClick={() => setEditTarget({})}
-            style={{ background: 'var(--greek-gold)', color: '#1a1206', border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3,
-              padding: '10px 16px', fontWeight: 600, cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14 }}
-          ><PlusCircle size={15} /> Add holding</button>
-          <button
-            onClick={handleRefresh}
-            style={{ border: `1px solid var(--border)`, borderRadius: 3, padding: '10px 14px',
-              background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14 }}
-          ><RefreshCw size={15} /> Refresh</button>
+        <div className="arca-header-actions">
+          <div className="arca-market-status">
+            <div className={`arca-market-dot ${wsStatus === 'connected' ? 'open' : 'closed'}`} />
+            {wsStatus === 'connected' ? 'Market Open' : 'Market Closed'}
+          </div>
+          <button className={`arca-btn-refresh ${refreshSpin ? 'spinning' : ''}`} onClick={handleRefresh}>
+            <ArrowsClockwise className="icon" size={14} weight="bold" /> REFRESH
+          </button>
+          <button className="arca-btn-primary" onClick={() => setEditTarget({})}>
+            <Plus size={14} weight="bold" /> ADD HOLDING
+          </button>
         </div>
       </div>
 
-      {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 14 }}>
+      {/* KPI Cards Row */}
+      <div className="arca-kpi-grid">
         {kpis.map((k) => <KpiCard key={k.label} {...k} />)}
       </div>
 
-      {/* Filter pills */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {/* Filter Tabs */}
+      <div className="arca-filter-tabs">
         {assetClasses.map((ac) => (
           <button
             key={ac}
+            className={`arca-tab ${filterClass === ac ? 'active' : ''}`}
             onClick={() => setFilterClass(ac)}
-            style={{
-              padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              border: `1px solid ${filterClass === ac ? 'var(--greek-gold)' : 'var(--border)'}`,
-              background: filterClass === ac ? 'rgba(212,160,23,0.12)' : 'transparent',
-              color: filterClass === ac ? 'var(--greek-gold)' : 'var(--text-faint)',
-              transition: 'all 0.15s',
-            }}
-          >{ac}</button>
+          >
+            {ac}
+          </button>
         ))}
       </div>
 
-      {/* Holdings table */}
-      <div style={{ ...panelStyle({ padding: 0, overflow: 'hidden' }) }}>
-        {holdings.length === 0 ? (
-          <EmptyState
-            title="No holdings yet"
-            message="Add your first holding or import a portfolio to get started."
-          />
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
-              <thead>
-                <tr style={{ background: 'rgba(212,160,23,0.02)' }}>
-                  {[['ticker','Stock'],['quantity','Qty'],['avg_buy_price','Avg buy'],
-                    ['current_price','LTP'],['current_value','Value'],
-                    ['unrealised_pnl','P&L']].map(([key, label]) => (
-                    <th key={key} style={thStyle(key)} onClick={() => toggleSort(key)}>
-                      {label} {sortKey === key ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
-                    </th>
-                  ))}
-                  <th style={{ ...thStyle('actions'), cursor: 'default' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {holdings.map((h, idx) => (
-                  <HoldingRow
-                    key={`${h.id || h.ticker || 'holding'}-${idx}`}
-                    holding={h}
-                    totalValue={totalValue}
-                    onEdit={setEditTarget}
-                    onDelete={setDeleteTarget}
-                  />
-                ))}
-              </tbody>
-            </table>
+      {/* Concentration Warning Banner */}
+      {highlyConcentratedHolding && !dismissedBanner && (
+        <div className="arca-concentration-banner">
+          <div className="arca-banner-content">
+            <Warning size={14} weight="bold" color="var(--status-warning)" />
+            <span>
+              <strong>{highlyConcentratedHolding.company_name || highlyConcentratedHolding.ticker}</strong> represents <strong>{((highlyConcentratedHolding.current_value / totalValue) * 100).toFixed(1)}%</strong> of your portfolio — above the 25% threshold
+            </span>
           </div>
-        )}
-      </div>
+          <button className="arca-banner-close" onClick={() => setDismissedBanner(true)}>
+            <X size={14} weight="bold" />
+          </button>
+        </div>
+      )}
 
-      {/* Summary footer */}
-      {holdings.length > 0 && (
-        <div style={{ ...panelStyle({ padding: '14px 22px' }), display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: 13, color: 'var(--text-faint)' }}>
-            {holdings.length} holding{holdings.length !== 1 ? 's' : ''}
-          </span>
-          <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
-            Invested: <strong>{compact(summary.totalInvested)}</strong>
-          </span>
-          <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
-            Current: <strong>{compact(summary.totalCurrent)}</strong>
-          </span>
-          <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums',
-            color: (summary.totalPnl || 0) >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)' }}>
-            P&L: <strong>{compact(summary.totalPnl)} ({pct(summary.totalPnlPct)})</strong>
-          </span>
+      {/* Holdings Table */}
+      {holdings.length === 0 ? (
+        <div className="arca-empty-state">
+          <ChartLine size={40} color="var(--border-default)" />
+          <div className="arca-empty-title">No Holdings Yet</div>
+          <div className="arca-empty-subtitle">Add your first holding to begin tracking your portfolio.</div>
+          <button className="arca-btn-primary" onClick={() => setEditTarget({})}>
+            <Plus size={14} weight="bold" /> ADD HOLDING
+          </button>
+        </div>
+      ) : (
+        <div className="arca-table-wrapper">
+          {/* Header */}
+          <div className="arca-table-header">
+            <div className="arca-th arca-col-stock">Stock</div>
+            <div className="arca-th arca-col-qty">Qty</div>
+            <div className="arca-th arca-col-avgbuy">Avg Buy</div>
+            <div className="arca-th arca-col-ltp">LTP</div>
+            <div className="arca-th arca-col-value" onClick={() => toggleSort('current_value')}>
+              Value {sortKey === 'current_value' && <ArrowDown size={10} weight="bold" className={`arca-sort-icon ${sortDir === 'asc' ? 'asc' : ''}`} />}
+            </div>
+            <div className="arca-th arca-col-pnl">P&L</div>
+            <div className="arca-th arca-col-actions">Actions</div>
+          </div>
+          
+          {/* Body */}
+          <div className="arca-table-body">
+            {holdings.map((h, idx) => (
+              <HoldingRow
+                key={`${h.id || h.ticker || 'holding'}-${idx}`}
+                holding={h}
+                totalValue={totalValue}
+                onEdit={setEditTarget}
+                onDelete={setDeleteTarget}
+              />
+            ))}
+          </div>
+          
+          {/* Footer Row */}
+          <div className="arca-table-footer">
+            <div className="arca-footer-segment">
+              <span className="arca-footer-label">{holdings.length} holdings</span>
+            </div>
+            <div className="arca-footer-separator" />
+            <div className="arca-footer-segment">
+              <span className="arca-footer-label">Invested:</span>
+              <span className="arca-footer-value">{compact(summary.totalInvested)}</span>
+            </div>
+            <div className="arca-footer-separator" />
+            <div className="arca-footer-segment">
+              <span className="arca-footer-label">Current:</span>
+              <span className="arca-footer-value">{compact(summary.totalCurrent)}</span>
+            </div>
+            <div className="arca-footer-separator" />
+            <div className="arca-footer-segment">
+              <span className="arca-footer-label">P&L:</span>
+              <span className={`arca-footer-value ${(summary.totalPnl || 0) >= 0 ? 'gain' : 'loss'}`}>
+                {compact(summary.totalPnl)} ({pct(summary.totalPnlPct)})
+              </span>
+            </div>
+          </div>
         </div>
       )}
 

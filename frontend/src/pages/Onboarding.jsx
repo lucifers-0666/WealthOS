@@ -1,100 +1,81 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Lock, Upload } from 'lucide-react';
-import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
-
-const steps = [
-  'Confirm profile and risk appetite',
-  'Import holdings or connect a broker export',
-  'Set target allocation and watchlists',
-  'Enter the command dashboard',
-];
+import { Check } from 'lucide-react';
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const [risk, setRisk] = useState('Balanced');
-  const [goal, setGoal] = useState('Long-term capital growth');
 
   return (
-    <div style={{ minHeight: '100dvh', padding: 22, background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
-      <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <div>
-            <div style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--text-faint)' }}>Secure onboarding</div>
-            <h1 style={{ margin: '8px 0 0', fontFamily: 'var(--font-serif)', fontSize: 'clamp(2rem, 4vw, 3.4rem)', letterSpacing: '-0.05em' }}>Set up your institutional workspace.</h1>
+    <div className="min-h-screen bg-[#0A201F] flex items-center justify-center p-6 animate-[fadeSlideUp_0.4s_ease-out]">
+      <div className="w-full max-w-md bg-[#172923] border border-[#2D3C37] rounded-[3px] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col items-center">
+        
+        {/* LOGO & TITLE */}
+        <div className="flex flex-col items-center mb-8 text-center">
+          <div className="w-12 h-12 bg-[rgba(200,179,142,0.1)] border border-[#C8B38E] rounded-full flex items-center justify-center mb-4">
+            <span className="font-cinzel text-xl font-bold text-[#C8B38E]">A</span>
           </div>
-          <button onClick={() => navigate('/app/dashboard')} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3, padding: '11px 16px', background: 'var(--greek-gold)', color: '#1a1206', fontWeight: 600, cursor: 'pointer' }}>
-            Skip for now
-          </button>
+          <h1 className="font-cinzel text-2xl font-bold text-[#ECE0CC] tracking-wide mb-2">ARCA</h1>
+          <p className="font-inter text-[12px] text-[#7B7C70]">Initialize your wealth instance</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr', gap: 18, alignItems: 'start' }}>
-          <aside style={{ ...panelStyle({ padding: 24 }) }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 10, display: 'grid', placeItems: 'center', background: 'rgba(212,160,23,0.12)', color: 'var(--greek-gold)' }}><Lock size={15} /></div>
-              <div>
-                <div style={{ fontWeight: 600, fontFamily: 'var(--font-serif)' }}>Onboarding checklist</div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>A calm path to first value.</div>
-              </div>
+        {/* STEPS */}
+        <div className="w-full flex flex-col gap-4 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full bg-[#6FAE8D] flex items-center justify-center flex-shrink-0">
+              <Check size={14} className="text-[#0A201F]" />
             </div>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {steps.map((step, index) => (
-                <div key={step} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 14, borderRadius: 3, border: `1px solid var(--border)`, background: 'rgba(212,160,23,0.02)' }}>
-                  <div style={{ width: 24, height: 24, borderRadius: 999, border: `1px solid var(--border)`, display: 'grid', placeItems: 'center', color: 'var(--greek-gold)', flexShrink: 0, marginTop: 1 }}>{index + 1}</div>
-                  <div style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>{step}</div>
-                </div>
-              ))}
+            <div className="font-inter text-[13px] text-[#ACA492]">Create Account</div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full border border-[#C8B38E] flex items-center justify-center flex-shrink-0">
+              <span className="font-mono text-[10px] text-[#C8B38E]">2</span>
             </div>
-          </aside>
-
-          <section style={{ ...panelStyle({ padding: 26 }) }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
-              <div>
-                <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-faint)', marginBottom: 8 }}>Risk profile</div>
-                <select value={risk} onChange={(e) => setRisk(e.target.value)} style={fieldStyle()}>
-                  {['Conservative', 'Balanced', 'Growth', 'Aggressive'].map((item) => <option key={item}>{item}</option>)}
-                </select>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-faint)', marginBottom: 8 }}>Primary goal</div>
-                <input value={goal} onChange={(e) => setGoal(e.target.value)} style={fieldStyle()} placeholder="Long-term wealth building" />
-              </div>
+            <div className="font-inter text-[13px] text-[#ECE0CC] font-bold">Connect Broker</div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full border border-[#2D3C37] flex items-center justify-center flex-shrink-0">
+              <span className="font-mono text-[10px] text-[#7B7C70]">3</span>
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginBottom: 18 }}>
-              {[
-                ['Session security', 'Protected routes and token sync'],
-                ['Data import', 'CSV, XLSX, screenshot OCR'],
-                ['Command layer', 'Advisor, signals, and allocation'],
-              ].map(([title, text]) => (
-                <div key={title} style={{ padding: 16, borderRadius: 3, border: `1px solid var(--border)`, background: 'rgba(212,160,23,0.02)' }}>
-                  <div style={{ fontWeight: 600, marginBottom: 6, fontFamily: 'var(--font-serif)' }}>{title}</div>
-                  <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--text-secondary)' }}>{text}</div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: 'grid', gap: 14 }}>
-              <div style={{ padding: 18, borderRadius: 3, border: `1px solid var(--border)`, background: 'rgba(212,160,23,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 600, marginBottom: 6, fontFamily: 'var(--font-serif)' }}>Upload portfolio snapshot</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Bring in holdings to unlock richer analytics.</div>
-                </div>
-                <Upload size={18} color="var(--greek-gold)" />
-              </div>
-              <button onClick={() => navigate('/app/upload')} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3, padding: '13px 16px', background: 'linear-gradient(180deg, #f0e6c8, var(--accent-gold))', color: '#1a1206', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer' }}>
-                Continue to import <ArrowRight size={16} />
-              </button>
-              <button onClick={() => navigate('/app/dashboard')} style={{ border: `1px solid var(--border)`, borderRadius: 3, padding: '13px 16px', background: 'transparent', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>
-                Enter dashboard without setup
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-faint)', fontSize: 12 }}>
-                <CheckCircle2 size={15} color="var(--aegean-green)" />
-                All onboarding actions are optional and reversible.
-              </div>
-            </div>
-          </section>
+            <div className="font-inter text-[13px] text-[#7B7C70]">Sync Data</div>
+          </div>
         </div>
+
+        {/* INPUTS */}
+        <div className="w-full flex flex-col gap-4 mb-8">
+          <div className="flex flex-col gap-1.5">
+            <label className="font-inter text-[10px] uppercase tracking-wide text-[#7B7C70]">Broker Integration</label>
+            <select className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-4 py-2.5 font-inter text-[13px] text-[#ECE0CC] outline-none focus:border-[rgba(200,179,142,0.3)] w-full">
+              <option>Select Broker...</option>
+              <option>Zerodha Kite</option>
+              <option>Upstox</option>
+              <option>Groww</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="font-inter text-[10px] uppercase tracking-wide text-[#7B7C70]">API Key / Access Token</label>
+            <input 
+              type="password"
+              placeholder="Enter secure token"
+              className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-4 py-2.5 font-inter text-[13px] text-[#ECE0CC] outline-none focus:border-[rgba(200,179,142,0.3)] w-full"
+            />
+          </div>
+        </div>
+
+        {/* CTA BUTTON */}
+        <button 
+          onClick={() => navigate('/app')}
+          className="w-full bg-[#C8B38E] text-[#0A201F] rounded-[3px] px-6 py-3 font-inter text-[12px] font-bold tracking-wider hover:brightness-110 transition-all shadow-[0_0_15px_rgba(200,179,142,0.15)] mb-4"
+        >
+          INITIALIZE SYSTEM
+        </button>
+
+        <button 
+          onClick={() => navigate('/app')}
+          className="font-inter text-[11px] text-[#7B7C70] hover:text-[#ACA492] transition-colors"
+        >
+          Skip onboarding and enter dashboard
+        </button>
+
       </div>
     </div>
   );

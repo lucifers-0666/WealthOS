@@ -155,7 +155,7 @@
 .ag-feature-cell--tl { border-right: 1px solid var(--border-divider); border-bottom: 1px solid var(--border-divider); }
 .ag-feature-cell--tr { border-bottom: 1px solid var(--border-divider); }
 .ag-feature-cell--bl { border-right: 1px solid var(--border-divider); }
-.ag-feature-cell--br { /* no border */ }
+.ag-feature-cell--br { border: none; }
 
 .ag-feature-cell__title {
   font-family: var(--font-display);

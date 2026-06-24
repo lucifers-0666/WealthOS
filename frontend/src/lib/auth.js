@@ -39,11 +39,11 @@ function ensureSupabaseConfigured() {
 
 function getDemoSession() {
   return {
-    access_token: '',
+    access_token: 'demo-token',
     user: {
-      id: '',
-      email: '',
-      user_metadata: {},
+      id: 'demo-user',
+      email: 'demo@example.com',
+      user_metadata: { full_name: 'Demo User' },
     },
   };
 }

@@ -1,9 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { uploadHoldingsCSV, uploadTransactionsCSV, uploadScreenshot } from '../lib/api.js';
 import { savePortfolioHoldings } from '../lib/portfolioStore.js';
-import { theme, panelStyle } from '../lib/theme.js';
 import { FileSpreadsheet, Image as ImageIcon, UploadCloud, CheckCircle2, Clock3 } from 'lucide-react';
 import { EmptyState } from '../components/PageStates.jsx';
+
+function SectionHeader({ title }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <div className="w-[2px] h-3 bg-[#C8B38E]"></div>
+      <h3 className="font-cinzel text-[10px] font-semibold uppercase tracking-[0.14em] text-[#ACA492]">
+        {title}
+      </h3>
+    </div>
+  );
+}
 
 function DropZone({ label, accept, onFile, status, result, icon, hint }) {
   const ref = useRef();
@@ -26,33 +36,30 @@ function DropZone({ label, accept, onFile, status, result, icon, hint }) {
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && ref.current?.click()}
       aria-label={`Upload ${label}`}
-      style={{
-        padding: 18,
-        borderRadius: 3,
-        border: `1px solid ${dragging ? 'var(--greek-gold)' : 'var(--border)'}`,
-        background: dragging ? 'rgba(212,160,23,0.06)' : 'rgba(212,160,23,0.02)',
-        minHeight: 240,
-        display: 'grid',
-        alignContent: 'center',
-        gap: 10,
-        cursor: 'pointer',
-        transition: 'all 180ms cubic-bezier(0.16,1,0.3,1)',
-      }}
+      className={`p-6 rounded-[3px] border ${dragging ? 'border-[#C8B38E] bg-[rgba(200,179,142,0.05)]' : 'border-[#2D3C37] bg-[#172923]'} min-h-[240px] flex flex-col justify-center items-center text-center gap-3 cursor-pointer transition-all hover:bg-[rgba(255,255,255,0.02)]`}
     >
-      <input ref={ref} type="file" accept={accept} style={{ display: 'none' }} onChange={(e) => { if (e.target.files?.[0]) onFile(e.target.files[0]); }} />
-      <div style={{ width: 42, height: 42, borderRadius: 13, display: 'grid', placeItems: 'center', background: 'rgba(212,160,23,0.1)', color: 'var(--greek-gold)' }}>
+      <input ref={ref} type="file" accept={accept} className="hidden" onChange={(e) => { if (e.target.files?.[0]) onFile(e.target.files[0]); }} />
+      <div className="w-12 h-12 rounded-[3px] border border-[#C8B38E] bg-[rgba(200,179,142,0.1)] flex items-center justify-center text-[#C8B38E] mb-2">
         {icon}
       </div>
-      <div style={{ fontWeight: 600, fontSize: 16, fontFamily: 'var(--font-serif)' }}>{label}</div>
-      <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: 13 }}>{hint}</div>
-      <div style={{ color: 'var(--text-faint)', fontSize: 12 }}>
+      <div className="font-cinzel text-[16px] font-bold text-[#ECE0CC]">{label}</div>
+      <div className="font-inter text-[12px] text-[#ACA492] leading-relaxed max-w-[80%]">{hint}</div>
+      <div className="font-mono text-[11px] text-[#7B7C70] mt-2">
         {status === 'idle' && 'Drag & drop or click to browse'}
         {status === 'loading' && 'Processing securely…'}
         {status === 'success' && result && `${result.imported || result.recognized || 0} records processed`}
-        {status === 'error' && result}
+        {status === 'error' && <span className="text-[#B66A6A]">{result}</span>}
       </div>
-      {status === 'loading' && <div style={{ height: 4, borderRadius: 999, overflow: 'hidden', background: 'rgba(212,160,23,0.06)' }}><div style={{ width: '62%', height: '100%', background: 'var(--greek-gold)', animation: 'pulseLine 1.2s infinite' }} /></div>}
-      {status === 'success' && <div style={{ color: 'var(--aegean-green)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}><CheckCircle2 size={14} /> Import complete</div>}
+      {status === 'loading' && (
+        <div className="w-[60%] h-1 rounded-full bg-[#0A201F] overflow-hidden mt-2">
+          <div className="h-full bg-[#C8B38E] w-1/2 animate-[pulseLine_1.2s_infinite]" />
+        </div>
+      )}
+      {status === 'success' && (
+        <div className="flex items-center gap-1.5 font-inter text-[11px] text-[#6FAE8D] mt-2 font-bold tracking-wide">
+          <CheckCircle2 size={14} /> IMPORT COMPLETE
+        </div>
+      )}
     </div>
   );
 }
@@ -123,91 +130,109 @@ export default function Upload() {
     }
   }
 
-  const csvIcon = <FileSpreadsheet size={18} />;
-  const imgIcon = <ImageIcon size={18} />;
-
   return (
-    <div style={{ display: 'grid', gap: 18 }}>
-      <section style={{ ...panelStyle({ padding: 24 }) }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start' }}>
-          <div style={{ maxWidth: 740 }}>
-            <div className="section-label" style={{ color: 'var(--text-faint)' }}>Secure ingestion</div>
-            <h2 className="editorial-title" style={{ margin: '8px 0 0', fontSize: 'clamp(2rem, 3vw, 3rem)', fontFamily: 'var(--font-serif)', color: 'var(--parchment)' }}>Import holdings with a calm, enterprise-grade workflow.</h2>
-            <p style={{ margin: '10px 0 0', color: 'var(--text-secondary)', lineHeight: 1.65 }}>Upload broker exports or screenshots. Arca validates, parses, and surfaces the result in a clean preview.</p>
+    <div className="flex flex-col min-h-0 h-full p-6 animate-[fadeSlideUp_0.4s_ease-out] overflow-y-auto">
+      <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full pb-8">
+        
+        {/* HEADER */}
+        <div className="flex justify-between items-start">
+          <div className="max-w-[740px]">
+            <h1 className="font-cinzel text-xl font-bold text-[#ECE0CC] tracking-wide">Data Ingestion</h1>
+            <p className="font-inter text-[12px] text-[#7B7C70] mt-1">Upload broker exports or screenshots. Arca validates, parses, and surfaces the result in a clean preview.</p>
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 3, border: `1px solid var(--border)`, color: 'var(--text-secondary)' }}>
-            <UploadCloud size={15} /> OCR ready
-          </div>
-        </div>
-      </section>
-
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
-        <DropZone label="Holdings CSV" accept=".csv,.xlsx" onFile={handleHoldings} status={holdingsStatus} result={holdingsResult} icon={csvIcon} hint="Columns needed: Ticker, Quantity, Avg Buy Price. Exchange optional." />
-        <DropZone label="Transactions CSV" accept=".csv,.xlsx" onFile={handleTxn} status={txnStatus} result={txnResult} icon={csvIcon} hint="Columns needed: Ticker, Action, Qty, Price, Date." />
-        <DropZone label="Screenshot OCR" accept="image/*" onFile={handleImage} status={imgStatus} result={typeof imgResult === 'string' ? imgResult : imgResult?.recognized} icon={imgIcon} hint="Supports portfolio screenshots from major brokers." />
-      </section>
-
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 0.9fr', gap: 18, alignItems: 'start' }}>
-        <div style={{ ...panelStyle({ padding: 20 }) }}>
-          <div className="section-label">Reference format</div>
-          <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Accepted CSV structure</h3>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="data-table">
-              <thead><tr><th>Column</th><th>Required</th><th>Example</th></tr></thead>
-              <tbody>
-                <tr><td>ticker / symbol</td><td>Yes</td><td>RELIANCE.NS</td></tr>
-                <tr><td>quantity / qty</td><td>Yes</td><td>10</td></tr>
-                <tr><td>avg_buy_price / avg_price</td><td>Yes</td><td>2450.00</td></tr>
-                <tr><td>exchange</td><td>No</td><td>NSE</td></tr>
-                <tr><td>asset_class</td><td>No</td><td>equity</td></tr>
-              </tbody>
-            </table>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-[3px] border border-[#2D3C37] font-inter text-[11px] text-[#ACA492]">
+            <UploadCloud size={14} /> OCR Ready
           </div>
         </div>
 
-        <div style={{ display: 'grid', gap: 18 }}>
-          <div style={{ ...panelStyle({ padding: 20 }) }}>
-            <div className="section-label">Upload history</div>
-            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Recent actions</h3>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {history.length ? history.map((item) => (
-                <div key={`${item.ts}-${item.kind}`} style={{ padding: 14, borderRadius: 3, border: `1px solid var(--border)`, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{item.kind}</div>
-                    <div style={{ color: 'var(--text-faint)', fontSize: 12, marginTop: 4 }}>{item.detail}</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-faint)', fontSize: 12 }}>
-                    <Clock3 size={13} /> {new Date(item.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-              )) : <div style={{ color: 'var(--text-faint)' }}>No uploads processed yet.</div>}
+        {/* DROPZONES */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <DropZone label="Holdings CSV" accept=".csv,.xlsx" onFile={handleHoldings} status={holdingsStatus} result={holdingsResult} icon={<FileSpreadsheet size={20} />} hint="Columns needed: Ticker, Quantity, Avg Buy Price." />
+          <DropZone label="Transactions CSV" accept=".csv,.xlsx" onFile={handleTxn} status={txnStatus} result={txnResult} icon={<FileSpreadsheet size={20} />} hint="Columns needed: Ticker, Action, Qty, Price, Date." />
+          <DropZone label="Screenshot OCR" accept="image/*" onFile={handleImage} status={imgStatus} result={typeof imgResult === 'string' ? imgResult : imgResult?.recognized} icon={<ImageIcon size={20} />} hint="Supports portfolio screenshots from major brokers." />
+        </div>
+
+        {/* BOTTOM SECTION */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_0.9fr] gap-6 items-start mt-2">
+          
+          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-6">
+            <SectionHeader title="ACCEPTED CSV STRUCTURE" />
+            <div className="w-full overflow-x-auto mt-4">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[#2D3C37] font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70]">
+                    <th className="py-3 font-normal">Column</th>
+                    <th className="py-3 font-normal">Required</th>
+                    <th className="py-3 font-normal">Example</th>
+                  </tr>
+                </thead>
+                <tbody className="font-inter text-[12px] text-[#ECE0CC]">
+                  <tr className="border-b border-[rgba(45,60,55,0.4)]">
+                    <td className="py-3">ticker / symbol</td><td className="py-3">Yes</td><td className="py-3 font-mono text-[11px]">RELIANCE.NS</td>
+                  </tr>
+                  <tr className="border-b border-[rgba(45,60,55,0.4)]">
+                    <td className="py-3">quantity / qty</td><td className="py-3">Yes</td><td className="py-3 font-mono text-[11px]">10</td>
+                  </tr>
+                  <tr className="border-b border-[rgba(45,60,55,0.4)]">
+                    <td className="py-3">avg_buy_price / avg_price</td><td className="py-3">Yes</td><td className="py-3 font-mono text-[11px]">2450.00</td>
+                  </tr>
+                  <tr className="border-b border-[rgba(45,60,55,0.4)]">
+                    <td className="py-3">exchange</td><td className="py-3 text-[#7B7C70]">No</td><td className="py-3 font-mono text-[11px]">NSE</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3">asset_class</td><td className="py-3 text-[#7B7C70]">No</td><td className="py-3 font-mono text-[11px]">equity</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {preview && (
-            <div style={{ ...panelStyle({ padding: 20 }) }}>
-              <div className="section-label">Preview</div>
-              <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Captured screenshot</h3>
-              <img src={preview} alt="Uploaded screenshot" style={{ width: '100%', borderRadius: 3, border: `1px solid var(--border)` }} />
-              {imgStatus === 'success' && imgResult?.holdings && (
-                <div style={{ marginTop: 14 }}>
-                  <div className="section-label" style={{ marginBottom: 10 }}>Recognized holdings</div>
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    {imgResult.holdings.map((h, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 3, border: `1px solid var(--border)` }}>
-                        <span className="badge badge-gold">{h.ticker}</span>
-                        <span style={{ color: 'var(--text-secondary)' }}>{h.quantity} units @ {h.avg_buy_price}</span>
-                      </div>
-                    ))}
+          <div className="flex flex-col gap-6">
+            <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-6">
+              <SectionHeader title="UPLOAD HISTORY" />
+              <div className="flex flex-col gap-3 mt-4">
+                {history.length ? history.map((item) => (
+                  <div key={`${item.ts}-${item.kind}`} className="p-3 rounded-[3px] border border-[#2D3C37] bg-[#0A201F] flex justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                      <div className="font-inter text-[12px] font-bold text-[#ECE0CC]">{item.kind}</div>
+                      <div className="font-inter text-[11px] text-[#7B7C70]">{item.detail}</div>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono text-[10px] text-[#7B7C70]">
+                      <Clock3 size={12} /> {new Date(item.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )) : <div className="font-inter text-[12px] text-[#7B7C70]">No uploads processed yet.</div>}
+              </div>
             </div>
-          )}
 
-          {!preview && imgStatus === 'idle' && <EmptyState title="Awaiting screenshot preview" message="Upload a broker screenshot to see holdings extracted here." />}
+            {preview && (
+              <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-6">
+                <SectionHeader title="CAPTURED SCREENSHOT" />
+                <img src={preview} alt="Uploaded screenshot" className="w-full rounded-[2px] border border-[#2D3C37] mt-4" />
+                {imgStatus === 'success' && imgResult?.holdings && (
+                  <div className="mt-6">
+                    <SectionHeader title="RECOGNIZED HOLDINGS" />
+                    <div className="flex flex-col gap-2 mt-4">
+                      {imgResult.holdings.map((h, i) => (
+                        <div key={i} className="flex justify-between items-center py-2 px-3 rounded-[2px] border border-[rgba(45,60,55,0.4)] bg-[#0A201F]">
+                          <span className="font-inter text-[10px] uppercase tracking-wide text-[#C8B38E] border border-[#C8B38E] px-1.5 py-0.5 rounded-[2px] bg-[rgba(200,179,142,0.1)]">{h.ticker}</span>
+                          <span className="font-inter text-[11px] text-[#ACA492]">{h.quantity} units @ {h.avg_buy_price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {!preview && imgStatus === 'idle' && (
+              <div className="h-full">
+                <EmptyState title="Awaiting screenshot preview" message="Upload a broker screenshot to see holdings extracted here." />
+              </div>
+            )}
+          </div>
+
         </div>
-      </section>
+      </div>
     </div>
   );
 }

@@ -1,225 +1,132 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { usePortfolio } from '../lib/usePortfolio.js';
-import { useAuth } from '../lib/useAuth.js';
-import { updateProfile as updateProfileApi } from '../services/portfolio.js';
-import { theme, panelStyle, fieldStyle } from '../lib/theme.js';
-import { LogOut, ShieldCheck, SlidersHorizontal, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
 
-const ASSET_CLASSES = [
-  { key: 'equity_IN', label: 'Indian Equity' },
-  { key: 'equity_US', label: 'US Equity / ETFs' },
-  { key: 'gold', label: 'Gold' },
-  { key: 'debt', label: 'Debt / Bonds' },
-  { key: 'cash', label: 'Cash & Liquid' },
-  { key: 'crypto', label: 'Crypto' },
-];
+function SectionHeader({ title }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <div className="w-[2px] h-3 bg-[#C8B38E]"></div>
+      <h3 className="font-cinzel text-[10px] font-semibold uppercase tracking-[0.14em] text-[#ACA492]">
+        {title}
+      </h3>
+    </div>
+  );
+}
+
+function Toggle({ checked, onChange }) {
+  return (
+    <div 
+      className={`w-10 h-5 rounded-full p-0.5 cursor-pointer transition-colors ${checked ? 'bg-[#6FAE8D]' : 'bg-[#0A201F] border border-[#2D3C37]'}`}
+      onClick={() => onChange(!checked)}
+    >
+      <div className={`w-4 h-4 rounded-full bg-[#ECE0CC] transform transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`}></div>
+    </div>
+  );
+}
 
 export default function Settings() {
-  const navigate = useNavigate();
-  const { targetAllocation, saveTargetAllocation } = usePortfolio();
-  const { user, signOut } = useAuth();
-  const [allocations, setAllocations] = useState({});
-  const [profile, setProfile] = useState({ currency: 'INR', risk_profile: 'moderate', investment_goal: '', target_corpus: '' });
-  const [preferences, setPreferences] = useState({ strategy_mode: 'balanced', rebalance_frequency: 'monthly' });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [profileSaved, setProfileSaved] = useState(false);
+  const [settings, setSettings] = useState({
+    animations: true,
+    compactMode: false,
+    darkMode: true,
+    apiKey: '',
+    geminiKey: '',
+  });
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem('arca:system-preferences');
-    if (stored) {
-      try {
-        setPreferences((prev) => ({ ...prev, ...JSON.parse(stored) }));
-      } catch {
-        // ignore malformed local preferences
-      }
-    }
-  }, []);
+  const toggleSetting = (key) => {
+    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
-  useEffect(() => {
-    const map = {};
-    ASSET_CLASSES.forEach((a) => { map[a.key] = 0; });
-    (targetAllocation || []).forEach((t) => { map[t.asset_class] = t.target_pct; });
-    setAllocations(map);
-  }, [targetAllocation]);
-
-  const total = useMemo(() => Object.values(allocations).reduce((s, v) => s + Number(v || 0), 0), [allocations]);
-  const valid = Math.abs(total - 100) < 0.01 || total === 0;
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      const arr = Object.entries(allocations)
-        .filter(([, v]) => Number(v) > 0)
-        .map(([asset_class, target_pct]) => ({ asset_class, target_pct: Number(target_pct) }));
-      await saveTargetAllocation(arr);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleSaveProfile() {
-    setSaving(true);
-    try {
-      await updateProfileApi({
-        currency: profile.currency,
-        risk_profile: profile.risk_profile,
-        investment_goal: profile.investment_goal || null,
-        target_corpus: profile.target_corpus ? Number(profile.target_corpus) : null,
-      });
-      window.localStorage.setItem('arca:system-preferences', JSON.stringify(preferences));
-      setProfileSaved(true);
-      setTimeout(() => setProfileSaved(false), 2500);
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleSignOut() {
-    await signOut();
-    navigate('/login');
-  }
+  const handleSave = () => {
+    // Dummy save
+  };
 
   return (
-    <div style={{ display: 'grid', gap: 18 }}>
-      <section style={{ ...panelStyle({ padding: 24 }) }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start' }}>
-          <div style={{ maxWidth: 740 }}>
-            <div className="section-label">System settings</div>
-            <h2 className="editorial-title" style={{ margin: '8px 0 0', fontSize: 'clamp(2rem, 3vw, 3rem)' }}>Profile, preferences, and allocation policy.</h2>
-            <p style={{ margin: '10px 0 0', color: 'var(--text-secondary)', lineHeight: 1.65, fontFamily: 'var(--font-sans)' }}>Keep your system profile, strategy, and account controls in one quiet place.</p>
-          </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 3, border: `1px solid var(--border-subtle)`, color: 'var(--text-secondary)' }}>
-            <ShieldCheck size={15} /> Protected
-          </div>
+    <div className="flex flex-col min-h-0 h-full relative items-center p-6 animate-[fadeSlideUp_0.4s_ease-out] overflow-y-auto">
+      <div className="w-full max-w-2xl flex flex-col gap-6 pb-20">
+        
+        {/* 1. PAGE HEADER */}
+        <div>
+          <h1 className="font-cinzel text-xl font-bold text-[#ECE0CC] tracking-wide">System Settings</h1>
+          <div className="font-inter text-[11px] text-[#7B7C70] mt-1">Application configuration and API keys</div>
         </div>
-      </section>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr', gap: 18, alignItems: 'start' }}>
-        <div style={{ display: 'grid', gap: 18 }}>
-          <div style={{ ...panelStyle({ padding: 20 }) }}>
-            <div className="section-label">Account</div>
-            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>User profile</h3>
-            <div style={{ display: 'grid', gap: 10, color: 'var(--text-secondary)', fontSize: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span>Email</span><span style={{ color: 'var(--text-primary)' }}>{user?.email || '—'}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span>User ID</span><span className="mono" style={{ color: 'var(--text-primary)' }}>{user?.id?.slice(0, 16) || '—'}...</span></div>
+        {/* 3. SETTINGS SECTIONS: UI PREFERENCES */}
+        <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-6 animate-[fadeSlideUp_0.4s_ease-out_100ms_both]">
+          <SectionHeader title="UI PREFERENCES" />
+          
+          <div className="flex flex-col mt-4">
+            <div className="flex justify-between items-center py-4 border-b border-[rgba(45,60,55,0.55)]">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-inter text-[13px] text-[#ECE0CC]">Terminal Animations</span>
+                <span className="font-inter text-[11px] text-[#7B7C70]">Enable smooth layout transitions and typing effects</span>
+              </div>
+              <Toggle checked={settings.animations} onChange={() => toggleSetting('animations')} />
             </div>
-            <button onClick={handleSignOut} style={{ marginTop: 16, border: '1px solid var(--border)', borderRadius: 3, padding: '11px 14px', background: 'rgba(107,46,46,0.12)', color: 'var(--terracotta)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <LogOut size={15} /> Sign out
-            </button>
-          </div>
-
-          <div style={{ ...panelStyle({ padding: 20 }) }}>
-            <div className="section-label">Profile preferences</div>
-            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Currency, risk, and corpus goals</h3>
-            <div style={{ display: 'grid', gap: 12 }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Currency</label>
-                <select value={profile.currency} onChange={(e) => setProfile((p) => ({ ...p, currency: e.target.value }))} style={fieldStyle()}>
-                  {['INR', 'USD', 'EUR', 'GBP'].map((c) => <option key={c}>{c}</option>)}
-                </select>
+            <div className="flex justify-between items-center py-4 border-b border-[rgba(45,60,55,0.55)]">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-inter text-[13px] text-[#ECE0CC]">Compact Mode</span>
+                <span className="font-inter text-[11px] text-[#7B7C70]">Reduce padding to fit more data on screen</span>
               </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Risk level</label>
-                <select value={profile.risk_profile} onChange={(e) => setProfile((p) => ({ ...p, risk_profile: e.target.value }))} style={fieldStyle()}>
-                  {['conservative', 'moderate', 'aggressive'].map((r) => <option key={r}>{r}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Investment goal</label>
-                <input value={profile.investment_goal} onChange={(e) => setProfile((p) => ({ ...p, investment_goal: e.target.value }))} placeholder="Retirement, house, corpus planning…" style={fieldStyle()} />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Target corpus</label>
-                <input type="number" min={0} step="any" value={profile.target_corpus} onChange={(e) => setProfile((p) => ({ ...p, target_corpus: e.target.value }))} placeholder="10000000" style={fieldStyle()} />
-              </div>
+              <Toggle checked={settings.compactMode} onChange={() => toggleSetting('compactMode')} />
             </div>
-            <div style={{ marginTop: 14, color: 'var(--text-secondary)', fontSize: 13 }}>
-              These preferences persist to your profile row in Supabase when configured.
-            </div>
-          </div>
-
-          <div style={{ ...panelStyle({ padding: 20 }) }}>
-            <div className="section-label">Operating preferences</div>
-            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Strategy mode and rebalance cadence</h3>
-            <div style={{ display: 'grid', gap: 12 }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Strategy mode</label>
-                <select value={preferences.strategy_mode} onChange={(e) => setPreferences((p) => ({ ...p, strategy_mode: e.target.value }))} style={fieldStyle()}>
-                  {['conservative', 'balanced', 'growth'].map((m) => <option key={m}>{m}</option>)}
-                </select>
+            <div className="flex justify-between items-center py-4">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-inter text-[13px] text-[#ECE0CC]">Default Dashboard View</span>
+                <span className="font-inter text-[11px] text-[#7B7C70]">Select the startup landing page</span>
               </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--text-faint)' }}>Rebalance frequency</label>
-                <select value={preferences.rebalance_frequency} onChange={(e) => setPreferences((p) => ({ ...p, rebalance_frequency: e.target.value }))} style={fieldStyle()}>
-                  {['monthly', 'quarterly', 'semiannual', 'annual'].map((r) => <option key={r}>{r}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ ...panelStyle({ padding: 20 }) }}>
-            <div className="section-label">Security posture</div>
-            <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Session and access control</h3>
-            <div style={{ display: 'grid', gap: 10, color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: 14 }}>
-              <div>Protected routes enabled</div>
-              <div>Session persistence active</div>
-              <div>Auth token sync to backend</div>
-              <div>Role-ready profile structure</div>
+              <select className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-3 py-1.5 font-inter text-[12px] text-[#ECE0CC] outline-none focus:border-[rgba(200,179,142,0.3)]">
+                <option>Command Center</option>
+                <option>Portfolio</option>
+                <option>Analytics</option>
+              </select>
             </div>
           </div>
         </div>
 
-        <div style={{ ...panelStyle({ padding: 22 }) }}>
-          <div className="section-label">Strategy controls</div>
-          <h3 className="editorial-title" style={{ margin: '6px 0 14px', fontSize: 18 }}>Target allocation</h3>
-          <div style={{ display: 'grid', gap: 12 }}>
-            {ASSET_CLASSES.map(({ key, label }) => (
-              <div key={key} style={{ display: 'grid', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                  <label htmlFor={key} style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{label}</label>
-                  <span style={{ color: 'var(--text-faint)', fontSize: 12 }}>{Number(allocations[key] || 0).toFixed(0)}%</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input
-                    id={key}
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={allocations[key] || ''}
-                    onChange={(e) => setAllocations((prev) => ({ ...prev, [key]: e.target.value }))}
-                    placeholder="0"
-                    style={{ ...fieldStyle({ maxWidth: 120 }) }}
-                  />
-                  <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'var(--bg-card)', overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.min(Number(allocations[key] || 0), 100)}%`, height: '100%', borderRadius: 999, background: 'var(--greek-gold)' }} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, color: 'var(--text-secondary)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><SlidersHorizontal size={15} /> Total target allocation</div>
-            <strong style={{ color: valid ? 'var(--text-primary)' : 'var(--terracotta)' }}>{total.toFixed(1)}%</strong>
-          </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-            <button onClick={handleSaveProfile} disabled={saving} style={{ border: '1px solid rgba(212,160,23,0.5)', borderRadius: 3, padding: '12px 16px', background: 'linear-gradient(180deg, #f0e6c8, var(--accent-gold))', color: '#1a1206', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <CheckCircle2 size={15} /> {saving ? 'Saving…' : profileSaved ? 'Profile saved' : 'Save profile'}
-            </button>
-            <button onClick={handleSave} disabled={saving || (!valid && total > 0)} style={{ border: '1px solid var(--border)', borderRadius: 3, padding: '12px 16px', background: 'rgba(212,160,23,0.05)', color: 'var(--greek-gold)', fontWeight: 600, cursor: 'pointer' }}>
-              {saving ? 'Saving…' : saved ? 'Saved' : 'Save allocation'}
-            </button>
+        {/* 3. SETTINGS SECTIONS: API INTEGRATIONS */}
+        <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-6 animate-[fadeSlideUp_0.4s_ease-out_200ms_both]">
+          <SectionHeader title="API INTEGRATIONS" />
+          
+          <div className="flex flex-col gap-6 mt-4">
+            <div className="flex flex-col gap-2">
+              <label className="font-inter text-[11px] uppercase tracking-wide text-[#ACA492]">AlphaVantage / Market Data API Key</label>
+              <input 
+                type="password" 
+                value={settings.apiKey}
+                onChange={e => setSettings(prev => ({...prev, apiKey: e.target.value}))}
+                placeholder="Enter API key" 
+                className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-4 py-2 font-inter text-[12px] text-[#ECE0CC] outline-none focus:border-[rgba(200,179,142,0.3)] w-full"
+              />
+              <span className="font-inter text-[10px] text-[#7B7C70]">Used for fetching live stock prices and historical data.</span>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="font-inter text-[11px] uppercase tracking-wide text-[#ACA492]">Gemini AI API Key</label>
+              <input 
+                type="password" 
+                value={settings.geminiKey}
+                onChange={e => setSettings(prev => ({...prev, geminiKey: e.target.value}))}
+                placeholder="Enter Gemini API key" 
+                className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-4 py-2 font-inter text-[12px] text-[#ECE0CC] outline-none focus:border-[rgba(200,179,142,0.3)] w-full"
+              />
+              <span className="font-inter text-[10px] text-[#7B7C70]">Required for AI Advisor and portfolio analysis features.</span>
+            </div>
           </div>
         </div>
-      </section>
+
+      </div>
+
+      {/* 5. SAVE BUTTON */}
+      <div className="fixed bottom-0 left-0 right-0 bg-[#0A201F] border-t border-[#2D3C37] p-4 flex justify-center z-10 lg:left-64">
+        <div className="w-full max-w-2xl flex justify-end">
+          <button 
+            onClick={handleSave}
+            className="bg-[#C8B38E] text-[#0A201F] rounded-[3px] px-6 py-2.5 font-inter text-[12px] font-bold tracking-wider hover:brightness-110 transition-all shadow-[0_0_15px_rgba(200,179,142,0.15)]"
+          >
+            SAVE SETTINGS
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }

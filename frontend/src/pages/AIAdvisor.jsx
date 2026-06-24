@@ -4,13 +4,13 @@ import { usePortfolio } from '../lib/usePortfolio';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const SMART_PROMPTS = [
-  { label: 'Rebalance', text: 'Analyze my current allocation and suggest a rebalancing plan.' },
-  { label: 'Concentration Risk', text: 'Identify concentration risks in my portfolio and suggest fixes.' },
-  { label: 'vs NIFTY', text: 'Compare my portfolio performance against NIFTY 50 benchmark.' },
-  { label: 'SIP Plan', text: 'Suggest a monthly SIP plan based on my current holdings and risk profile.' },
-  { label: 'Tax Harvesting', text: 'Identify tax loss harvesting opportunities in my portfolio.' },
-  { label: 'Stress Test 10%', text: 'What happens to my portfolio if NIFTY falls 10%? Show sector impact.' },
-  { label: 'IT Sector -15%', text: 'Simulate a 15% drop in IT sector — what is my estimated portfolio impact?' },
+  { label: 'REBALANCE', text: 'Analyze my current allocation and suggest a rebalancing plan.' },
+  { label: 'CONCENTRATION RISK', text: 'Identify concentration risks in my portfolio and suggest fixes.' },
+  { label: 'VS NIFTY', text: 'Compare my portfolio performance against NIFTY 50 benchmark.' },
+  { label: 'SIP PLAN', text: 'Suggest a monthly SIP plan based on my current holdings and risk profile.' },
+  { label: 'TAX HARVESTING', text: 'Identify tax loss harvesting opportunities in my portfolio.' },
+  { label: 'STRESS TEST 10%', text: 'What happens to my portfolio if NIFTY falls 10%? Show sector impact.' },
+  { label: 'IT SECTOR -15%', text: 'Simulate a 15% drop in IT sector — what is my estimated portfolio impact?' },
 ];
 
 const FALLBACK_MSG = 'Advisor systems are temporarily under elevated load. Your portfolio context is preserved — please try again in a moment.';
@@ -144,55 +144,57 @@ export default function AIAdvisor() {
   }, [input, loading, buildPortfolioContext, tryStream, tryRegular]);
 
   return (
-    <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
-      <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div>
-          <h1 className="text-xl font-semibold" style={{ color: 'var(--parchment)', fontFamily: 'var(--font-serif)' }}>AI Advisor</h1>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Portfolio-aware · Gemini powered</p>
+    <div className="flex flex-col h-full bg-[#0A201F] animate-[fadeSlideUp_0.4s_ease-out]">
+      {/* 1. PAGE HEADER */}
+      <div className="px-6 py-5 border-b border-[#2D3C37] shrink-0">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="font-cinzel text-xl font-bold text-[#ECE0CC] tracking-wide">AI Advisor</h1>
+            <p className="font-inter text-[11px] text-[#7B7C70] mt-1">Portfolio-aware · Gemini powered</p>
+          </div>
+          {loading && (
+            <span className="flex items-center gap-2 font-inter text-[10px] uppercase text-[#6FAE8D] tracking-wide">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#6FAE8D] animate-pulse" />
+              {streaming ? 'Streaming...' : 'Thinking...'}
+            </span>
+          )}
         </div>
-        {loading && (
-          <span className="flex items-center gap-2 text-xs" style={{ color: 'var(--aegean-green)' }}>
-            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--aegean-green)' }} />
-            {streaming ? 'Streaming...' : 'Thinking...'}
-          </span>
-        )}
       </div>
 
-      <div className="px-4 py-3 flex gap-2 overflow-x-auto scrollbar-none" style={{ borderBottom: '1px solid var(--border)' }}>
-        {SMART_PROMPTS.map(sp => (
+      {/* 3. PROMPT PILLS */}
+      <div className="px-6 py-4 flex gap-3 overflow-x-auto scrollbar-none border-b border-[#2D3C37] shrink-0">
+        {SMART_PROMPTS.map((sp, i) => (
           <button
             key={sp.label}
             onClick={() => sendMessage(sp.text)}
             disabled={loading}
-            className="shrink-0 px-3 py-1.5 rounded-full text-xs transition-all disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-faint)' }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-faint)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+            className="shrink-0 px-3 py-1.5 rounded-[3px] border border-[#2D3C37] bg-[#0A201F] font-inter text-[9px] uppercase tracking-[0.1em] text-[#7B7C70] transition-colors disabled:opacity-40 hover:text-[#ECE0CC] hover:border-[#C8B38E]"
+            style={{ animation: `fadeSlideUp 0.3s ease-out ${i*50}ms backwards` }}
           >
             {sp.label}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ minHeight: 0 }}>
+      {/* 2 & 4. CHAT AREA & MESSAGES */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`} style={{ animation: 'fadeSlideUp 0.3s ease-out backwards' }}>
             <div
-              className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap`}
-              style={
+              className={`max-w-[80%] px-5 py-4 rounded-[4px] leading-relaxed whitespace-pre-wrap ${
                 msg.role === 'user'
-                  ? { background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.3)', color: 'var(--parchment)' }
+                  ? 'bg-[#172923] border border-[#2D3C37] text-[#ECE0CC] font-inter text-[13px]'
                   : msg.isError
-                  ? { background: 'rgba(107,46,46,0.15)', border: '1px solid rgba(107,46,46,0.3)', color: 'var(--terracotta)' }
-                  : { background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--cream)' }
-              }
+                  ? 'bg-[rgba(182,106,106,0.1)] border border-[rgba(182,106,106,0.3)] text-[#B66A6A] font-inter text-[13px]'
+                  : 'bg-transparent border-none text-[#ACA492] font-serif text-[15px]'
+              }`}
             >
               {msg.content}
               {msg.streaming && (
-                <span className="inline-flex gap-0.5 ml-1 align-middle">
-                  <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--aegean-green)', animationDelay: '0ms' }} />
-                  <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--aegean-green)', animationDelay: '150ms' }} />
-                  <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--aegean-green)', animationDelay: '300ms' }} />
+                <span className="inline-flex gap-1 ml-2 align-middle">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#6FAE8D] animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#6FAE8D] animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#6FAE8D] animate-bounce" style={{ animationDelay: '300ms' }} />
                 </span>
               )}
             </div>
@@ -201,27 +203,29 @@ export default function AIAdvisor() {
         <div ref={endRef} />
       </div>
 
-      <div className="px-4 py-4" style={{ borderTop: '1px solid var(--border)' }}>
-        <div className="flex gap-2">
+      {/* 5. INPUT BAR */}
+      <div className="px-6 py-5 border-t border-[#2D3C37] bg-[#0A201F] shrink-0">
+        <div className="flex gap-3">
           <input
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             placeholder="Ask anything about your portfolio..."
             disabled={loading}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition disabled:opacity-50"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--cream)' }}
+            className="flex-1 px-4 py-3 rounded-[3px] bg-[#172923] border border-[#2D3C37] text-[#ECE0CC] font-inter text-[13px] focus:outline-none focus:border-[rgba(200,179,142,0.5)] transition-colors disabled:opacity-50 placeholder-[#7B7C70]"
           />
           <button
             onClick={() => sendMessage()}
             disabled={loading || !input.trim()}
-            className="px-4 py-2.5 rounded-xl text-sm font-medium transition disabled:opacity-40"
-            style={{ background: 'var(--greek-gold)', color: '#1a1206', border: '1px solid rgba(212,160,23,0.5)' }}
+            className="px-6 py-3 rounded-[3px] font-inter text-[12px] font-bold tracking-wide transition-all disabled:opacity-40 bg-[#C8B38E] text-[#0A201F] hover:brightness-110"
           >
-            {loading ? '...' : 'Send'}
+            {loading ? '...' : 'SEND'}
           </button>
         </div>
-        <p className="text-xs mt-2 text-center" style={{ color: 'var(--text-faint)' }}>Powered by Gemini · Portfolio context auto-injected</p>
+        <div className="flex justify-between items-center mt-3 px-1">
+          <p className="font-inter text-[9px] uppercase tracking-wide text-[#7B7C70]">Portfolio context auto-injected</p>
+          <p className="font-inter text-[9px] uppercase tracking-wide text-[#7B7C70]">Powered by Gemini</p>
+        </div>
       </div>
     </div>
   );

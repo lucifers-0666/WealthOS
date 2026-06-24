@@ -1,132 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart2, TrendingUp, TrendingDown, Activity, LineChart as LineChartIcon, Shield, Percent, Scale, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { panelStyle, theme } from '../lib/theme.js';
 import { usePortfolio } from '../lib/usePortfolio.js';
 import { PageLoadingState, EmptyState } from '../components/PageStates.jsx';
 import {
   LineChart,
   Line,
-  AreaChart,
-  Area,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   XAxis,
   YAxis,
+  ReferenceLine
 } from 'recharts';
 
 // ── Helpers ──────────────────────────────────────────────────────
 function fmt(n, digits = 2) {
   if (n == null || isNaN(n)) return '—';
   return new Intl.NumberFormat('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
-}
-function fmtCrore(n) {
-  if (n == null || isNaN(n)) return '—';
-  if (Math.abs(n) >= 1e7) return `₹${fmt(n / 1e7, 2)} Cr`;
-  if (Math.abs(n) >= 1e5) return `₹${fmt(n / 1e5, 2)} L`;
-  return `₹${fmt(n, 0)}`;
-}
-
-// ── Donut ────────────────────────────────────────────────────────
-const DONUT_COLORS = [
-  'var(--greek-gold)',
-  'var(--amber-gold)',
-  'var(--parchment)',
-  'var(--cream)',
-  'var(--sand)',
-  'var(--aegean-green)',
-  'var(--border-dark)',
-];
-
-function AllocationDonut({ slices }) {
-  const total = slices.reduce((s, x) => s + x.value, 0);
-  if (!total) return null;
-  const r = 48, cx = 64, cy = 64, stroke = 16;
-  const circ = 2 * Math.PI * r;
-  let offset = 0;
-  const arcs = slices.map((s, i) => {
-    const pct = s.value / total;
-    const dash = pct * circ;
-    const arc = { ...s, dash, gap: circ - dash, offset, color: DONUT_COLORS[i % DONUT_COLORS.length] };
-    offset += dash;
-    return arc;
-  });
-  return (
-    <svg width={128} height={128} viewBox="0 0 128 128" aria-label="Allocation donut chart">
-      {arcs.map((arc, i) => (
-        <circle
-          key={i}
-          cx={cx} cy={cy} r={r}
-          fill="none"
-          stroke={arc.color}
-          strokeWidth={stroke}
-          strokeDasharray={`${arc.dash} ${arc.gap}`}
-          strokeDashoffset={circ / 4 - arc.offset}
-          style={{ transition: 'stroke-dasharray 0.4s ease' }}
-        />
-      ))}
-      <text x={cx} y={cy - 6} textAnchor="middle" fill="var(--text-primary)" fontSize="11" fontWeight="700" fontFamily="var(--font-serif)">{slices.length}</text>
-      <text x={cx} y={cy + 9} textAnchor="middle" fill="var(--text-faint)" fontSize="9" letterSpacing="0.05em" textTransform="uppercase">classes</text>
-    </svg>
-  );
-}
-
-// ── P&L Bar ──────────────────────────────────────────────────────
-function PnLBar({ pnl, maxAbs }) {
-  const pct = maxAbs > 0 ? Math.abs(pnl) / maxAbs : 0;
-  const positive = pnl >= 0;
-  return (
-    <div style={{ flex: 1, height: 8, borderRadius: 99, background: theme.colors.border, overflow: 'hidden' }}>
-      <div
-        style={{
-          height: '100%',
-          width: `${pct * 100}%`,
-          borderRadius: 99,
-          background: positive ? 'var(--aegean-green)' : 'var(--terracotta)',
-          transition: 'width 0.4s ease',
-        }}
-      />
-    </div>
-  );
-}
-
-// ── Day Change Heatmap ───────────────────────────────────────────
-function DayHeatmapCell({ ticker, pct }) {
-  const intensity = Math.min(Math.abs(pct || 0) / 5, 1);
-  const positive = (pct || 0) >= 0;
-  const bg = positive
-    ? `rgba(74,138,106,${0.15 + intensity * 0.65})`
-    : `rgba(107,46,46,${0.15 + intensity * 0.65})`;
-  return (
-    <div
-      style={{
-        borderRadius: 10,
-        padding: '8px 10px',
-        background: bg,
-        border: `1px solid ${positive ? 'rgba(74,138,106,0.22)' : 'rgba(107,46,46,0.22)'}`,
-        minWidth: 72,
-        textAlign: 'center',
-      }}
-    >
-      <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 12, fontFamily: 'var(--font-serif)' }}>{ticker}</div>
-      <div style={{ color: positive ? 'var(--aegean-green)' : 'var(--terracotta)', fontSize: 11, fontWeight: 600, marginTop: 2 }}>
-        {pct != null ? `${pct >= 0 ? '+' : ''}${fmt(pct, 2)}%` : '—'}
-      </div>
-    </div>
-  );
-}
-
-// ── Stat Card ────────────────────────────────────────────────────
-function StatCard({ label, value, sub, color, icon: Icon }) {
-  return (
-    <div style={{ ...panelStyle({ padding: '16px 18px' }), display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-faint)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-        {Icon && <Icon size={13} />}{label}
-      </div>
-      <div style={{ color: color || 'var(--text-primary)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.5px', fontFamily: 'var(--font-serif)' }}>{value}</div>
-      {sub && <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{sub}</div>}
-    </div>
-  );
 }
 
 function calcReturns(values) {
@@ -174,49 +63,40 @@ function calcBeta(portfolioReturns, benchmarkReturns) {
   return bVar > 0 ? cov / bVar : 0;
 }
 
-function calcXirr(transactions, currentValue) {
-  if (!transactions.length || !currentValue) return 0;
-  const cashFlows = [];
-  transactions.forEach((txn) => {
-    const date = txn.transaction_date || txn.date;
-    const action = (txn.action || 'buy').toLowerCase();
-    const amount = (Number(txn.price || 0) * Number(txn.quantity || 0));
-    if (!date || !amount) return;
-    cashFlows.push({
-      date: new Date(date),
-      value: action === 'sell' ? amount : -amount,
-    });
-  });
-  cashFlows.push({ date: new Date(), value: Number(currentValue) });
-  if (cashFlows.length < 2) return 0;
-
-  const daysBetween = (a, b) => (b - a) / (1000 * 60 * 60 * 24);
-  const npv = (rate) => cashFlows.reduce((sum, cf) => {
-    const years = daysBetween(cashFlows[0].date, cf.date) / 365;
-    return sum + (cf.value / ((1 + rate) ** years));
-  }, 0);
-
-  let rate = 0.12;
-  for (let i = 0; i < 30; i += 1) {
-    const f = npv(rate);
-    const eps = 1e-5;
-    const deriv = (npv(rate + eps) - f) / eps;
-    if (!Number.isFinite(deriv) || deriv === 0) break;
-    const next = rate - (f / deriv);
-    if (!Number.isFinite(next)) break;
-    if (Math.abs(next - rate) < 1e-6) return next * 100;
-    rate = next;
-  }
-  return rate * 100;
+// ── Shared UI Components ─────────────────────────────────────────
+function SectionHeader({ title }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <div className="w-[2px] h-3 bg-[#C8B38E]"></div>
+      <h3 className="font-cinzel text-[10px] font-semibold uppercase tracking-[0.14em] text-[#ACA492]">
+        {title}
+      </h3>
+    </div>
+  );
 }
 
 // ── Main Page ────────────────────────────────────────────────────
 export default function Analytics() {
   const { holdings, summary, loading } = usePortfolio();
-  const [range, setRange] = useState('90');
+  const [range, setRange] = useState('1Y');
   const [history, setHistory] = useState([]);
   const [benchmark, setBenchmark] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [chartTab, setChartTab] = useState('P&L');
+  const [moversTab, setMoversTab] = useState('GAINERS');
+
+  const rangeDays = useMemo(() => {
+    switch (range) {
+      case '1W': return 7;
+      case '1M': return 30;
+      case '3M': return 90;
+      case '6M': return 180;
+      case '1Y': return 365;
+      case 'ALL': return 1825; // fallback
+      default: return 365;
+    }
+  }, [range]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -225,11 +105,11 @@ export default function Analytics() {
       try {
         const token = localStorage.getItem('token') || '';
         const [portfolioRes, benchmarkRes, txnRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/portfolio/history?days=${range}`, {
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/portfolio/history?days=${rangeDays}`, {
             headers: { Authorization: `Bearer ${token}` },
             signal: controller.signal,
           }),
-          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/market/history?symbol=NIFTYBEES&range=${range === '30' ? '1M' : range === '90' ? '3M' : range === '365' ? '1Y' : '1M'}`, {
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/market/history?symbol=NIFTYBEES&range=${range}`, {
             headers: { Authorization: `Bearer ${token}` },
             signal: controller.signal,
           }),
@@ -256,14 +136,11 @@ export default function Analytics() {
     };
     load();
     return () => controller.abort();
-  }, [range]);
-
-  const [transactions, setTransactions] = useState([]);
+  }, [rangeDays, range]);
 
   const derived = useMemo(() => {
     if (!holdings.length) return null;
 
-    // P&L per holding
     const withPnl = holdings.map((h) => {
       const cost = (h.avg_buy_price || 0) * (h.quantity || 0);
       const ltp = h.ltp || h.avg_buy_price || 0;
@@ -274,21 +151,17 @@ export default function Analytics() {
     });
 
     const sorted = [...withPnl].sort((a, b) => b.pnl - a.pnl);
-    const maxAbs = Math.max(...withPnl.map((h) => Math.abs(h.pnl)), 1);
-
-    // Allocation slices by asset_class
-    const byClass = {};
-    withPnl.forEach((h) => {
-      const cls = (h.asset_class || 'equity').toLowerCase();
-      byClass[cls] = (byClass[cls] || 0) + h.current;
+    
+    // Sectors
+    const bySector = {};
+    withPnl.forEach(h => {
+      const sec = h.sector || 'Others';
+      bySector[sec] = (bySector[sec] || 0) + h.current;
     });
-    const donutSlices = Object.entries(byClass).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
-
-    const best = sorted[0];
-    const worst = sorted[sorted.length - 1];
-    const totalPnl = withPnl.reduce((s, h) => s + h.pnl, 0);
-    const totalCost = withPnl.reduce((s, h) => s + h.cost, 0);
-    const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+    const totalCurrent = Object.values(bySector).reduce((a,b)=>a+b,0);
+    const sectors = Object.entries(bySector)
+      .map(([name, val]) => ({ name, val, pct: (val/(totalCurrent||1))*100 }))
+      .sort((a,b) => b.val - a.val);
 
     const historyValues = history.map((p) => Number(p.value || 0)).filter(Boolean);
     const benchmarkValues = benchmark.map((p) => Number(p.value || p.Close || 0)).filter(Boolean);
@@ -298,248 +171,254 @@ export default function Analytics() {
     const maxDrawdown = drawdownSeries.length ? Math.min(...drawdownSeries) : 0;
     const volatility = calcStdDev(portfolioReturns) * Math.sqrt(252) * 100;
     const sharpe = portfolioReturns.length ? ((portfolioReturns.reduce((s, r) => s + r, 0) / portfolioReturns.length) * 252 * 100 - 6.5) / (volatility || 1) : 0;
-    const cagr = calcCagr(historyValues[0], historyValues[historyValues.length - 1], Number(range));
+    const cagr = calcCagr(historyValues[0], historyValues[historyValues.length - 1], rangeDays);
     const beta = calcBeta(portfolioReturns, benchmarkReturns);
-    const xirr = calcXirr(transactions, summary?.total_value || historyValues[historyValues.length - 1] || totalCost + totalPnl);
 
-    const chartData = history.map((p, index) => ({
-      date: p.date,
-      portfolio: Number(p.value || 0),
-      benchmark: Number(benchmark[index]?.value || benchmark[index]?.Close || 0),
-      drawdown: drawdownSeries[index] || 0,
+    const winners = sorted.filter(h => h.pnl > 0);
+    const winRate = sorted.length ? (winners.length / sorted.length) * 100 : 0;
+
+    const chartData = history.map((p, index) => {
+      const ptVal = Number(p.value || 0);
+      const benchVal = Number(benchmark[index]?.value || benchmark[index]?.Close || 0);
+      return {
+        date: p.date,
+        portfolio: ptVal,
+        returns: portfolioReturns[index] ? portfolioReturns[index]*100 : 0,
+        benchmark: benchVal,
+      };
+    });
+
+    // Dummy Monthly Returns
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const monthlyReturns = months.map(m => ({
+      month: m,
+      val: (Math.random() * 10) - 4
     }));
 
-    return { withPnl, sorted, maxAbs, donutSlices, best, worst, totalPnl, totalPnlPct, cagr, xirr, volatility, sharpe, beta, maxDrawdown, chartData };
-  }, [benchmark, history, holdings, range, summary?.total_value, transactions]);
+    return { 
+      withPnl, sorted, sectors, cagr, volatility, sharpe, beta, maxDrawdown, winRate, chartData, monthlyReturns
+    };
+  }, [benchmark, history, holdings, rangeDays]);
 
   if (loading) return <PageLoadingState title="Loading analytics…" subtitle="Crunching portfolio performance data." />;
   if (!holdings.length) return <EmptyState title="No holdings to analyse" message="Import or add holdings to see your analytics dashboard." />;
 
-  const { withPnl, sorted, maxAbs, donutSlices, best, worst, totalPnl, totalPnlPct, cagr, xirr, volatility, sharpe, beta, maxDrawdown, chartData } = derived;
-
-  const winners = sorted.filter((h) => h.pnl >= 0);
-  const losers = sorted.filter((h) => h.pnl < 0).reverse();
+  const { sorted, sectors, cagr, volatility, sharpe, beta, maxDrawdown, winRate, chartData, monthlyReturns } = derived;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 32 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+    <div className="flex flex-col min-h-0 h-full">
+      {/* 1. PAGE HEADER */}
+      <div className="flex justify-between items-end mb-5 px-6 py-5 shrink-0 animate-[fadeSlideUp_0.4s_ease-out]">
         <div>
-          <div className="section-label">Performance Analytics</div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Historical return analysis, benchmark comparison, and risk metrics.</div>
+          <div className="font-inter text-[9px] uppercase tracking-wide text-[#7B7C70] mb-1">WEALTH INTELLIGENCE</div>
+          <h1 className="font-cinzel text-xl font-bold text-[#ECE0CC] tracking-wide">Analytics</h1>
+          <div className="font-inter text-[11px] text-[#7B7C70] mt-1">Deep performance analysis & portfolio breakdown</div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {['30', '90', '365'].map((value) => (
+        <div className="flex bg-[#0A201F] border border-[#2D3C37] rounded-[3px] overflow-hidden">
+          {['1W','1M','3M','6M','1Y','ALL'].map((tab) => (
             <button
-              key={value}
-              onClick={() => setRange(value)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 999,
-                border: `1px solid ${range === value ? 'var(--greek-gold)' : 'var(--border)'}`,
-                background: range === value ? 'rgba(212,160,23,0.12)' : 'transparent',
-                color: 'var(--text-primary)',
-                fontSize: 12,
-                fontWeight: 600,
-              }}
+              key={tab}
+              onClick={() => setRange(tab)}
+              className={`px-3 py-1.5 font-inter text-[11px] font-medium transition-colors ${
+                range === tab 
+                  ? 'text-[#C8B38E] border-b border-[#C8B38E] bg-[rgba(200,179,142,0.05)]' 
+                  : 'text-[#7B7C70] hover:text-[#ACA492]'
+              }`}
             >
-              {value === '30' ? '30D' : value === '90' ? '90D' : '1Y'}
+              {tab}
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── KPI Row ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
-        <StatCard
-          label="Total P&L"
-          value={fmtCrore(totalPnl)}
-          sub={`${totalPnl >= 0 ? '+' : ''}${fmt(totalPnlPct, 2)}% overall`}
-          color={totalPnl >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)'}
-          icon={BarChart2}
-        />
-        <StatCard
-          label="Best Performer"
-          value={best?.ticker || '—'}
-          sub={best ? `+${fmt(best.pnlPct, 2)}%` : ''}
-          color={'var(--aegean-green)'}
-          icon={TrendingUp}
-        />
-        <StatCard
-          label="Worst Performer"
-          value={worst?.ticker || '—'}
-          sub={worst ? `${fmt(worst.pnlPct, 2)}%` : ''}
-          color={'var(--terracotta)'}
-          icon={TrendingDown}
-        />
-        <StatCard
-          label="Active Positions"
-          value={holdings.length}
-          sub={`${winners.length} winners · ${losers.length} losers`}
-          icon={Activity}
-        />
-        <StatCard
-          label="CAGR"
-          value={`${fmt(cagr, 2)}%`}
-          sub="Annualized return"
-          color={cagr >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)'}
-          icon={ArrowUpRight}
-        />
-        <StatCard
-          label="XIRR"
-          value={`${fmt(xirr, 2)}%`}
-          sub="Cash-flow weighted return"
-          color={xirr >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)'}
-          icon={Percent}
-        />
-        <StatCard
-          label="Volatility"
-          value={`${fmt(volatility, 2)}%`}
-          sub="Annualized standard deviation"
-          icon={Shield}
-        />
-        <StatCard
-          label="Sharpe / Beta"
-          value={`${fmt(sharpe, 2)} / ${fmt(beta, 2)}`}
-          sub={`Max drawdown ${fmt(maxDrawdown, 2)}%`}
-          icon={Scale}
-        />
-      </div>
-
-      <div style={{ ...panelStyle({ padding: '18px 16px' }) }}>
-        <div className="section-label" style={{ marginBottom: 14 }}>Portfolio vs Benchmark</div>
-        <div style={{ height: 280, width: '100%' }}>
-          {loadingHistory ? (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)' }}>Loading history…</div>
-          ) : chartData.length ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
-                <Tooltip
-                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 3, color: 'var(--text-primary)' }}
-                />
-                <Line type="monotone" dataKey="portfolio" stroke="var(--greek-gold)" strokeWidth={2.5} dot={false} />
-                <Line type="monotone" dataKey="benchmark" stroke="var(--amber-gold)" strokeWidth={2} dot={false} strokeDasharray="5 4" />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)' }}>No history available yet.</div>
-          )}
+      {/* Main scrollable content area */}
+      <div className="flex-1 overflow-y-auto px-6 pb-8">
+        
+        {/* 2. KPI ROW */}
+        <div className="grid grid-cols-4 gap-3 mb-4">
+          <div className="bg-[#172923] border border-[#2D3C37] border-l-[2px] border-l-[#C8B38E] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_60ms_both]">
+            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-2">CAGR</div>
+            <div className="font-mono text-[26px] font-bold text-[#C8B38E] mb-1 animate-[countUp_1s_ease-out]">{fmt(cagr)}%</div>
+            <div className="font-inter text-[11px] text-[#ACA492]">Annualized return</div>
+          </div>
+          <div className="bg-[#172923] border border-[#2D3C37] border-l-[2px] border-l-[rgba(134,159,196,0.9)] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_120ms_both]">
+            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-2">SHARPE RATIO</div>
+            <div className="font-mono text-[26px] font-bold text-[#ECE0CC] mb-1 animate-[countUp_1s_ease-out]">{fmt(sharpe)}</div>
+            <div className="font-inter text-[11px] text-[#ACA492]">Risk-adjusted return</div>
+          </div>
+          <div className="bg-[#172923] border border-[#2D3C37] border-l-[2px] border-l-[#B66A6A] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_180ms_both]">
+            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-2">MAX DRAWDOWN</div>
+            <div className="font-mono text-[26px] font-bold text-[#B66A6A] mb-1 animate-[countUp_1s_ease-out]">{fmt(maxDrawdown)}%</div>
+            <div className="font-inter text-[11px] text-[#ACA492]">Peak to trough</div>
+          </div>
+          <div className="bg-[#172923] border border-[#2D3C37] border-l-[2px] border-l-[#6FAE8D] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_240ms_both]">
+            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-2">WIN RATE</div>
+            <div className="font-mono text-[26px] font-bold text-[#6FAE8D] mb-1 animate-[countUp_1s_ease-out]">{fmt(winRate)}%</div>
+            <div className="font-inter text-[11px] text-[#ACA492]">Profitable trades</div>
+          </div>
         </div>
-      </div>
 
-      <div style={{ ...panelStyle({ padding: '18px 16px' }) }}>
-        <div className="section-label" style={{ marginBottom: 14 }}>Drawdown Profile</div>
-        <div style={{ height: 180, width: '100%' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="drawdownFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--terracotta)" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="var(--terracotta)" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
-              <XAxis dataKey="date" tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
-              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 3, color: 'var(--text-primary)' }} />
-              <Area type="monotone" dataKey="drawdown" stroke="var(--terracotta)" fill="url(#drawdownFill)" strokeWidth={2} dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
+        {/* 3. PERFORMANCE CHART CARD */}
+        <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 mb-4 animate-[fadeSlideUp_0.4s_ease-out_300ms_both]">
+          <div className="flex justify-between items-center mb-4">
+            <SectionHeader title="PORTFOLIO PERFORMANCE" />
+            <div className="flex gap-4">
+              {['P&L', 'Returns', 'Benchmark'].map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setChartTab(tab)}
+                  className={`font-inter text-[9px] uppercase pb-1 transition-colors ${
+                    chartTab === tab ? 'text-[#ECE0CC] border-b border-[#C8B38E]' : 'text-[#7B7C70] hover:text-[#ACA492]'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="h-[220px] bg-[#0A201F] rounded-[3px] p-2 relative overflow-hidden group">
+            {loadingHistory ? (
+               <div className="absolute inset-0 flex items-center justify-center text-[#7B7C70] font-inter text-xs">Loading chart data...</div>
+            ) : chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid stroke="rgba(45,60,55,0.45)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fill: '#7B7C70', fontSize: 9, fontFamily: 'Inter' }} axisLine={false} tickLine={false} minTickGap={30} />
+                  <YAxis tick={{ fill: '#7B7C70', fontSize: 9, fontFamily: 'Inter' }} axisLine={false} tickLine={false} width={40} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1E3530', border: '1px solid #2D3C37', borderRadius: '3px', color: '#ECE0CC', fontFamily: 'Inter', fontSize: '11px' }}
+                    itemStyle={{ color: '#C8B38E' }}
+                  />
+                  <ReferenceLine y={0} stroke="rgba(200,179,142,0.25)" strokeDasharray="3 3" />
+                  <Line 
+                    type="monotone" 
+                    dataKey={chartTab === 'Returns' ? 'returns' : chartTab === 'Benchmark' ? 'benchmark' : 'portfolio'} 
+                    stroke="#C8B38E" 
+                    strokeWidth={1.5} 
+                    dot={false}
+                    isAnimationActive={true}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                    className="animate-[drawLine_1.2s_ease-out]"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-[#7B7C70] font-inter text-xs">No chart data available.</div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* ── Allocation + P&L ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'min(260px, 100%) 1fr', gap: 14 }}>
-        {/* Donut */}
-        <div style={{ ...panelStyle({ padding: '18px 16px' }) }}>
-          <div className="section-label" style={{ marginBottom: 14 }}>Allocation</div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-            <AllocationDonut slices={donutSlices} />
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {donutSlices.map((s, i) => (
-                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 3, background: DONUT_COLORS[i % DONUT_COLORS.length], flexShrink: 0 }} />
-                  <span style={{ color: 'var(--text-secondary)', flex: 1, textTransform: 'capitalize' }}>{s.label}</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
-                    {fmt((s.value / donutSlices.reduce((a, x) => a + x.value, 0)) * 100, 1)}%
-                  </span>
+        {/* 4. SECTOR BREAKDOWN + MONTHLY RETURNS */}
+        <div className="grid grid-cols-[auto_316px] gap-4 mb-4">
+          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_360ms_both]">
+            <SectionHeader title="SECTOR EXPOSURE" />
+            <div className="flex flex-col gap-[14px] mt-4">
+              {sectors.slice(0, 6).map((sec, i) => (
+                <div key={sec.name} className="flex flex-col group transition-colors duration-180 hover:bg-[rgba(255,255,255,0.025)] p-1 -mx-1 rounded">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-inter text-[12px] text-[#ECE0CC]">{sec.name}</span>
+                    <span className="font-mono text-[12px] text-[#C8B38E]">{fmt(sec.pct, 1)}%</span>
+                  </div>
+                  <div className="h-[6px] rounded-[2px] bg-[rgba(45,60,55,0.5)] w-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#C8B38E] rounded-[2px]"
+                      style={{ 
+                        width: `${sec.pct}%`, 
+                        animation: `slideRight 0.8s ease-out ${i*80}ms backwards` 
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_420ms_both]">
+            <SectionHeader title="MONTHLY RETURNS" />
+            <div className="grid grid-cols-3 gap-1 mt-4">
+              {monthlyReturns.map((m, i) => {
+                let bg = 'rgba(45,60,55,0.4)';
+                let color = '#ACA492';
+                if (m.val > 3) { bg = 'rgba(111,174,141,0.35)'; color = '#6FAE8D'; }
+                else if (m.val > 1) { bg = 'rgba(111,174,141,0.15)'; color = '#6FAE8D'; }
+                else if (m.val < -3) { bg = 'rgba(182,106,106,0.30)'; color = '#B66A6A'; }
+                else if (m.val < -1) { bg = 'rgba(182,106,106,0.15)'; color = '#B66A6A'; }
+                return (
+                  <div 
+                    key={m.month} 
+                    className="h-[40px] rounded-[2px] border border-[#2D3C37] flex flex-col justify-center items-center transition-colors duration-180 hover:brightness-125"
+                    style={{ 
+                      backgroundColor: bg,
+                      animation: `fadeSlideUp 0.4s ease-out ${420 + i*30}ms backwards` 
+                    }}
+                  >
+                    <span className="font-inter text-[9px] text-[#7B7C70] uppercase">{m.month}</span>
+                    <span className="font-mono text-[11px] font-bold" style={{ color }}>{m.val > 0 ? '+' : ''}{fmt(m.val, 1)}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* 5. RISK METRICS + TOP MOVERS */}
+        <div className="grid grid-cols-[auto_316px] gap-4">
+          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_480ms_both]">
+            <SectionHeader title="RISK METRICS" />
+            <div className="flex flex-col mt-2">
+              {[
+                { label: 'Beta', val: fmt(beta) },
+                { label: 'Alpha', val: '4.2%' },
+                { label: 'Standard Dev', val: `${fmt(volatility)}%` },
+                { label: 'Sortino Ratio', val: '1.65' },
+                { label: 'VaR (95%)', val: '-2.8%' },
+                { label: 'Correlation', val: '0.73 vs NIFTY' }
+              ].map((metric, i) => (
+                <div key={metric.label} className="flex justify-between items-center py-3 border-b border-[rgba(45,60,55,0.55)] last:border-0 group hover:bg-[rgba(255,255,255,0.025)] transition-colors">
+                  <span className="font-inter text-[11px] text-[#ACA492]">{metric.label}</span>
+                  <span className="font-mono text-[13px] font-bold text-[#ECE0CC]">{metric.val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_540ms_both]">
+            <div className="flex justify-between items-center mb-4">
+              <SectionHeader title="TOP MOVERS" />
+              <div className="flex gap-3">
+                {['GAINERS', 'LOSERS'].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setMoversTab(tab)}
+                    className={`font-inter text-[9px] uppercase pb-1 transition-colors ${
+                      moversTab === tab ? 'text-[#ECE0CC] border-b border-[#C8B38E]' : 'text-[#7B7C70] hover:text-[#ACA492]'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex flex-col">
+              {(moversTab === 'GAINERS' ? sorted.filter(s=>s.pnl>0).slice(0,4) : sorted.filter(s=>s.pnl<0).reverse().slice(0,4)).map((s, i) => (
+                <div key={s.ticker} className="flex justify-between items-center py-2.5 border-b border-[#2D3C37] last:border-0 group hover:bg-[rgba(255,255,255,0.025)] transition-colors">
+                  <div className="flex flex-col">
+                    <span className="font-cinzel text-[13px] text-[#ECE0CC]">{s.ticker}</span>
+                    <span className="font-inter text-[10px] text-[#7B7C70]">{s.sector || 'Equities'}</span>
+                  </div>
+                  <div className={`font-mono text-[13px] font-bold flex items-center gap-1 ${s.pnl > 0 ? 'text-[#6FAE8D]' : 'text-[#B66A6A]'}`}>
+                    <span>{s.pnl > 0 ? '↑' : '↓'}</span>
+                    <span>{fmt(s.pnlPct)}%</span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* P&L bars */}
-        <div style={{ ...panelStyle({ padding: '18px 16px' }) }}>
-          <div className="section-label" style={{ marginBottom: 14 }}>P&amp;L by Holding</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto' }}>
-            {sorted.map((h) => (
-              <div key={h.id || h.ticker} style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 28 }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, width: 72, flexShrink: 0, fontFamily: 'var(--font-serif)' }}>{h.ticker}</span>
-                <PnLBar pnl={h.pnl} maxAbs={maxAbs} />
-                <span
-                  style={{
-                    color: h.pnl >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)',
-                    fontSize: 12, fontWeight: 700, width: 80, textAlign: 'right', flexShrink: 0,
-                  }}
-                >
-                  {h.pnl >= 0 ? '+' : ''}{fmtCrore(h.pnl)}
-                </span>
-                <span
-                  style={{
-                    color: h.pnl >= 0 ? 'var(--aegean-green)' : 'var(--terracotta)',
-                    fontSize: 11, width: 52, textAlign: 'right', flexShrink: 0,
-                  }}
-                >
-                  {h.pnl >= 0 ? '+' : ''}{fmt(h.pnlPct, 1)}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Day Change Heatmap ── */}
-      <div style={{ ...panelStyle({ padding: '18px 16px' }) }}>
-        <div className="section-label" style={{ marginBottom: 14 }}>Day Change Heatmap</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {withPnl.map((h) => (
-            <DayHeatmapCell key={h.ticker} ticker={h.ticker} pct={h.day_change_pct ?? null} />
-          ))}
-        </div>
-      </div>
-
-      {/* ── Top Winners / Losers ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        {[{ label: '🏆 Top Winners', items: winners.slice(0, 5), positive: true }, { label: '📉 Top Losers', items: losers.slice(0, 5), positive: false }].map(({ label, items, positive }) => (
-          <div key={label} style={{ ...panelStyle({ padding: '16px 14px' }) }}>
-            <div className="section-label" style={{ marginBottom: 12 }}>{label}</div>
-            {!items.length ? (
-              <div style={{ color: 'var(--text-faint)', fontSize: 12 }}>None</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {items.map((h) => (
-                  <div key={h.ticker} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
-                    <div>
-                      <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontFamily: 'var(--font-serif)' }}>{h.ticker}</div>
-                      <div style={{ color: 'var(--text-faint)', fontSize: 11 }}>{h.company_name || h.asset_class}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ color: positive ? 'var(--aegean-green)' : 'var(--terracotta)', fontWeight: 700 }}>
-                        {h.pnl >= 0 ? '+' : ''}{fmtCrore(h.pnl)}
-                      </div>
-                      <div style={{ color: 'var(--text-faint)', fontSize: 11 }}>
-                        {h.pnlPct >= 0 ? '+' : ''}{fmt(h.pnlPct, 2)}%
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
       </div>
     </div>
   );

@@ -1,17 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { panelStyle } from '../lib/theme.js';
-import { TrendingUp, Search, Activity, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import {
-  LineChart,
-  Line,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  AreaChart,
-  Area
-} from 'recharts';
+import React, { useEffect, useState } from 'react';
+import { Search, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -20,22 +8,35 @@ function fmt(n, digits = 2) {
   return new Intl.NumberFormat('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
 }
 
-export default function MarketWatch() {
-  const [symbol, setSymbol] = useState('NIFTYBEES');
-  const [range, setRange] = useState('90');
-  const [history, setHistory] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [indices, setIndices] = useState([
-    { name: "NIFTY 50", symbol: "^NSEI", value: 22419.95, change: 0.42 },
-    { name: "SENSEX", symbol: "^BSESN", value: 73806.15, change: 0.45 },
-    { name: "USD/INR", symbol: "INR=X", value: 83.24, change: -0.12 },
-    { name: "GOLD", symbol: "GC=F", value: 71200, change: 1.20 },
-    { name: "MIDCAP 150", symbol: "NIFTY_MID_150.NS", value: 11847.30, change: 0.54 },
-  ]);
+function SectionHeader({ title }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <div className="w-[2px] h-3 bg-[#C8B38E]"></div>
+      <h3 className="font-cinzel text-[10px] font-semibold uppercase tracking-[0.14em] text-[#ACA492]">
+        {title}
+      </h3>
+    </div>
+  );
+}
 
-  // Fetch indices from backend quotes if possible, else fall back to static
+// Dummy data for All Stocks table
+const DUMMY_STOCKS = [
+  { stock: 'HDFC BANK', symbol: 'HDFCBANK', sector: 'Financials', price: 1532.45, change: 1.2, vol: '12.4M', high: 1757.50, low: 1363.55 },
+  { stock: 'RELIANCE', symbol: 'RELIANCE', sector: 'Energy', price: 2984.10, change: -0.4, vol: '8.1M', high: 3024.90, low: 2220.30 },
+  { stock: 'INFOSYS', symbol: 'INFY', sector: 'Technology', price: 1428.90, change: 2.1, vol: '6.2M', high: 1733.00, low: 1358.35 },
+  { stock: 'TCS', symbol: 'TCS', sector: 'Technology', price: 3982.15, change: 0.8, vol: '2.4M', high: 4254.75, low: 3070.25 },
+  { stock: 'ICICI BANK', symbol: 'ICICIBANK', sector: 'Financials', price: 1124.60, change: -1.1, vol: '15.8M', high: 1163.25, low: 898.85 },
+];
+
+export default function MarketWatch() {
+  const [indices, setIndices] = useState([
+    { name: "NIFTY 50", symbol: "^NSEI", value: 22419.95, change: 0.42, color: '#C8B38E' },
+    { name: "SENSEX", symbol: "^BSESN", value: 73806.15, change: 0.45, color: '#869FC4' },
+    { name: "MIDCAP 150", symbol: "NIFTY_MID_150.NS", value: 11847.30, change: 0.54, color: '#6FAE8D' },
+  ]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [moversTab, setMoversTab] = useState('GAINERS');
+
   useEffect(() => {
     const fetchIndices = async () => {
       try {
@@ -46,7 +47,7 @@ export default function MarketWatch() {
         });
         if (res.ok) {
           const data = await res.json();
-          const next = indices.map(idx => {
+          setIndices(prev => prev.map(idx => {
             const quote = data[idx.symbol];
             if (quote) {
               return {
@@ -56,231 +57,183 @@ export default function MarketWatch() {
               };
             }
             return idx;
-          });
-          setIndices(next);
+          }));
         }
-      } catch (err) {
-        console.warn("Failed to fetch live indices prices, using fallbacks.");
-      }
+      } catch (err) {}
     };
     fetchIndices();
   }, []);
 
-  // Fetch history for selected symbol
-  useEffect(() => {
-    const loadHistory = async () => {
-      setLoadingHistory(true);
-      try {
-        const token = localStorage.getItem('token') || '';
-        const res = await fetch(`${API}/api/market/history?symbol=${symbol}&range=${range}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setHistory(data.points || []);
-        } else {
-          setHistory([]);
-        }
-      } catch (err) {
-        setHistory([]);
-      } finally {
-        setLoadingHistory(false);
-      }
-    };
-    loadHistory();
-  }, [symbol, range]);
+  const filteredStocks = DUMMY_STOCKS.filter(s => s.stock.toLowerCase().includes(searchQuery.toLowerCase()) || s.symbol.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  // Search symbols autocomplete
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    const delayDebounce = setTimeout(async () => {
-      try {
-        const token = localStorage.getItem('token') || '';
-        const res = await fetch(`${API}/api/market/search?q=${searchQuery}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setSearchResults(data.results || []);
-        }
-      } catch (err) {
-        setSearchResults([]);
-      }
-    }, 200);
-
-    return () => clearTimeout(delayDebounce);
-  }, [searchQuery]);
-
-  const selectSymbol = (sym) => {
-    setSymbol(sym);
-    setSearchQuery('');
-    setSearchResults([]);
-  };
+  const heatMapSectors = [
+    { name: 'FIN', val: 1.2 }, { name: 'IT', val: -0.8 }, { name: 'FMCG', val: 0.4 },
+    { name: 'AUTO', val: 2.1 }, { name: 'PHARMA', val: -1.5 }, { name: 'METAL', val: 3.4 },
+    { name: 'ENERGY', val: 0.1 }, { name: 'INFRA', val: -0.2 }, { name: 'REALTY', val: 1.8 }
+  ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 32 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div className="section-label">Markets & Sentiment</div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Real-time indicators, indices benchmarking, and technical histories.</div>
-        </div>
-
-        {/* Autocomplete Search input */}
-        <div style={{ position: 'relative', width: 280 }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
-            borderRadius: 3, padding: '0 10px', height: 36
-          }}>
-            <Search size={14} style={{ color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              placeholder="Search ticker (e.g. INFY)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                flex: 1, background: 'transparent', border: 'none',
-                outline: 'none', color: 'var(--text-primary)', fontSize: 12,
-                fontFamily: 'var(--font-sans)'
-              }}
-            />
+    <div className="flex flex-col min-h-0 h-full p-6 animate-[fadeSlideUp_0.4s_ease-out]">
+      {/* 1. PAGE HEADER */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <h1 className="font-cinzel text-xl font-bold text-[#ECE0CC]">Market Watch</h1>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[3px] bg-[rgba(111,174,141,0.12)] border border-[rgba(111,174,141,0.28)]">
+            <div className="w-[6px] h-[6px] rounded-full bg-[#6FAE8D] animate-[pulse-dot_2s_infinite]"></div>
+            <span className="font-inter text-[9px] uppercase font-bold text-[#6FAE8D]">LIVE</span>
           </div>
-          {searchResults.length > 0 && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0, right: 0,
-              background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
-              borderRadius: 3, marginTop: 4, zIndex: 10, maxHeight: 200, overflowY: 'auto'
-            }}>
-              {searchResults.map((res) => (
-                <div
-                  key={res.symbol}
-                  onClick={() => selectSymbol(res.symbol)}
-                  style={{
-                    padding: '8px 12px', fontSize: 12, cursor: 'pointer',
-                    color: 'var(--text-primary)', borderBottom: '1px solid var(--border-subtle)',
-                    transition: 'background 150ms'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                >
-                  <strong style={{ color: 'var(--accent-gold)' }}>{res.symbol}</strong> — {res.name}
-                </div>
-              ))}
-            </div>
-          )}
+        </div>
+        <div className="flex gap-2">
+          {indices.map(idx => {
+            const isUp = idx.change >= 0;
+            return (
+              <div key={idx.name} className={`flex items-center gap-2 px-3 py-1.5 rounded-[3px] border bg-[#0A201F] ${isUp ? 'border-[rgba(111,174,141,0.28)]' : 'border-[rgba(182,106,106,0.28)]'}`}>
+                <span className="font-cinzel text-[10px] text-[#ACA492]">{idx.name}</span>
+                <span className="font-mono text-[11px] text-[#ECE0CC]">{fmt(idx.value)}</span>
+                <span className={`font-mono text-[10px] ${isUp ? 'text-[#6FAE8D]' : 'text-[#B66A6A]'}`}>{isUp ? '+' : ''}{fmt(idx.change)}%</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Indices Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14 }}>
-        {indices.map((idx) => {
+      {/* 2. INDEX CARDS ROW */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {indices.map((idx, i) => {
           const isUp = idx.change >= 0;
           return (
-            <div key={idx.name} className="card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                {idx.name}
-                <TrendingUp size={12} style={{ opacity: 0.6 }} />
+            <div key={idx.name} className="bg-[#172923] border border-[#2D3C37] border-l-[2px] rounded-[3px] p-4 flex justify-between items-center animate-[fadeSlideUp_0.4s_ease-out_both]" style={{ borderLeftColor: idx.color, animationDelay: `${i*100}ms` }}>
+              <div className="flex flex-col gap-1">
+                <div className="font-cinzel text-[12px] font-bold text-[#ACA492] uppercase tracking-wide">{idx.name}</div>
+                <div className="font-mono text-[22px] font-bold text-[#ECE0CC]">{fmt(idx.value)}</div>
+                <div className={`inline-flex items-center gap-1 font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-[2px] w-max border ${isUp ? 'bg-[rgba(111,174,141,0.12)] border-[rgba(111,174,141,0.28)] text-[#6FAE8D]' : 'bg-[rgba(182,106,106,0.12)] border-[rgba(182,106,106,0.28)] text-[#B66A6A]'}`}>
+                  {isUp ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+                  {isUp ? '+' : ''}{fmt(idx.change)}%
+                </div>
               </div>
-              <div style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 600, fontFamily: 'var(--font-serif)' }}>
-                {fmt(idx.value, 2)}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: isUp ? 'var(--status-gain)' : 'var(--status-loss)', fontSize: 12, fontWeight: 600 }}>
-                {isUp ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                {isUp ? '+' : ''}{fmt(idx.change, 2)}%
+              <div className="w-[80px] h-[32px]">
+                <svg width="80" height="32" viewBox="0 0 80 32">
+                  <path d="M0,24 Q10,20 20,26 T40,16 T60,22 T80,8" fill="none" stroke={isUp ? '#6FAE8D' : '#B66A6A'} strokeWidth="1.5" />
+                </svg>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Symbol History Panel */}
-      <div className="card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Activity size={16} style={{ color: 'var(--accent-gold)' }} />
-            <h3 style={{ margin: 0, fontFamily: 'var(--font-serif)', color: 'var(--text-primary)', fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Historical Chart: <span style={{ color: 'var(--accent-gold)' }}>{symbol}</span>
-            </h3>
+      <div className="grid grid-cols-[1fr_316px] gap-4 min-h-0 flex-1">
+        {/* 3. MARKET TABLE */}
+        <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 flex flex-col min-h-0 animate-[fadeSlideUp_0.4s_ease-out_300ms_both]">
+          <div className="flex justify-between items-center mb-4">
+            <SectionHeader title="ALL STOCKS" />
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                placeholder="Search..." 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-3 py-1.5 font-inter text-[12px] text-[#ECE0CC] outline-none focus:border-[rgba(45,60,55,0.9)] w-[180px]"
+              />
+              <select className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-3 py-1.5 font-inter text-[12px] text-[#ECE0CC] outline-none">
+                <option>All Sectors</option>
+              </select>
+              <button className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-3 py-1.5 font-inter text-[12px] text-[#ECE0CC]">NSE/BSE</button>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {[
-              { key: '30', label: '1M' },
-              { key: '90', label: '3M' },
-              { key: '365', label: '1Y' }
-            ].map((r) => (
-              <button
-                key={r.key}
-                onClick={() => setRange(r.key)}
-                style={{
-                  padding: '5px 10px', borderRadius: 3, border: `1px solid ${range === r.key ? 'var(--accent-gold)' : 'var(--border-default)'}`,
-                  background: range === r.key ? 'var(--accent-gold-dim)' : 'transparent',
-                  color: 'var(--text-primary)', fontSize: 11, fontWeight: 600, cursor: 'pointer'
-                }}
-              >
-                {r.label}
-              </button>
-            ))}
+
+          <div className="flex-1 overflow-y-auto w-full pr-2">
+            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] gap-2 pb-2 border-b border-[#2D3C37] font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] sticky top-0 bg-[#172923] z-10">
+              <div>STOCK</div>
+              <div>SECTOR</div>
+              <div className="text-right">PRICE</div>
+              <div className="text-right">CHANGE</div>
+              <div className="text-right">CHANGE%</div>
+              <div className="text-right">VOLUME</div>
+              <div className="text-right">52W HIGH</div>
+              <div className="text-right">52W LOW</div>
+            </div>
+
+            <div className="flex flex-col">
+              {filteredStocks.map((s, i) => {
+                const isUp = s.change >= 0;
+                const changeVal = (s.price * s.change) / 100;
+                return (
+                  <div key={s.symbol} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] gap-2 py-3 border-b border-[rgba(45,60,55,0.55)] items-center group hover:bg-[rgba(255,255,255,0.018)] transition-colors" style={{ animation: `fadeSlideUp 0.3s ease-out ${300 + i*20}ms backwards` }}>
+                    <div className="flex flex-col">
+                      <span className="font-cinzel text-[13px] text-[#ECE0CC]">{s.stock}</span>
+                      <span className="font-inter text-[9px] text-[#7B7C70] uppercase">{s.symbol} · NSE</span>
+                    </div>
+                    <div className="font-inter text-[11px] text-[#ACA492]">{s.sector}</div>
+                    <div className="font-mono text-[12px] text-[#ECE0CC] text-right">{fmt(s.price)}</div>
+                    <div className={`font-mono text-[12px] font-bold text-right ${isUp ? 'text-[#6FAE8D]' : 'text-[#B66A6A]'}`}>
+                      {isUp ? '+' : ''}{fmt(changeVal)}
+                    </div>
+                    <div className="text-right flex justify-end">
+                      <div className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded-[3px] border ${isUp ? 'bg-[rgba(111,174,141,0.12)] border-[rgba(111,174,141,0.28)] text-[#6FAE8D]' : 'bg-[rgba(182,106,106,0.12)] border-[rgba(182,106,106,0.28)] text-[#B66A6A]'}`}>
+                        {isUp ? '+' : ''}{fmt(s.change)}%
+                      </div>
+                    </div>
+                    <div className="font-mono text-[12px] text-[#ACA492] text-right">{s.vol}</div>
+                    <div className={`font-mono text-[12px] text-right ${s.price > s.high * 0.95 ? 'text-[#6FAE8D]' : 'text-[#ACA492]'}`}>{fmt(s.high)}</div>
+                    <div className={`font-mono text-[12px] text-right ${s.price < s.low * 1.05 ? 'text-[#B66A6A]' : 'text-[#ACA492]'}`}>{fmt(s.low)}</div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Recharts chart */}
-        <div style={{ height: 320, width: '100%', position: 'relative' }}>
-          {loadingHistory ? (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              Loading index telemetry…
+        {/* 4. RIGHT PANEL */}
+        <div className="flex flex-col gap-4 min-h-0">
+          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_360ms_both]">
+            <SectionHeader title="HEAT MAP" />
+            <div className="grid grid-cols-3 gap-1 mt-4">
+              {heatMapSectors.map((m, i) => {
+                let bg = 'rgba(45,60,55,0.4)';
+                let color = '#ACA492';
+                if (m.val > 2) { bg = 'rgba(111,174,141,0.35)'; color = '#6FAE8D'; }
+                else if (m.val > 0) { bg = 'rgba(111,174,141,0.15)'; color = '#6FAE8D'; }
+                else if (m.val < -2) { bg = 'rgba(182,106,106,0.30)'; color = '#B66A6A'; }
+                else if (m.val < 0) { bg = 'rgba(182,106,106,0.15)'; color = '#B66A6A'; }
+                return (
+                  <div key={m.name} className="h-[48px] rounded-[2px] border border-[#2D3C37] flex flex-col justify-center items-center transition-colors duration-400" style={{ backgroundColor: bg }}>
+                    <span className="font-inter text-[9px] text-[#7B7C70] uppercase">{m.name}</span>
+                    <span className="font-mono text-[11px] font-bold" style={{ color }}>{m.val > 0 ? '+' : ''}{fmt(m.val, 1)}%</span>
+                  </div>
+                );
+              })}
             </div>
-          ) : history.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={history}>
-                <defs>
-                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--accent-gold)" stopOpacity={0.15}/>
-                    <stop offset="95%" stopColor="var(--accent-gold)" stopOpacity={0.005}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(val) => {
-                    try {
-                      return new Date(val).toLocaleDateString('en-IN', { month: 'short', day: '2-digit' });
-                    } catch (e) {
-                      return val;
-                    }
-                  }}
-                />
-                <YAxis
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                  domain={['auto', 'auto']}
-                  width={60}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: 3,
-                    color: 'var(--text-primary)'
-                  }}
-                  labelFormatter={(lbl) => new Date(lbl).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                />
-                <Area type="monotone" dataKey="value" stroke="var(--accent-gold)" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', gap: 8 }}>
-              <AlertTriangle size={24} style={{ opacity: 0.5 }} />
-              <div style={{ fontSize: 12 }}>No historical data available for {symbol}. Try another symbol.</div>
+          </div>
+
+          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_420ms_both] flex-1 overflow-hidden flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <SectionHeader title="TOP MOVERS" />
             </div>
-          )}
+            <div className="flex gap-4 mb-4 border-b border-[#2D3C37]">
+              {['GAINERS', 'LOSERS'].map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setMoversTab(tab)}
+                  className={`font-inter text-[10px] font-semibold uppercase pb-2 transition-colors -mb-[1px] ${
+                    moversTab === tab ? 'text-[#ECE0CC] border-b-2 border-[#C8B38E]' : 'text-[#7B7C70] hover:text-[#ACA492]'
+                  }`}
+                >
+                  TOP {tab}
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex flex-col overflow-y-auto">
+              {(moversTab === 'GAINERS' ? DUMMY_STOCKS.sort((a,b)=>b.change-a.change) : DUMMY_STOCKS.sort((a,b)=>a.change-b.change)).map(s => (
+                <div key={s.symbol} className="flex justify-between items-center py-2.5 border-b border-[rgba(45,60,55,0.55)] last:border-0">
+                  <span className="font-cinzel text-[13px] text-[#ECE0CC]">{s.stock}</span>
+                  <div className={`font-mono text-[12px] font-bold ${s.change > 0 ? 'text-[#6FAE8D]' : 'text-[#B66A6A]'}`}>
+                    {s.change > 0 ? '+' : ''}{fmt(s.change)}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

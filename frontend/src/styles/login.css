@@ -359,22 +359,22 @@
 .ag-input:focus {
   border-color: rgba(200, 179, 142, 0.55);
   background: var(--bg-input); /* unchanged */
-  box-shadow: 0 0 0 3px rgba(200, 179, 142, 0.08);
+  
 }
 .ag-input--password {
   padding-right: 44px;
 }
 .ag-input--error {
   border-color: rgba(224, 82, 82, 0.70);
-  box-shadow: 0 0 0 3px rgba(224, 82, 82, 0.08);
+  
 }
 
 /* Fix browser autofill white background */
 .ag-input:-webkit-autofill,
 .ag-input:-webkit-autofill:hover,
 .ag-input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px #0A201F inset !important;
-  box-shadow: 0 0 0 1000px #0A201F inset !important;
+  -webkit-
+  
   -webkit-text-fill-color: #ECE0CC !important;
   border-color: rgba(45, 60, 55, 0.90);
   caret-color: #ECE0CC;

@@ -45,7 +45,7 @@ export function WSHealthMonitor() {
         borderRadius: '0.5rem',
         fontSize: '0.75rem',
         fontFamily: 'inherit',
-        backdropFilter: 'blur(12px)',
+        
         background: isReconnecting
           ? 'rgba(220,150,0,0.12)'
           : isStaleData

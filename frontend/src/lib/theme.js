@@ -1,37 +1,39 @@
+// theme.js — Antigravity Dark Forest Teal palette
+// Legacy bridge: use Tailwind classes for new components.
+// Only import this in components that cannot use Tailwind yet.
+
 export const theme = {
   colors: {
-    bg: '#1a1206',
-    bgSoft: '#221808',
-    surface: '#221808',
-    border: '#3d2e0a',
-    text: '#f0e6c8',
-    textSoft: '#e8d8a8',
-    textMuted: '#c4b48a',
-    accent: 'var(--accent-gold)',
-    gold: 'var(--accent-gold)',
-    success: '#4a8a6a',
-    warning: '#b8960a',
-    error: '#6b2e2e',
+    bg:         '#0A201F',
+    bgSoft:     '#102321',
+    surface:    '#172923',
+    overlay:    '#1E3530',
+    border:     '#2D3C37',
+    borderSubtle: 'rgba(45,60,55,0.55)',
+    text:       '#ECE0CC',
+    textSoft:   '#ACA492',
+    textMuted:  '#7B7C70',
+    accent:     '#C8B38E',
+    gold:       '#C8B38E',
+    success:    '#6FAE8D',
+    warning:    '#D2A76D',
+    error:      '#B66A6A',
   },
   radius: {
-    sm: 12,
-    md: 18,
-    lg: 24,
+    sm: 3,
+    md: 3,
+    lg: 3,
   },
-  shadow: '0 8px 32px rgba(0,0,0,0.18)',
+  shadow: 'none',
   ease: 'cubic-bezier(0.16, 1, 0.3, 1)',
-  duration: 220,
+  duration: 180,
 };
 
 export function panelStyle(extra = {}) {
   return {
-    background:
-      'linear-gradient(180deg, rgba(212,160,23,0.03), rgba(212,160,23,0.01)), linear-gradient(180deg, rgba(34,24,8,0.96), var(--bg-base))',
-    border: `1px solid rgba(212,160,23,0.15)`,
-    borderRadius: theme.radius.md,
-    boxShadow: theme.shadow,
-    backdropFilter: 'blur(24px)',
-    WebkitBackdropFilter: 'blur(24px)',
+    background: '#172923',
+    border: '1px solid #2D3C37',
+    borderRadius: 3,
     ...extra,
   };
 }
@@ -39,14 +41,16 @@ export function panelStyle(extra = {}) {
 export function fieldStyle(extra = {}) {
   return {
     width: '100%',
-    minHeight: 42,
+    minHeight: 38,
     borderRadius: 3,
-    border: `1px solid ${theme.colors.border}`,
-    background: 'var(--bg-base)',
-    color: theme.colors.text,
-    padding: '11px 14px',
+    border: '1px solid #2D3C37',
+    background: '#0A201F',
+    color: '#ECE0CC',
+    padding: '9px 12px',
     outline: 'none',
-    transition: `all ${theme.duration}ms ${theme.ease}`,
+    fontFamily: 'Inter, sans-serif',
+    fontSize: 12,
+    transition: `all 180ms cubic-bezier(0.16,1,0.3,1)`,
     ...extra,
   };
 }

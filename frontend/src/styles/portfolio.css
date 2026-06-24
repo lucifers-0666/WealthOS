@@ -576,7 +576,7 @@
 /* ── Modals Override ──────────────────────────────────────────── */
 .arca-modal-overlay {
   background: rgba(0,0,0,0.55) !important;
-  backdrop-filter: blur(4px) !important;
+  
 }
 
 .arca-modal-container {
@@ -585,7 +585,7 @@
   border-radius: 3px !important;
   width: 480px !important;
   padding: 28px !important;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.6) !important;
+  
 }
 
 .arca-modal-header-row {
@@ -638,7 +638,7 @@
 }
 .arca-modal-input:focus {
   border-color: rgba(200, 179, 142, 0.55) !important;
-  box-shadow: 0 0 0 3px rgba(200, 179, 142, 0.08) !important;
+  
 }
 .arca-modal-textarea {
   height: auto !important;

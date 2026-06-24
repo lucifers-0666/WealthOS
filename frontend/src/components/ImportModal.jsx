@@ -50,7 +50,7 @@ export default function ImportModal({ existingHoldings = [], onImport, onClose }
     setStage('done');
   };
 
-  const overlay = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 };
+  const overlay = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',  zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 };
   const modal = { ...panelStyle({ padding: 0 }), width: '100%', maxWidth: 800, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: `1px solid ${theme.colors.border}` };
   const header = { padding: '20px 24px', borderBottom: `1px solid ${theme.colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
   const body = { flex: 1, overflow: 'auto', padding: 24 };
@@ -138,7 +138,7 @@ export default function ImportModal({ existingHoldings = [], onImport, onClose }
                         </td>
                         <td style={{ padding: '9px 10px', color: theme.colors.textMuted }}>{row.exchange}</td>
                         <td style={{ padding: '9px 10px', textAlign: 'center' }}>
-                          <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                          <span style={{ padding: '2px 8px', borderRadius: 3, fontSize: 11, fontWeight: 600,
                             background: `${confColor[row._confidence]}22`, color: confColor[row._confidence] }}>
                             {row._confidence}
                           </span>

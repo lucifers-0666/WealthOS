@@ -146,11 +146,11 @@ export default function CommandPalette({ onAction }) {
 
   if (!open && !showShortcuts) return null;
 
-  const overlay = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '15vh' };
+  const overlay = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',  zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '15vh' };
   const palette = {
     width: '100%', maxWidth: 560, background: theme.colors.surface,
     border: `1px solid ${theme.colors.border}`, borderRadius: 3,
-    boxShadow: '0 24px 64px rgba(0,0,0,0.5)', overflow: 'hidden',
+     overflow: 'hidden',
     animation: 'cmdFadeIn 0.12s ease',
   };
 

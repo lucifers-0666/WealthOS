@@ -1,38 +1,74 @@
 import React from 'react';
-import { AlertTriangle, Loader2, Inbox } from 'lucide-react';
-import { panelStyle, theme } from '../lib/theme.js';
+import { Loader2, AlertTriangle, Inbox } from 'lucide-react';
 
-export function PageLoadingState({ title = 'Loading Arca…', subtitle = 'Preparing secure market context.' }) {
+function SectionHeader({ title }) {
   return (
-    <div style={{ ...panelStyle({ padding: 24, minHeight: 240, display: 'grid', placeItems: 'center' }) }}>
-      <div style={{ textAlign: 'center', color: theme.colors.textSoft }}>
-        <Loader2 size={22} className="animate-spin-slow" style={{ marginBottom: 12 }} />
-        <div style={{ color: theme.colors.text, fontWeight: 700, marginBottom: 6 }}>{title}</div>
-        <div style={{ fontSize: 13, lineHeight: 1.6 }}>{subtitle}</div>
+    <div className="flex items-center gap-2 mb-4">
+      <div className="w-[2px] h-3 bg-[#C8B38E]"></div>
+      <h3 className="font-cinzel text-[10px] font-semibold uppercase tracking-[0.14em] text-[#ACA492]">
+        {title}
+      </h3>
+    </div>
+  );
+}
+
+export function PageLoadingState({
+  title = 'Loading Arca…',
+  subtitle = 'Preparing secure market context.',
+}) {
+  return (
+    <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-6 flex items-center justify-center min-h-[240px] w-full">
+      <div className="flex flex-col items-center text-center gap-3">
+        <Loader2
+          size={20}
+          className="animate-spin text-[#C8B38E]"
+        />
+        <div className="font-cinzel text-[13px] font-semibold text-[#ECE0CC]">
+          {title}
+        </div>
+        <div className="font-inter text-[11px] text-[#7B7C70] max-w-[260px] leading-relaxed">
+          {subtitle}
+        </div>
       </div>
     </div>
   );
 }
 
-export function PageErrorState({ title = 'Unable to load content', message = 'We hit a temporary service issue.' }) {
+export function PageErrorState({
+  title = 'Unable to load content',
+  message = 'We hit a temporary service issue.',
+}) {
   return (
-    <div style={{ ...panelStyle({ padding: 24, minHeight: 220 }) }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: theme.colors.warning, marginBottom: 10 }}>
-        <AlertTriangle size={18} />
-        <strong>{title}</strong>
+    <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 w-full">
+      <div className="flex items-center gap-2 text-[#D2A76D] mb-2">
+        <AlertTriangle size={16} />
+        <span className="font-cinzel text-[12px] font-semibold uppercase tracking-[0.10em]">
+          {title}
+        </span>
       </div>
-      <div style={{ color: theme.colors.textSoft, lineHeight: 1.65 }}>{message}</div>
+      <div className="font-inter text-[11px] text-[#ACA492] leading-relaxed ml-6">
+        {message}
+      </div>
     </div>
   );
 }
 
-export function EmptyState({ title = 'Nothing here yet', message = 'This section will populate once data arrives.' }) {
+export function EmptyState({
+  title = 'Nothing here yet',
+  message = 'This section will populate once data arrives.',
+}) {
   return (
-    <div style={{ ...panelStyle({ padding: 24, minHeight: 180, display: 'grid', placeItems: 'center' }) }}>
-      <div style={{ textAlign: 'center', color: theme.colors.textSoft }}>
-        <Inbox size={22} style={{ marginBottom: 12 }} />
-        <div style={{ color: theme.colors.text, fontWeight: 700, marginBottom: 6 }}>{title}</div>
-        <div style={{ fontSize: 13, lineHeight: 1.6 }}>{message}</div>
+    <div className="flex-1 flex flex-col items-center justify-center py-16 px-8 text-center min-h-[200px]">
+      <Inbox
+        size={28}
+        className="text-[#2D3C37] mb-4"
+        strokeWidth={1.5}
+      />
+      <div className="font-cinzel text-[13px] font-semibold text-[#ECE0CC] mb-2">
+        {title}
+      </div>
+      <div className="font-inter text-[11px] text-[#7B7C70] max-w-[260px] leading-relaxed">
+        {message}
       </div>
     </div>
   );

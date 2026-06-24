@@ -38,9 +38,9 @@ const STYLES = {
 
 const KEYFRAMES = `
 @keyframes ws-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(74,222,128,0.6); }
-  70%  { box-shadow: 0 0 0 6px rgba(74,222,128,0); }
-  100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+  0%   {  }
+  70%  {  }
+  100% {  }
 }
 @keyframes ws-spin {
   to { transform: rotate(360deg); }

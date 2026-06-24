@@ -17,88 +17,70 @@ export default function PriceAlertModal({ ticker, currentPrice, onSave, onClose,
     onSave({ ticker, target_price: parseFloat(price), direction, note });
   }
 
-  const overlay = {
-    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    zIndex: 1002, backdropFilter: 'blur(6px)',
-  };
-  const modal = {
-    background: theme.colors.surface || '#141414',
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: 20, padding: 26, width: '100%', maxWidth: 400,
-    boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
-    animation: 'modal-in 0.18s cubic-bezier(0.16,1,0.3,1)',
-  };
-  const inp = {
-    background: 'rgba(255,255,255,0.04)', border: `1px solid ${theme.colors.border}`,
-    borderRadius: 10, padding: '10px 14px', color: theme.colors.text,
-    fontSize: 14, outline: 'none', width: '100%',
-  };
-
   return (
-    <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={modal}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Bell size={18} color="var(--color-primary,#4f98a3)" />
-            <h3 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-serif)' }}>Set alert — {ticker}</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-[#1E3530] border border-[#2D3C37] rounded-[3px] w-full max-w-[360px] p-6 animate-[modal-in_0.18s_cubic-bezier(0.16,1,0.3,1)] shadow-none">
+        <div className="flex justify-between items-center mb-5">
+          <div className="flex items-center gap-2">
+            <Bell size={18} className="text-[#C8B38E]" />
+            <h3 className="font-cinzel text-[14px] font-bold text-[#ECE0CC] mb-0 leading-none">Set alert — {ticker}</h3>
           </div>
-          <button onClick={onClose} style={{ color: theme.colors.textMuted, padding: 4 }} aria-label="Close">
+          <button onClick={onClose} className="text-[#7B7C70] hover:text-[#ECE0CC] transition-colors p-1" aria-label="Close">
             <X size={18} />
           </button>
         </div>
         {currentPrice && (
-          <p style={{ margin: '0 0 16px', fontSize: 13, color: theme.colors.textSoft }}>
-            Current price: <strong style={{ color: theme.colors.text }}>
+          <p className="m-0 mb-4 font-inter text-[13px] text-[#ACA492]">
+            Current price: <strong className="text-[#ECE0CC] font-mono">
               &#8377;{Number(currentPrice).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
             </strong>
           </p>
         )}
-        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 14 }}>
-          <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.colors.textMuted }}>Alert when price is</label>
-            <div style={{ display: 'flex', gap: 8 }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-1.5">
+            <label className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-0">Alert when price is</label>
+            <div className="flex gap-2">
               {['above', 'below'].map((d) => (
                 <button
                   key={d} type="button"
                   onClick={() => setDir(d)}
-                  style={{
-                    flex: 1, padding: '9px', borderRadius: 10, cursor: 'pointer', fontWeight: 600,
-                    fontSize: 13, border: `1px solid ${direction === d ? 'var(--color-primary,#4f98a3)' : theme.colors.border}`,
-                    background: direction === d ? 'rgba(79,152,163,0.12)' : 'transparent',
-                    color: direction === d ? 'var(--color-primary,#4f98a3)' : theme.colors.textMuted,
-                    transition: 'all 0.15s',
-                  }}
+                  className={`flex-1 p-2 rounded-[3px] cursor-pointer font-inter text-[12px] font-semibold transition-all border ${
+                    direction === d 
+                      ? 'border-[#C8B38E] bg-[rgba(200,179,142,0.1)] text-[#C8B38E]' 
+                      : 'border-[#2D3C37] bg-transparent text-[#7B7C70] hover:border-[#ACA492]'
+                  }`}
                 >{d.charAt(0).toUpperCase() + d.slice(1)}</button>
               ))}
             </div>
           </div>
-          <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.colors.textMuted }}>Target price (&#8377;) *</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-0">Target price (&#8377;) *</label>
             <input
               type="number" min="0" step="any"
-              style={{ ...inp, borderColor: error ? 'var(--color-error,#f87171)' : theme.colors.border }}
+              className={`bg-[#0A201F] border ${error ? 'border-[#B66A6A]' : 'border-[#2D3C37]'} rounded-[3px] px-3 py-2 font-inter text-[12px] text-[#ECE0CC] outline-none focus:border-[rgba(200,179,142,0.35)] w-full`}
               value={price}
               onChange={(e) => { setPrice(e.target.value); setError(''); }}
               placeholder="e.g. 3000"
             />
-            {error && <span style={{ fontSize: 12, color: 'var(--color-error,#f87171)' }}>{error}</span>}
+            {error && <span className="text-[12px] text-[#B66A6A] font-inter">{error}</span>}
           </div>
-          <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.colors.textMuted }}>Note (optional)</label>
-            <input style={inp} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Breakout level, resistance..." />
+          <div className="flex flex-col gap-1.5">
+            <label className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-0">Note (optional)</label>
+            <input 
+              className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-3 py-2 font-inter text-[12px] text-[#ECE0CC] outline-none focus:border-[rgba(200,179,142,0.35)] w-full"
+              value={note} 
+              onChange={(e) => setNote(e.target.value)} 
+              placeholder="Breakout level, resistance..." 
+            />
           </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+          <div className="flex gap-2.5 justify-end mt-2">
             <button type="button" onClick={onClose}
-              style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${theme.colors.border}`,
-                borderRadius: 10, padding: '10px 18px', color: theme.colors.text, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+              className="border border-[#2D3C37] text-[#ACA492] font-inter text-[12px] rounded-[3px] px-4 py-2 hover:border-[rgba(200,179,142,0.3)] hover:text-[#ECE0CC] transition-colors cursor-pointer"
             >Cancel</button>
             <button type="submit" disabled={loading}
-              style={{ background: 'var(--color-primary,#01696f)', color: '#fff', border: 'none',
-                borderRadius: 10, padding: '10px 18px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
-                display: 'inline-flex', alignItems: 'center', gap: 8, opacity: loading ? 0.7 : 1, fontSize: 13 }}
+              className={`bg-[#C8B38E] text-[#0A201F] font-inter text-[12px] font-semibold rounded-[3px] px-4 py-2 hover:bg-[#b5a07e] transition-colors cursor-pointer flex items-center gap-2 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              {loading ? <Loader2 size={14} className="spin" /> : <Bell size={14} />}
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <Bell size={14} />}
               {loading ? 'Setting...' : 'Set alert'}
             </button>
           </div>

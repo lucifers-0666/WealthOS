@@ -1331,3 +1331,130 @@
 @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideLeft { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes slideRight { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+
+/* ── Market Status Badge ── */
+.market-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-family: 'Inter', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: default;
+  white-space: nowrap;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* States */
+.badge-open {
+  background: rgba(111, 174, 141, 0.12);
+  border: 1px solid rgba(111, 174, 141, 0.28);
+  color: #6FAE8D;
+}
+.badge-preopen {
+  background: rgba(210, 167, 109, 0.10);
+  border: 1px solid rgba(210, 167, 109, 0.24);
+  color: #D2A76D;
+}
+.badge-closing {
+  background: rgba(200, 179, 142, 0.08);
+  border: 1px solid rgba(200, 179, 142, 0.22);
+  color: #C8B38E;
+}
+.badge-closed {
+  background: rgba(123, 124, 112, 0.10);
+  border: 1px solid rgba(123, 124, 112, 0.28);
+  color: #7B7C70;
+}
+
+/* Dot */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-open  { background: #6FAE8D; animation: pulse-dot 2s ease-in-out infinite; }
+.dot-warn  { background: #D2A76D; animation: pulse-dot 2s ease-in-out infinite; }
+.dot-gold  { background: #C8B38E; animation: pulse-dot 3s ease-in-out infinite; }
+.dot-muted { background: #7B7C70; }
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1);    opacity: 1;   }
+  50%       { transform: scale(1.35); opacity: 0.5; }
+}
+
+/* Countdown area */
+.badge-sep {
+  width: 1px;
+  height: 10px;
+  background: rgba(123, 124, 112, 0.40);
+  margin: 0 2px;
+}
+.badge-countdown {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: #7B7C70;
+}
+.clock-icon {
+  color: #7B7C70;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot { animation: none !important; }
+}
+
+/* ── Topbar Specific Styles ── */
+.topbar-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  background: transparent;
+  color: #7B7C70;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.topbar-icon-btn:hover {
+  background: #1E3530;
+  color: #ECE0CC;
+}
+.notif-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #B66A6A;
+  border: 1.5px solid #102321;
+}
+.topbar-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #172923;
+  border: 1px solid #2D3C37;
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ECE0CC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.topbar-avatar:hover {
+  border-color: rgba(200,179,142,0.22);
+}

@@ -17,6 +17,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import Fuse from 'fuse.js';
 import { usePortfolio } from '../lib/usePortfolio.js';
+import MarketStatusBadge from './MarketStatusBadge.jsx';
 
 const NAV = [
   { to: '/dashboard', label: 'Command Center', icon: Terminal, group: 'CORE' },
@@ -159,101 +160,49 @@ export default function Layout() {
       <div className="layout-body">
         
         {/* ── Topbar ── */}
-        <header className="layout-topbar" style={{
-          background: 'var(--bg-secondary)',
-          borderBottom: '1px solid var(--border-default)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingLeft: 24,
-          paddingRight: 20
-        }}>
+        <header className="layout-topbar bg-[#102321] h-[48px] border-b border-[#2D3C37] px-[20px] pl-[24px] flex items-center justify-between">
           {/* Left zone */}
-          <div style={{ display: 'flex', alignItems: 'baseline' }}>
-            <div>
-              <div className="nav-section-label" style={{ marginBottom: 2 }}>WEALTH INTELLIGENCE</div>
-              <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                <h1 className="topbar-page-title">{title}</h1>
-                <span className="topbar-subtitle" style={{ marginLeft: 12 }}>{sub}</span>
-              </div>
+          <div className="flex flex-col justify-center gap-[3px]">
+            <div className="font-inter text-[9px] font-medium tracking-[0.16em] uppercase text-[#7B7C70] leading-none">
+              WEALTH INTELLIGENCE
+            </div>
+            <div className="flex flex-row items-center">
+              <h1 className="font-cinzel text-[18px] font-bold text-[#ECE0CC] m-0 leading-none">{title}</h1>
+              <span className="font-inter text-[11px] font-normal text-[#7B7C70] ml-[10px] leading-none">{sub}</span>
             </div>
           </div>
 
           {/* Center zone */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: 'var(--bg-base)',
-            border: '1px solid var(--border-default)',
-            borderRadius: '3px',
-            padding: '0 10px',
-            height: '30px',
-            width: '320px',
-            flexShrink: 0,
-          }}>
-            {/* MagnifyingGlass icon */}
-            <MagnifyingGlass size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-            
+          <div className="flex items-center gap-[8px] bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-[10px] h-[30px] w-[300px] shrink-0 focus-within:border-[rgba(45,60,55,0.90)] transition-colors">
+            <MagnifyingGlass size={13} className="text-[#7B7C70] shrink-0" />
             <input
               ref={paletteInputRef}
               type="text"
               value={topSearch}
               onChange={(e) => setTopSearch(e.target.value)}
               placeholder="Search holdings, watchlist, no..."
-              style={{
-                flex: 1,
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-sans)',
-                fontSize: '12px',
-                lineHeight: 1,
-              }}
+              className="flex-1 bg-transparent border-none outline-none text-[#ECE0CC] font-inter text-[11px] placeholder:text-[#7B7C70]"
             />
-
-            {/* CTRL K badge */}
-            <span style={{
-              background: 'var(--bg-overlay)',
-              border: '1px solid var(--border-default)',
-              borderRadius: '2px',
-              padding: '2px 5px',
-              fontSize: '10px',
-              color: 'var(--text-muted)',
-              fontFamily: 'var(--font-sans)',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}>
+            <span className="bg-[#1E3530] border border-[#2D3C37] rounded-[2px] px-[5px] py-[2px] text-[9px] text-[#7B7C70] font-inter shrink-0 leading-none">
               CTRL K
             </span>
           </div>
 
           {/* Right zone */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: 'var(--fill-gain)', border: '1px solid var(--border-gain)', borderRadius: 3,
-              padding: '4px 10px'
-            }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--status-gain)' }} />
-              <span className="badge-label" style={{ color: 'var(--status-gain)' }}>MARKETS OPEN</span>
-            </div>
+          <div className="flex items-center gap-[10px]">
+            <MarketStatusBadge />
             
-            <SquaresFour size={16} color="var(--text-muted)" />
+            <button className="topbar-icon-btn" aria-label="Toggle grid view">
+              <SquaresFour size={16} />
+            </button>
             
-            <div style={{ position: 'relative' }}>
-              <Bell size={16} color="var(--text-muted)" />
-              {/* Optional notification dot */}
-              <span style={{ position: 'absolute', top: -2, right: -2, width: 6, height: 6, borderRadius: '50%', background: 'var(--status-loss)' }} />
-            </div>
+            <button className="topbar-icon-btn relative" aria-label="Notifications">
+              <Bell size={16} />
+              {/* <span className="notif-dot"></span> */}
+            </button>
 
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <span style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: 'var(--text-primary)' }}>AK</span>
+            <div className="topbar-avatar" aria-label="User menu">
+              AK
             </div>
           </div>
         </header>

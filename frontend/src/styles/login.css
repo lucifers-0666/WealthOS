@@ -373,8 +373,6 @@
 .ag-input:-webkit-autofill,
 .ag-input:-webkit-autofill:hover,
 .ag-input:-webkit-autofill:focus {
-  -webkit-
-  
   -webkit-text-fill-color: #ECE0CC !important;
   border-color: rgba(45, 60, 55, 0.90);
   caret-color: #ECE0CC;
@@ -584,4 +582,297 @@
     margin: 32px auto 0;
     left: auto;
   }
+}
+
+
+/* ── Access Terminal Card ── */
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  background: #172923;
+  border: 1px solid #2D3C37;
+  border-radius: 6px;
+  padding: 40px 36px;
+}
+
+/* ── Logo / Brand Row ── */
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.auth-icon-wrap {
+  width: 48px;          /* FIXED — not larger */
+  height: 48px;         /* FIXED */
+  background: #172923;  /* bg/surface */
+  border: 1px solid #2D3C37;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Shield SVG inside: 22px, color #C8B38E (accent/gold) */
+.auth-icon-wrap svg {
+  width: 22px;
+  height: 22px;
+  color: #C8B38E;       /* accent/gold — ONLY appearance here */
+}
+
+.auth-brand-text h1 {
+  font-family: 'Cinzel', serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ECE0CC;        /* text/primary */
+  margin: 0 0 3px;
+}
+
+.auth-brand-text p {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: #7B7C70;        /* text/muted */
+  margin: 0;
+}
+
+
+/* ── TABS ── */
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #2D3C37;
+  margin-bottom: 24px;
+}
+
+.auth-tab {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: #7B7C70;          /* text/muted — inactive */
+  padding: 0 0 10px;
+  margin-right: 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: color 180ms ease;
+}
+
+.auth-tab:hover {
+  color: #ACA492;           /* text/secondary */
+}
+
+.auth-tab.active {
+  color: #ECE0CC;           /* text/primary */
+  font-weight: 600;
+}
+
+/* Gold underline on active tab — NOT white, NOT cream */
+.auth-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #C8B38E;      /* accent/gold — CRITICAL FIX */
+  border-radius: 1px;
+}
+
+
+/* ── FORM FIELDS ── */
+.auth-field {
+  margin-bottom: 16px;
+}
+
+.auth-label {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #7B7C70;            /* text/muted */
+  margin-bottom: 7px;
+}
+
+.auth-input-wrap {
+  position: relative;
+}
+
+.auth-input {
+  width: 100%;
+  height: 42px;
+  background: #0A201F;       /* bg/base — CRITICAL FIX (was light blue) */
+  border: 1px solid #2D3C37; /* border/default */
+  border-radius: 3px;
+  padding: 0 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: #ECE0CC;            /* text/primary */
+  outline: none;
+  transition: border-color 180ms ease;
+  /* Fix autofill background — CRITICAL */
+  -webkit-box-shadow: 0 0 0 1000px #0A201F inset !important;
+  -webkit-text-fill-color: #ECE0CC !important;
+  caret-color: #C8B38E;
+}
+
+.auth-input::placeholder {
+  color: #7B7C70;            /* text/muted */
+  font-size: 13px;
+}
+
+.auth-input:focus {
+  border-color: rgba(45, 60, 55, 0.90); /* border/strong */
+  box-shadow: 0 0 0 3px rgba(200, 179, 142, 0.07); /* gold glow — very subtle */
+}
+
+/* Password toggle eye icon */
+.auth-input-wrap .eye-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #7B7C70;            /* text/muted */
+  display: flex;
+  align-items: center;
+  transition: color 180ms ease;
+}
+.auth-input-wrap .eye-toggle:hover {
+  color: #ACA492;
+}
+
+/* Password input needs right padding for eye icon */
+input[type="password"],
+input[type="text"].password-field {
+  padding-right: 40px;
+}
+
+
+/* ── PRIMARY BUTTON — THE MAIN FIX ── */
+.btn-auth-primary {
+  width: 100%;
+  height: 46px;
+  margin-top: 20px;
+  background: #C8B38E;       /* accent/gold — THE FIX */
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 180ms ease, transform 100ms ease;
+}
+
+.btn-auth-primary:hover {
+  background: #B89E76;       /* darken accent/gold ~12% */
+}
+
+.btn-auth-primary:active {
+  background: #A38A5E;
+  transform: scale(0.99);
+}
+
+.btn-auth-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-auth-primary .btn-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0A201F;            /* text/inverse — DARK on gold, NOT white */
+}
+
+.btn-auth-primary .btn-arrow {
+  font-size: 14px;
+  color: #0A201F;
+  line-height: 1;
+}
+
+
+/* ── AUTHENTICATED STATE (success, shown ONLY post-login) ── */
+/* Do NOT show this as default state */
+.btn-auth-primary.state-success {
+  background: rgba(111, 174, 141, 0.15); /* fill/gain */
+  border: 1px solid rgba(111, 174, 141, 0.28);
+  cursor: default;
+  pointer-events: none;
+}
+
+.btn-auth-primary.state-success .btn-label {
+  color: #6FAE8D;            /* status/gain */
+}
+
+.btn-auth-primary.state-success .btn-icon {
+  color: #6FAE8D;
+}
+
+/* Loading state — show spinner, keep gold bg */
+.btn-auth-primary.state-loading {
+  background: #C8B38E;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+
+/* ── BOTTOM LINKS ── */
+.auth-footer-links {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.auth-link-forgot {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: #7B7C70;            /* text/muted */
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+.auth-link-forgot:hover {
+  color: #ACA492;
+}
+
+.auth-link-create {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: #C8B38E;            /* accent/gold — clear CTA */
+  text-decoration: none;
+  transition: color 180ms ease, text-decoration 180ms ease;
+}
+.auth-link-create:hover {
+  color: #B89E76;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@keyframes onAutoFillStart { from {} to {} }
+
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus,
+.auth-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0A201F inset !important;
+  -webkit-text-fill-color: #ECE0CC !important;
+  caret-color: #C8B38E;
+  border-color: #2D3C37 !important;
+  transition: background-color 9999s ease-in-out 0s;
 }

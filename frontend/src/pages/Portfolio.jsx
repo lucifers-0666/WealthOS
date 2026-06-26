@@ -6,7 +6,7 @@ import EditHoldingModal from '../components/EditHoldingModal.jsx';
 import DeleteConfirmModal from '../components/DeleteConfirmModal.jsx';
 import { DotsThree, ArrowUp, ArrowDown } from '@phosphor-icons/react';
 
-// ---- Helpers --------------------------------------------------------
+// ── Helpers ─────────────────────────────────────────────────────────────────
 function fmt(n) {
   if (n == null || isNaN(n)) return '—';
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
@@ -23,67 +23,110 @@ function compact(n) {
   return fmt(n);
 }
 
-// ---- Main Page --------------------------------------------------------
+// ── Donut SVG ────────────────────────────────────────────────────────────────
+const DONUT_COLORS = ['#C8B38E', '#869FC4', '#6FAE8D', '#B66A6A', '#D2A76D', '#ACA492', '#7B7C70'];
+
+function DonutChart({ slices, centerLabel }) {
+  const r = 64, cx = 80, cy = 80, strokeW = 20;
+  const circ = 2 * Math.PI * r;
+  let offset = 0;
+  const arcs = slices.map((s, i) => {
+    const dash = (s.pct / 100) * circ;
+    const el = (
+      <circle
+        key={i} cx={cx} cy={cy} r={r} fill="none"
+        stroke={DONUT_COLORS[i % DONUT_COLORS.length]}
+        strokeWidth={strokeW}
+        strokeDasharray={`${dash} ${circ - dash}`}
+        strokeDashoffset={circ / 4 - offset}
+        style={{ transition: 'all 1s ease-out' }}
+      />
+    );
+    offset += dash;
+    return el;
+  });
+
+  return (
+    <div style={{ position: 'relative', width: 160, height: 160, margin: '0 auto' }}>
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        {/* track */}
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(45,60,55,0.4)" strokeWidth={strokeW} />
+        {arcs}
+      </svg>
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+      }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700, color: '#ECE0CC', lineHeight: 1 }}>{centerLabel}</span>
+        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 8, fontWeight: 400, color: '#7B7C70', textTransform: 'uppercase', letterSpacing: '0.18em', marginTop: 5 }}>Portfolio</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ────────────────────────────────────────────────────────────────
 export default function Portfolio() {
   const { portfolio, loading, error, refresh, updateHolding, deleteHolding } = usePortfolio();
-  const { holdings: liveHoldings, wsStatus, isLive, forceRefresh } = useMarketData();
+  const { holdings: liveHoldings, forceRefresh } = useMarketData();
 
-  const [editTarget, setEditTarget]     = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [saving, setSaving]             = useState(false);
-  const [deleting, setDeleting]         = useState(false);
-  const [searchQuery, setSearchQuery]   = useState('');
-  const [filterClass, setFilterClass]   = useState('All');
+  const [editTarget, setEditTarget]       = useState(null);
+  const [deleteTarget, setDeleteTarget]   = useState(null);
+  const [saving, setSaving]               = useState(false);
+  const [deleting, setDeleting]           = useState(false);
+  const [searchQuery, setSearchQuery]     = useState('');
+  const [filterClass, setFilterClass]     = useState('All');
   const [activeDropdown, setActiveDropdown] = useState(null);
 
-  const liveHoldingsHaveValue = liveHoldings.some((h) => Number(h?.current_value || h?.current_value_inr || 0) > 0 || Number(h?.ltp || 0) > 0);
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!activeDropdown) return;
+    const close = () => setActiveDropdown(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [activeDropdown]);
+
+  const liveHoldingsHaveValue = liveHoldings.some(h =>
+    Number(h?.current_value || 0) > 0 || Number(h?.ltp || 0) > 0
+  );
   const rawHoldings = liveHoldingsHaveValue ? liveHoldings : (portfolio?.holdings || []);
 
   const assetClasses = useMemo(() => {
-    const s = new Set(rawHoldings.map((h) => h.asset_class || 'Equity'));
-    const arr = ['All', ...Array.from(s)];
-    if (!arr.includes('ETF')) arr.push('ETF');
-    return arr;
+    const s = new Set(rawHoldings.map(h => h.asset_class || 'Equity'));
+    return ['All', ...Array.from(s)];
   }, [rawHoldings]);
 
   const holdings = useMemo(() => {
-    let h = filterClass === 'All' ? rawHoldings : rawHoldings.filter((x) => (x.asset_class || 'Equity') === filterClass);
+    let h = filterClass === 'All' ? rawHoldings : rawHoldings.filter(x => (x.asset_class || 'Equity') === filterClass);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      h = h.filter(x => (x.ticker||'').toLowerCase().includes(q) || (x.company_name||'').toLowerCase().includes(q));
+      h = h.filter(x => (x.ticker || '').toLowerCase().includes(q) || (x.company_name || '').toLowerCase().includes(q));
     }
     return [...h].sort((a, b) => (b.current_value || 0) - (a.current_value || 0));
   }, [rawHoldings, filterClass, searchQuery]);
 
-  const summary = portfolio?.summary || {};
+  const summary    = portfolio?.summary || {};
   const totalValue = summary.totalCurrent || 0;
 
   // Sectors
-  const bySector = {};
-  holdings.forEach(h => {
-    const sec = h.sector || 'Others';
-    bySector[sec] = (bySector[sec] || 0) + (h.current_value || 0);
-  });
-  const sectors = Object.entries(bySector)
-    .map(([name, val]) => ({ name, val, pct: (val/(totalValue||1))*100 }))
-    .sort((a,b) => b.val - a.val);
-
-  // Donut slices
-  const donutSlices = sectors;
-  const DONUT_COLORS = ['#C8B38E', '#869FC4', '#6FAE8D', '#B66A6A', '#D2A76D', '#ACA492', '#7B7C70'];
+  const sectors = useMemo(() => {
+    const bySector = {};
+    holdings.forEach(h => {
+      const sec = h.sector || 'Others';
+      bySector[sec] = (bySector[sec] || 0) + (h.current_value || 0);
+    });
+    return Object.entries(bySector)
+      .map(([name, val]) => ({ name, val, pct: (val / (totalValue || 1)) * 100 }))
+      .sort((a, b) => b.val - a.val);
+  }, [holdings, totalValue]);
 
   const handleSave = useCallback(async (data) => {
     setSaving(true);
     try {
       await updateHolding({ id: editTarget?.id, ...data });
       setEditTarget(null);
-      refresh();
-      forceRefresh();
-    } catch (e) {
-      console.error('Save holding failed', e);
-    } finally {
-      setSaving(false);
-    }
+      refresh(); forceRefresh();
+    } catch (e) { console.error('Save holding failed', e); }
+    finally { setSaving(false); }
   }, [editTarget, updateHolding, refresh, forceRefresh]);
 
   const handleDelete = useCallback(async () => {
@@ -92,188 +135,312 @@ export default function Portfolio() {
     try {
       await deleteHolding(deleteTarget.id);
       setDeleteTarget(null);
-      refresh();
-      forceRefresh();
-    } catch (e) {
-      console.error('Delete holding failed', e);
-    } finally {
-      setDeleting(false);
-    }
+      refresh(); forceRefresh();
+    } catch (e) { console.error('Delete holding failed', e); }
+    finally { setDeleting(false); }
   }, [deleteTarget, deleteHolding, refresh, forceRefresh]);
 
   if (loading && !liveHoldings.length) return <PageLoadingState title="Loading portfolio…" />;
-  if (error && !liveHoldings.length) return <PageErrorState title="Portfolio unavailable" message={error} />;
+  if (error   && !liveHoldings.length) return <PageErrorState title="Portfolio unavailable" message={error} />;
 
   const kpis = [
-    { label: 'TOTAL VALUE', value: compact(summary.totalCurrent), border: '#C8B38E' },
-    { label: 'INVESTED', value: compact(summary.totalInvested), border: 'rgba(134,159,196,0.9)' },
-    { label: 'P&L', value: compact(summary.totalPnl), color: (summary.totalPnl || 0) >= 0 ? '#6FAE8D' : '#B66A6A', border: (summary.totalPnl || 0) >= 0 ? '#6FAE8D' : '#B66A6A' },
-    { label: 'XIRR', value: '14.2%', border: 'rgba(134,159,196,0.9)' },
+    { label: 'TOTAL VALUE', value: compact(summary.totalCurrent), color: '#ECE0CC', bar: '#C8B38E' },
+    { label: 'INVESTED',    value: compact(summary.totalInvested), color: '#ECE0CC', bar: '#869FC4' },
+    { label: 'P&L',         value: compact(summary.totalPnl),      color: (summary.totalPnl || 0) >= 0 ? '#6FAE8D' : '#B66A6A', bar: (summary.totalPnl || 0) >= 0 ? '#6FAE8D' : '#B66A6A' },
+    { label: 'XIRR',        value: '14.2%',                        color: '#ECE0CC', bar: '#869FC4' },
   ];
 
   return (
-    <div className="flex flex-col min-h-0 h-full p-6 animate-[fadeSlideUp_0.4s_ease-out]">
-      {/* 1. PAGE HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="font-cinzel text-xl font-bold text-[#ECE0CC]">Portfolio</h1>
-        <div className="flex gap-3">
-          <button className="border border-[#2D3C37] text-[#ACA492] rounded-[3px] px-3 py-1.5 font-inter text-[12px] hover:border-[rgba(200,179,142,0.3)] hover:text-[#ECE0CC] transition-colors">
+    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20, boxSizing: 'border-box' }}>
+
+      {/* ── 1. PAGE HEADER ─────────────────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: '#ECE0CC', margin: 0 }}>Portfolio</h1>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button style={{ border: '1px solid #2D3C37', color: '#ACA492', borderRadius: 3, padding: '5px 12px', fontFamily: 'Inter, sans-serif', fontSize: 12, background: 'transparent', cursor: 'pointer' }}>
             Export CSV
           </button>
-          <button className="border border-[#2D3C37] text-[#ACA492] rounded-[3px] px-3 py-1.5 font-inter text-[12px] hover:border-[rgba(200,179,142,0.3)] hover:text-[#ECE0CC] transition-colors" onClick={() => setEditTarget({})}>
+          <button
+            onClick={() => setEditTarget({})}
+            style={{ border: '1px solid #2D3C37', color: '#ACA492', borderRadius: 3, padding: '5px 12px', fontFamily: 'Inter, sans-serif', fontSize: 12, background: 'transparent', cursor: 'pointer' }}
+          >
             + Add Holding
           </button>
         </div>
       </div>
 
-      {/* 2. KPI ROW */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      {/* ── 2. KPI ROW ──────────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
         {kpis.map((k, i) => (
-          <div key={k.label} className="bg-[#172923] border border-[#2D3C37] border-l-[2px] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_both]" style={{ borderLeftColor: k.border, animationDelay: `${i*60}ms` }}>
-            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-2">{k.label}</div>
-            <div className={`font-mono text-[26px] font-bold animate-[countUp_1s_ease-out]`} style={{ color: k.color || '#ECE0CC' }}>
+          <div key={k.label} style={{
+            background: '#172923', border: '1px solid #2D3C37', borderLeft: `2px solid ${k.bar}`,
+            borderRadius: 3, padding: '18px 20px',
+            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+            minHeight: 108, position: 'relative',
+            animation: `fadeSlideUp 0.4s ease-out ${i * 60}ms both`,
+          }}>
+            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#7B7C70', marginBottom: 10 }}>
+              {k.label}
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 700, letterSpacing: '-0.01em', color: k.color, lineHeight: 1, marginTop: 'auto' }}>
               {k.value}
             </div>
-            <div className="h-[28px] w-[48px] mt-2 border-b border-dashed border-[#2D3C37]"></div>
+            <div style={{ height: 1, background: 'rgba(45,60,55,0.55)', marginTop: 12 }} />
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-[auto_316px] gap-4">
-        {/* 3. HOLDINGS TABLE CARD */}
-        <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_300ms_both]">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-[2px] h-3 bg-[#C8B38E]"></div>
-              <h3 className="font-cinzel text-[10px] font-semibold uppercase tracking-[0.14em] text-[#ACA492]">HOLDINGS</h3>
+      {/* ── 3. MAIN GRID ────────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, alignItems: 'start' }}>
+
+        {/* Holdings Table */}
+        <div style={{ background: '#172923', border: '1px solid #2D3C37', borderRadius: 3, padding: '18px 0 14px', animation: 'fadeSlideUp 0.4s ease-out 300ms both' }}>
+          {/* Card header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 18px', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ display: 'inline-block', width: 2, height: 12, background: '#C8B38E', borderRadius: 1 }} />
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#ACA492' }}>Holdings</span>
             </div>
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Search..." 
-                value={searchQuery}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text" placeholder="Search…" value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-3 py-1 font-inter text-[12px] text-[#ECE0CC] outline-none focus:border-[rgba(45,60,55,0.9)] w-[200px]"
+                style={{ background: '#0A201F', border: '1px solid #2D3C37', borderRadius: 3, padding: '4px 10px', fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#ECE0CC', outline: 'none', width: 180 }}
               />
-              <select 
-                value={filterClass}
-                onChange={e => setFilterClass(e.target.value)}
-                className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-3 py-1 font-inter text-[12px] text-[#ECE0CC] outline-none"
+              <select
+                value={filterClass} onChange={e => setFilterClass(e.target.value)}
+                style={{ background: '#0A201F', border: '1px solid #2D3C37', borderRadius: 3, padding: '4px 10px', fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#ECE0CC', outline: 'none' }}
               >
                 {assetClasses.map(ac => <option key={ac} value={ac}>{ac}</option>)}
               </select>
             </div>
           </div>
 
-          <div className="w-full">
-            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr_40px] gap-2 pb-2 border-b border-[#2D3C37] font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70]">
-              <div>STOCK</div>
-              <div>SECTOR</div>
-              <div className="text-right">QTY</div>
-              <div className="text-right">AVG COST</div>
-              <div className="text-right">LTP</div>
-              <div className="text-right">P&L</div>
-              <div className="text-right">P&L%</div>
-              <div>WEIGHT</div>
-              <div className="text-center">ACTION</div>
-            </div>
+          {/* Table */}
+          <div style={{ width: '100%', overflowX: 'auto' }}>
+            <table style={{ tableLayout: 'fixed', width: '100%', borderCollapse: 'collapse' }}>
+              <colgroup>
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '7%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '8%' }} />
+              </colgroup>
+              <thead>
+                <tr style={{ background: '#0A201F', borderBottom: '1px solid #2D3C37', position: 'sticky', top: 0, zIndex: 2 }}>
+                  {[
+                    { label: 'STOCK',    align: 'left' },
+                    { label: 'SECTOR',   align: 'left' },
+                    { label: 'QTY',      align: 'right' },
+                    { label: 'AVG COST', align: 'right' },
+                    { label: 'LTP',      align: 'right' },
+                    { label: 'P&L',      align: 'right' },
+                    { label: 'P&L%',     align: 'right' },
+                    { label: 'WEIGHT',   align: 'left' },
+                    { label: 'ACTION',   align: 'center' },
+                  ].map(col => (
+                    <th key={col.label} style={{
+                      textAlign: col.align, padding: '8px 12px', fontFamily: 'Inter, sans-serif',
+                      fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em',
+                      color: '#7B7C70', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>{col.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {holdings.map((h, i) => {
+                  const invested   = h.invested_amount || 0;
+                  const pnl        = (h.current_value || 0) - invested;
+                  const pnlPct     = invested > 0 ? (pnl / invested) * 100 : 0;
+                  const weight     = totalValue > 0 ? ((h.current_value || 0) / totalValue) * 100 : 0;
+                  const isPositive = pnl >= 0;
 
-            <div className="flex flex-col">
-              {holdings.map((h, i) => {
-                const invested = h.invested_amount || 0;
-                const pnl = (h.current_value || 0) - invested;
-                const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
-                const weight = totalValue > 0 ? ((h.current_value || 0) / totalValue) * 100 : 0;
-                const isPositive = pnl >= 0;
+                  const tdBase = {
+                    padding: '10px 12px', whiteSpace: 'nowrap', overflow: 'hidden',
+                    textOverflow: 'ellipsis', verticalAlign: 'middle',
+                    borderBottom: '1px solid rgba(45,60,55,0.55)',
+                  };
 
-                return (
-                  <div key={h.id || h.ticker} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr_40px] gap-2 py-3 border-b border-[rgba(45,60,55,0.55)] items-center group hover:bg-[rgba(255,255,255,0.018)] transition-colors duration-180" style={{ animation: `fadeSlideUp 0.4s ease-out ${300 + i*30}ms backwards` }}>
-                    <div className="flex flex-col">
-                      <span className="font-cinzel text-[13px] text-[#ECE0CC] truncate">{h.company_name || h.ticker}</span>
-                      <span className="font-inter text-[9px] text-[#7B7C70] uppercase">{h.exchange || 'NSE'}</span>
-                    </div>
-                    <div className="font-inter text-[11px] text-[#ACA492] truncate">{h.sector || 'Equity'}</div>
-                    <div className="font-mono text-[12px] text-[#ECE0CC] text-right">{h.quantity}</div>
-                    <div className="font-mono text-[12px] text-[#ECE0CC] text-right">{fmt(h.avg_buy_price)}</div>
-                    <div className="font-mono text-[12px] text-[#ECE0CC] text-right">{fmt(h.current_price || h.ltp)}</div>
-                    <div className={`font-mono text-[13px] font-bold text-right ${isPositive ? 'text-[#6FAE8D]' : 'text-[#B66A6A]'}`}>
-                      {fmt(pnl)}
-                    </div>
-                    <div className="text-right flex justify-end">
-                      <div className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded-[3px] border ${isPositive ? 'bg-[rgba(111,174,141,0.12)] border-[rgba(111,174,141,0.28)] text-[#6FAE8D]' : 'bg-[rgba(182,106,106,0.12)] border-[rgba(182,106,106,0.28)] text-[#B66A6A]'}`}>
-                        {isPositive ? '+' : ''}{pnlPct.toFixed(2)}%
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-[64px] h-[4px] bg-[rgba(45,60,55,0.5)] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#C8B38E]" style={{ width: `${weight}%`, animation: 'slideRight 0.8s ease-out backwards' }}></div>
-                      </div>
-                      <span className="font-mono text-[10px] text-[#ACA492]">{weight.toFixed(1)}%</span>
-                    </div>
-                    <div className="relative flex justify-center">
-                      <button className="text-[#7B7C70] hover:text-[#ECE0CC]" onClick={() => setActiveDropdown(activeDropdown === h.id ? null : h.id)}>
-                        <DotsThree size={16} weight="bold" />
-                      </button>
-                      {activeDropdown === h.id && (
-                        <div className="absolute right-0 top-6 w-32 bg-[#1E3530] border border-[#2D3C37] rounded-[3px] shadow-lg z-10 py-1 animate-[fadeSlideUp_150ms_ease-out]">
-                          <button className="w-full text-left px-3 py-1.5 font-inter text-[11px] text-[#ECE0CC] hover:bg-[rgba(255,255,255,0.05)]" onClick={() => { setActiveDropdown(null); setEditTarget(h); }}>View / Edit</button>
-                          <button className="w-full text-left px-3 py-1.5 font-inter text-[11px] text-[#B66A6A] hover:bg-[rgba(255,255,255,0.05)]" onClick={() => { setActiveDropdown(null); setDeleteTarget(h); }}>Remove</button>
+                  return (
+                    <tr
+                      key={h.id || h.ticker}
+                      style={{ minHeight: 44, animation: `fadeSlideUp 0.4s ease-out ${300 + i * 30}ms both` }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.018)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      {/* STOCK */}
+                      <td style={tdBase}>
+                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 600, color: '#ECE0CC', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {h.company_name || h.ticker}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 9, color: '#7B7C70', textTransform: 'uppercase' }}>
+                          {h.exchange || 'NSE'}
+                        </div>
+                      </td>
+                      {/* SECTOR */}
+                      <td style={{ ...tdBase, fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#ACA492' }}>
+                        {h.sector || 'Equity'}
+                      </td>
+                      {/* QTY */}
+                      <td style={{ ...tdBase, fontFamily: 'var(--font-mono)', fontSize: 12, color: '#ECE0CC', textAlign: 'right' }}>
+                        {h.quantity}
+                      </td>
+                      {/* AVG COST */}
+                      <td style={{ ...tdBase, fontFamily: 'var(--font-mono)', fontSize: 12, color: '#ECE0CC', textAlign: 'right' }}>
+                        {fmt(h.avg_buy_price)}
+                      </td>
+                      {/* LTP */}
+                      <td style={{ ...tdBase, fontFamily: 'var(--font-mono)', fontSize: 12, color: '#ECE0CC', textAlign: 'right' }}>
+                        {fmt(h.current_price || h.ltp)}
+                      </td>
+                      {/* P&L */}
+                      <td style={{ ...tdBase, fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: isPositive ? '#6FAE8D' : '#B66A6A', textAlign: 'right' }}>
+                        {fmt(pnl)}
+                      </td>
+                      {/* P&L% — fixed-width badge */}
+                      <td style={{ ...tdBase, textAlign: 'right' }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          width: 72, height: 22,
+                          fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
+                          borderRadius: 3,
+                          background: isPositive ? 'rgba(111,174,141,0.12)' : 'rgba(182,106,106,0.12)',
+                          border: isPositive ? '1px solid rgba(111,174,141,0.28)' : '1px solid rgba(182,106,106,0.28)',
+                          color: isPositive ? '#6FAE8D' : '#B66A6A',
+                        }}>
+                          {isPositive ? '+' : ''}{pnlPct.toFixed(2)}%
+                        </span>
+                      </td>
+                      {/* WEIGHT */}
+                      <td style={tdBase}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ flex: 1, height: 2, background: 'rgba(45,60,55,0.5)', borderRadius: 1, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${Math.min(weight, 100)}%`, background: '#C8B38E', borderRadius: 1, animation: 'slideRight 0.8s ease-out backwards' }} />
+                          </div>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#ECE0CC', minWidth: 36, textAlign: 'right' }}>
+                            {weight.toFixed(1)}%
+                          </span>
+                        </div>
+                      </td>
+                      {/* ACTION */}
+                      <td style={{ ...tdBase, position: 'relative', textAlign: 'center' }}>
+                        <button
+                          style={{ color: '#7B7C70', background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'inline-flex' }}
+                          onClick={e => { e.stopPropagation(); setActiveDropdown(activeDropdown === h.id ? null : h.id); }}
+                        >
+                          <DotsThree size={16} weight="bold" />
+                        </button>
+                        {activeDropdown === h.id && (
+                          <div
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                              position: 'absolute', right: 4, top: '100%', zIndex: 50,
+                              minWidth: 140, background: '#1E3530',
+                              border: '1px solid #2D3C37', borderRadius: 3,
+                              boxShadow: '0 8px 24px rgba(0,0,0,0.40)',
+                              animation: 'fadeSlideUp 150ms ease-out',
+                            }}
+                          >
+                            <button
+                              style={{ width: '100%', textAlign: 'left', padding: '10px 16px', fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#ECE0CC', background: 'none', border: 'none', cursor: 'pointer' }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#172923'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                              onClick={() => { setActiveDropdown(null); setEditTarget(h); }}
+                            >View / Edit</button>
+                            <div style={{ height: 1, background: 'rgba(45,60,55,0.55)' }} />
+                            <button
+                              style={{ width: '100%', textAlign: 'left', padding: '10px 16px', fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#B66A6A', background: 'none', border: 'none', cursor: 'pointer' }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(182,106,106,0.08)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                              onClick={() => { setActiveDropdown(null); setDeleteTarget(h); }}
+                            >Remove</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {holdings.length === 0 && (
+                  <tr>
+                    <td colSpan={9} style={{ padding: '40px 0', textAlign: 'center', fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#7B7C70' }}>
+                      No holdings found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* 4. ALLOCATION DONUT + 5. SECTOR WEIGHTS */}
-        <div className="flex flex-col gap-4">
-          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_360ms_both]">
-            <div className="flex justify-center items-center py-6 relative">
-              <svg width="160" height="160" viewBox="0 0 160 160">
-                {(() => {
-                  let offset = 0;
-                  const r = 60, cx = 80, cy = 80, stroke = 12;
-                  const circ = 2 * Math.PI * r;
-                  return donutSlices.map((s, i) => {
-                    const dash = (s.pct / 100) * circ;
-                    const arc = <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={DONUT_COLORS[i % DONUT_COLORS.length]} strokeWidth={stroke} strokeDasharray={`${dash} ${circ - dash}`} strokeDashoffset={circ/4 - offset} className="transition-all duration-1000 ease-out" />;
-                    offset += dash;
-                    return arc;
-                  });
-                })()}
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="font-mono text-[16px] font-bold text-[#ECE0CC]">{compact(totalValue)}</span>
-                <span className="font-inter text-[9px] text-[#7B7C70] uppercase">PORTFOLIO</span>
-              </div>
+        {/* ── Right Panel: Donut + Sector Weights ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* Allocation Donut */}
+          <div style={{ background: '#172923', border: '1px solid #2D3C37', borderRadius: 3, padding: 20, minHeight: 280, animation: 'fadeSlideUp 0.4s ease-out 360ms both' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <span style={{ display: 'inline-block', width: 2, height: 12, background: '#C8B38E', borderRadius: 1 }} />
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#ACA492' }}>Allocation</span>
             </div>
+            <div style={{ padding: '8px 0 16px' }}>
+              <DonutChart slices={sectors.length ? sectors : [{ name: 'Empty', pct: 100 }]} centerLabel={compact(totalValue)} />
+            </div>
+            {/* Legend */}
+            {sectors.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+                {sectors.slice(0, 5).map((s, i) => (
+                  <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: DONUT_COLORS[i % DONUT_COLORS.length], flexShrink: 0 }} />
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: '#ACA492', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7B7C70', flexShrink: 0 }}>{s.pct.toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_420ms_both]">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-[2px] h-3 bg-[#C8B38E]"></div>
-              <h3 className="font-cinzel text-[10px] font-semibold uppercase tracking-[0.14em] text-[#ACA492]">SECTOR WEIGHTS</h3>
+          {/* Sector Weights */}
+          <div style={{ background: '#172923', border: '1px solid #2D3C37', borderRadius: 3, padding: 20, animation: 'fadeSlideUp 0.4s ease-out 420ms both' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ display: 'inline-block', width: 2, height: 12, background: '#C8B38E', borderRadius: 1 }} />
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#ACA492' }}>Sector Weights</span>
             </div>
-            <div className="flex flex-col gap-[14px]">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {sectors.map((sec, i) => (
-                <div key={sec.name} className="flex flex-col group transition-colors duration-180 hover:bg-[rgba(255,255,255,0.025)] p-1 -mx-1 rounded">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-inter text-[12px] text-[#ECE0CC]">{sec.name}</span>
-                    <span className="font-mono text-[12px] text-[#C8B38E]">{sec.pct.toFixed(1)}%</span>
+                <div key={sec.name}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: '#ECE0CC', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                      {sec.name}
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#ACA492', flexShrink: 0 }}>
+                      {sec.pct.toFixed(1)}%
+                    </span>
                   </div>
-                  <div className="h-[6px] rounded-[2px] bg-[rgba(45,60,55,0.5)] w-full overflow-hidden">
-                    <div className="h-full bg-[#C8B38E] rounded-[2px]" style={{ width: `${sec.pct}%`, animation: `slideRight 0.8s ease-out ${i*80}ms backwards` }} />
+                  <div style={{ height: 2, background: 'rgba(45,60,55,0.5)', borderRadius: 1, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', background: '#C8B38E', borderRadius: 1,
+                      /* Cap "Unknown 100%" at 80% visual to avoid looking broken */
+                      width: `${Math.min(sec.pct, 80)}%`,
+                      animation: `slideRight 0.8s ease-out ${i * 80}ms backwards`,
+                    }} />
                   </div>
                 </div>
               ))}
+              {sectors.length === 0 && (
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#7B7C70', textAlign: 'center', padding: '16px 0' }}>
+                  No sector data
+                </div>
+              )}
             </div>
           </div>
+
         </div>
       </div>
 
+      {/* ── Modals ── */}
       {editTarget !== null && (
         <EditHoldingModal
           holding={editTarget?.id ? editTarget : null}

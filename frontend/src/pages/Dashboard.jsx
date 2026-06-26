@@ -19,13 +19,18 @@ function pct(n) {
   return (n >= 0 ? "+" : "") + Number(n).toFixed(2) + "%";
 }
 
-function SectionHeader({ title, icon: Icon, onIconClick }) {
+function SectionHeader({ title, icon: Icon, onIconClick, right }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-      <div className="section-header" style={{ marginBottom: 0 }}>
-        <span className="section-header__text">{title}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {Icon
+          ? <Icon size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          : <span style={{ display: 'inline-block', width: 2, height: 12, background: '#C8B38E', borderRadius: 1, flexShrink: 0 }} />
+        }
+        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#ACA492' }}>{title}</span>
       </div>
-      {Icon && (
+      {right}
+      {Icon && onIconClick && (
         <button onClick={onIconClick} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
           <Icon size={14} color="var(--text-muted)" />
         </button>
@@ -253,80 +258,119 @@ export default function Dashboard() {
           </div>
 
           {/* Right Column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <PositionWeightsCard topPositions={topPositions} />
             
             <PortfolioIntelligence holdings={holdings} summary={summary} />
 
-            {/* Activity Feed Hardcoded Mockup from Spec */}
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 3, padding: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <div className="section-header" style={{ marginBottom: 0 }}>
-                  <Clock size={14} style={{ marginRight: 8, color: 'var(--text-muted)' }} />
-                  <span className="section-header__text">ACTIVITY FEED</span>
+            {/* Activity Feed */}
+            <div style={{ background: '#172923', border: '1px solid #2D3C37', borderRadius: 3, padding: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                {/* Header left: clock icon + title */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Clock size={13} style={{ color: '#7B7C70', flexShrink: 0 }} />
+                  <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#ACA492' }}>Activity Feed</span>
                 </div>
-                <div style={{ display: 'flex', gap: 12 }}>
+                {/* Tab filter */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   {['ALL', 'BUY', 'SELL'].map(v => (
                     <button key={v} onClick={() => setActivityFilter(v)} style={{
-                      fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 500,
-                      background: 'none', border: 'none', cursor: 'pointer', paddingBottom: 4,
-                      borderBottom: activityFilter === v ? '1px solid var(--accent-gold)' : '1px solid transparent',
-                      color: activityFilter === v ? 'var(--text-primary)' : 'var(--text-muted)'
-                    }}>{v}</button>
+                      fontFamily: 'Inter, sans-serif', fontSize: 9, fontWeight: 600,
+                      letterSpacing: '0.10em', textTransform: 'uppercase',
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      paddingBottom: 3,
+                      borderBottom: activityFilter === v ? '1px solid #C8B38E' : '1px solid transparent',
+                      color: activityFilter === v ? '#ECE0CC' : '#7B7C70'
+                    }}
+                    onMouseEnter={e => { if (activityFilter !== v) e.target.style.color = '#ACA492'; }}
+                    onMouseLeave={e => { if (activityFilter !== v) e.target.style.color = '#7B7C70'; }}
+                    >{v}</button>
                   ))}
                 </div>
               </div>
-              
-              <div style={{ display: 'grid', gap: 6 }}>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
-                  { type: 'BUY', tick: 'INFY', meta: '50 shares @ ₹1,425', time: 'June 15, 2026 · 10:32 AM' },
-                  { type: 'SELL', tick: 'ITC', meta: '100 shares @ ₹412', time: 'June 14, 2026 · 2:15 PM' },
-                  { type: 'BUY', tick: 'HDFC', meta: '25 shares @ ₹1,650', time: 'June 12, 2026 · 11:45 AM' },
-                  { type: 'BUY', tick: 'TCS', meta: '15 shares @ ₹3,820', time: 'June 10, 2026 · 9:20 AM' },
-                ].filter(a => activityFilter === 'ALL' || a.type === activityFilter).map((act, i) => (
-                  <div key={i} className="activity-row">
-                    <div className="activity-row__badge">
-                      <div className={act.type === 'BUY' ? 'badge-buy' : 'badge-sell'}>
-                        {act.type === 'BUY' ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-                        {act.type}
+                  { type: 'BUY',  tick: 'INFY', meta: '50 shares @ ₹1,425',  time: 'June 15 · 10:32 AM' },
+                  { type: 'SELL', tick: 'ITC',  meta: '100 shares @ ₹412',    time: 'June 14 · 2:15 PM' },
+                  { type: 'BUY',  tick: 'HDFC', meta: '25 shares @ ₹1,650',   time: 'June 12 · 11:45 AM' },
+                  { type: 'BUY',  tick: 'TCS',  meta: '15 shares @ ₹3,820',   time: 'June 10 · 9:20 AM' },
+                ].filter(a => activityFilter === 'ALL' || a.type === activityFilter).map((act, i, arr) => (
+                  <div key={i} style={{
+                    background: '#0A201F',
+                    border: '1px solid rgba(45,60,55,0.55)',
+                    borderRadius: 3,
+                    padding: '10px 12px',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    marginBottom: i === arr.length - 1 ? 0 : undefined
+                  }}>
+                    {/* LEFT: pill + ticker + meta */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {/* Pill */}
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 3,
+                          height: 18, lineHeight: '18px', padding: '0 6px',
+                          borderRadius: 2, whiteSpace: 'nowrap',
+                          fontFamily: 'Inter, sans-serif', fontSize: 9, fontWeight: 700,
+                          letterSpacing: '0.06em', textTransform: 'uppercase',
+                          background: act.type === 'BUY' ? 'rgba(111,174,141,0.12)' : 'rgba(182,106,106,0.12)',
+                          border: act.type === 'BUY' ? '1px solid rgba(111,174,141,0.28)' : '1px solid rgba(182,106,106,0.28)',
+                          color: act.type === 'BUY' ? '#6FAE8D' : '#B66A6A',
+                        }}>
+                          {act.type === 'BUY' ? <ArrowUp size={9} /> : <ArrowDown size={9} />}
+                          {act.type}
+                        </span>
+                        {/* Ticker */}
+                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 600, color: '#ECE0CC' }}>{act.tick}</span>
                       </div>
+                      {/* Meta */}
+                      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 400, color: '#7B7C70' }}>{act.meta}</span>
                     </div>
-                    <div className="activity-row__body">
-                      <div className="activity-row__ticker">{act.tick}</div>
-                      <div className="activity-row__meta">{act.meta}</div>
-                    </div>
-                    <div className="activity-row__time">{act.time}</div>
+                    {/* RIGHT: date/time */}
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 9, fontWeight: 400, color: '#7B7C70', whiteSpace: 'nowrap', alignSelf: 'flex-start', textAlign: 'right' }}>{act.time}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Watchlist Mockup from Spec */}
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 3, padding: 20 }}>
-              <SectionHeader title="WATCHLIST" />
-              <div style={{ display: 'grid', gap: 8 }}>
+            {/* Watchlist */}
+            <div style={{ background: '#172923', border: '1px solid #2D3C37', borderRadius: 3, padding: 18 }}>
+              <SectionHeader title="Watchlist" />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {[
-                  { t: 'BAJFINANCE', n: 'Bajaj Finance', p: '₹7,245.50', c: '+2.34%' },
-                  { t: 'ASIANPAINT', n: 'Asian Paints', p: '₹2,892.20', c: '-0.87%' },
-                  { t: 'HDFCLIFE', n: 'HDFC Life', p: '₹645.80', c: '+1.12%' },
-                  { t: 'BHARTIARTL', n: 'Bharti Airtel', p: '₹1,156.30', c: '+0.65%' },
-                ].map((w, i) => (
-                  <div key={i} className="watchlist-row">
-                    <Star size={14} className="watchlist-star" />
-                    <div className="watchlist-info">
-                      <span className="watchlist-ticker">{w.t}</span>
-                      <span className="watchlist-company">{w.n}</span>
+                  { t: 'BAJFINANCE',  n: 'Bajaj Finance',  p: '₹7,245.50', c: '+2.34%' },
+                  { t: 'ASIANPAINT', n: 'Asian Paints',    p: '₹2,892.20', c: '-0.87%' },
+                  { t: 'HDFCLIFE',   n: 'HDFC Life',       p: '₹645.80',   c: '+1.12%' },
+                  { t: 'BHARTIARTL', n: 'Bharti Airtel',   p: '₹1,156.30', c: '+0.65%' },
+                ].map((w, i, arr) => {
+                  const isGain = w.c.startsWith('+');
+                  return (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+                      padding: '8px 0',
+                      borderBottom: i < arr.length - 1 ? '1px solid rgba(45,60,55,0.55)' : 'none',
+                    }}>
+                      {/* LEFT: star + text column */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <Star size={13} style={{ color: '#C8B38E', flexShrink: 0, marginTop: 1 }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 600, color: '#ECE0CC' }}>{w.t}</span>
+                          <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, fontWeight: 400, color: '#7B7C70' }}>{w.n}</span>
+                        </div>
+                      </div>
+                      {/* RIGHT: price + change stacked */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 400, color: '#ECE0CC' }}>{w.p}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 400, color: isGain ? '#6FAE8D' : '#B66A6A' }}>{w.c}</span>
+                      </div>
                     </div>
-                    <div className="watchlist-price-block">
-                      <span className="watchlist-price">{w.p}</span>
-                      <span className={w.c.startsWith('+') ? 'watchlist-change-up' : 'watchlist-change-down'}>
-                        {w.c.startsWith('+') ? <ArrowUp size={8} /> : <ArrowDown size={8} />}
-                        {w.c}
-                      </span>
-                      <MiniSparkline positive={w.c.startsWith('+')} width={40} height={12} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             

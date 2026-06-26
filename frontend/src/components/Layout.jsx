@@ -18,6 +18,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Fuse from 'fuse.js';
 import { usePortfolio } from '../lib/usePortfolio.js';
 import MarketStatusBadge from './MarketStatusBadge.jsx';
+import TopbarRight from './TopbarRight.jsx';
 
 const NAV = [
   { to: '/dashboard', label: 'Command Center', icon: Terminal, group: 'CORE' },
@@ -59,7 +60,7 @@ const NavItem = ({ to, icon: Icon, label }) => (
   >
     {({ isActive }) => (
       <>
-        <Icon size={16} weight={isActive ? 'fill' : 'regular'} />
+        <Icon size={15} weight={isActive ? 'fill' : 'regular'} />
         <span>{label}</span>
       </>
     )}
@@ -119,16 +120,16 @@ export default function Layout() {
         flexDirection: 'column'
       }}>
         {/* Top block */}
-        <div style={{ height: 88, paddingTop: 16, paddingLeft: 16 }}>
+        <div style={{ height: 88, paddingTop: 18, paddingLeft: 16 }}>
           {/* Logo SVG Placeholder */}
-          <div style={{ width: 28, height: 28, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <div style={{ width: 22, height: 22, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
             </svg>
           </div>
-          <div style={{ marginTop: 10 }}>
-            <div className="brand-logo-name">ARCA</div>
-            <div className="brand-logo-tagline">PRIVATE TERMINAL</div>
+          <div style={{ marginTop: 8 }}>
+            <div className="brand-logo-name" style={{ fontFamily: 'Cinzel', fontSize: 12, fontWeight: 700, letterSpacing: '0.20em', textTransform: 'uppercase' }}>ARCA</div>
+            <div className="brand-logo-tagline" style={{ fontFamily: 'Cinzel', fontSize: 8, fontWeight: 400, letterSpacing: '0.24em', textTransform: 'uppercase' }}>PRIVATE TERMINAL</div>
           </div>
         </div>
 
@@ -136,7 +137,7 @@ export default function Layout() {
         <nav style={{ flex: 1, overflowY: 'auto', marginTop: 10, display: 'flex', flexDirection: 'column' }}>
           {Object.entries(grouped).map(([group, items]) => (
             <div key={group} style={{ marginBottom: 16 }}>
-              <div className="nav-section-label" style={{ marginTop: 20, paddingLeft: 16, marginBottom: 8 }}>{group}</div>
+              <div className="nav-section-label" style={{ marginTop: 24, paddingLeft: 16, marginBottom: 6, fontFamily: 'Inter', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'var(--text-muted)' }}>{group}</div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {items.map(({ to, label, icon: Icon }) => (
                   <NavItem key={to} to={to} icon={Icon} label={label} />
@@ -147,12 +148,12 @@ export default function Layout() {
         </nav>
 
         {/* Bottom status block */}
-        <div style={{ position: 'absolute', bottom: 0, width: '100%', borderTop: '1px solid var(--border-subtle)', padding: '12px 16px', background: 'var(--bg-secondary)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--status-gain)' }} />
-            <span className="nav-item-inactive">SECURE SYNC</span>
+        <div style={{ position: 'absolute', bottom: 0, width: '100%', borderTop: '1px solid var(--border-subtle)', padding: '14px 16px', background: 'var(--bg-secondary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--status-gain)' }} />
+            <span style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--status-gain)' }}>SECURE SYNC</span>
           </div>
-          <div className="nav-section-label">22ms · encrypted</div>
+          <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 400, color: 'var(--text-muted)' }}>22ms · encrypted</div>
         </div>
       </aside>
 
@@ -160,7 +161,7 @@ export default function Layout() {
       <div className="layout-body">
         
         {/* ── Topbar ── */}
-        <header className="layout-topbar bg-[#102321] h-[48px] border-b border-[#2D3C37] px-[20px] pl-[24px] flex items-center justify-between">
+        <header className="layout-topbar bg-[#102321] h-[48px] min-h-[48px] max-h-[48px] border-b border-[#2D3C37] px-[20px] pl-[24px] flex items-center justify-between">
           {/* Left zone */}
           <div className="flex flex-col justify-center gap-[3px]">
             <div className="font-inter text-[9px] font-medium tracking-[0.16em] uppercase text-[#7B7C70] leading-none">
@@ -189,22 +190,7 @@ export default function Layout() {
           </div>
 
           {/* Right zone */}
-          <div className="flex items-center gap-[10px]">
-            <MarketStatusBadge />
-            
-            <button className="topbar-icon-btn" aria-label="Toggle grid view">
-              <SquaresFour size={16} />
-            </button>
-            
-            <button className="topbar-icon-btn relative" aria-label="Notifications">
-              <Bell size={16} />
-              {/* <span className="notif-dot"></span> */}
-            </button>
-
-            <div className="topbar-avatar" aria-label="User menu">
-              AK
-            </div>
-          </div>
+          <TopbarRight />
         </header>
 
         {/* ── Content Area ── */}

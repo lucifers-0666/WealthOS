@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { usePortfolio } from '../lib/usePortfolio.js';
 import { useMarketData } from '../lib/MarketDataContext.jsx';
 import { PageLoadingState, PageErrorState } from '../components/PageStates.jsx';
@@ -81,8 +82,11 @@ export default function Portfolio() {
   useEffect(() => {
     if (!activeDropdown) return;
     const close = () => setActiveDropdown(null);
-    window.addEventListener('click', close);
-    return () => window.removeEventListener('click', close);
+    const timer = setTimeout(() => window.addEventListener('click', close), 0);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('click', close);
+    };
   }, [activeDropdown]);
 
   const liveHoldingsHaveValue = liveHoldings.some(h =>
@@ -253,6 +257,7 @@ export default function Portfolio() {
               </thead>
               <tbody>
                 {holdings.map((h, i) => {
+                  const rowKey     = h.id || h.ticker || i;
                   const invested   = h.invested_amount || 0;
                   const pnl        = (h.current_value || 0) - invested;
                   const pnlPct     = invested > 0 ? (pnl / invested) * 100 : 0;
@@ -327,39 +332,50 @@ export default function Portfolio() {
                         </div>
                       </td>
                       {/* ACTION */}
-                      <td style={{ ...tdBase, position: 'relative', textAlign: 'center' }}>
+                      <td style={{ ...tdBase, overflow: 'visible', textOverflow: 'unset', position: 'relative', textAlign: 'center' }}>
                         <button
+                          data-row-key={rowKey}
                           style={{ color: '#7B7C70', background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'inline-flex' }}
-                          onClick={e => { e.stopPropagation(); setActiveDropdown(activeDropdown === h.id ? null : h.id); }}
+                          onClick={e => { e.stopPropagation(); setActiveDropdown(activeDropdown === rowKey ? null : rowKey); }}
                         >
                           <DotsThree size={16} weight="bold" />
                         </button>
-                        {activeDropdown === h.id && (
-                          <div
-                            onClick={e => e.stopPropagation()}
-                            style={{
-                              position: 'absolute', right: 4, top: '100%', zIndex: 50,
-                              minWidth: 140, background: '#1E3530',
-                              border: '1px solid #2D3C37', borderRadius: 3,
-                              boxShadow: '0 8px 24px rgba(0,0,0,0.40)',
-                              animation: 'fadeSlideUp 150ms ease-out',
-                            }}
-                          >
-                            <button
-                              style={{ width: '100%', textAlign: 'left', padding: '10px 16px', fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#ECE0CC', background: 'none', border: 'none', cursor: 'pointer' }}
-                              onMouseEnter={e => e.currentTarget.style.background = '#172923'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                              onClick={() => { setActiveDropdown(null); setEditTarget(h); }}
-                            >View / Edit</button>
-                            <div style={{ height: 1, background: 'rgba(45,60,55,0.55)' }} />
-                            <button
-                              style={{ width: '100%', textAlign: 'left', padding: '10px 16px', fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#B66A6A', background: 'none', border: 'none', cursor: 'pointer' }}
-                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(182,106,106,0.08)'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                              onClick={() => { setActiveDropdown(null); setDeleteTarget(h); }}
-                            >Remove</button>
-                          </div>
-                        )}
+                        {activeDropdown === rowKey && (() => {
+                          const btn = document.querySelector(`[data-row-key="${rowKey}"]`);
+                          const rect = btn ? btn.getBoundingClientRect() : { bottom: 0, right: 0 };
+                          return createPortal(
+                            <div
+                              onClick={e => e.stopPropagation()}
+                              style={{
+                                position: 'fixed',
+                                top: rect.bottom + 4,
+                                right: window.innerWidth - rect.right,
+                                zIndex: 9999,
+                                minWidth: 140,
+                                background: '#1E3530',
+                                border: '1px solid #2D3C37',
+                                borderRadius: 3,
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.50)',
+                                animation: 'fadeSlideUp 150ms ease-out',
+                              }}
+                            >
+                              <button
+                                style={{ width: '100%', textAlign: 'left', padding: '10px 16px', fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#ECE0CC', background: 'none', border: 'none', cursor: 'pointer' }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#172923'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                onClick={() => { setActiveDropdown(null); setEditTarget(h); }}
+                              >View / Edit</button>
+                              <div style={{ height: 1, background: 'rgba(45,60,55,0.55)' }} />
+                              <button
+                                style={{ width: '100%', textAlign: 'left', padding: '10px 16px', fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#B66A6A', background: 'none', border: 'none', cursor: 'pointer' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(182,106,106,0.08)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                onClick={() => { setActiveDropdown(null); setDeleteTarget(h); }}
+                              >Remove</button>
+                            </div>,
+                            document.body
+                          );
+                        })()}
                       </td>
                     </tr>
                   );

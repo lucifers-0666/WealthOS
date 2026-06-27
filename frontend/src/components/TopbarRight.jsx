@@ -4,10 +4,83 @@ import {
   ArrowsLeftRight, Brain, Star, Gear, UserCircle, ChartBar, FileText, ArrowSquareOut
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import MarketStatusBadge from './MarketStatusBadge.jsx';
+import { useAuth } from '../lib/useAuth.js';
+import { supabase } from '../lib/auth.js';
+
+function useMarketStatus() {
+  const [status, setStatus] = useState('closed')
+  
+  useEffect(() => {
+    function check() {
+      const now = new Date()
+      // IST = UTC+5:30
+      const utcMs = now.getTime() + now.getTimezoneOffset() * 60000
+      const ist = new Date(utcMs + 5.5 * 3600000)
+      const day = ist.getDay()         // 0=Sun, 6=Sat
+      const h = ist.getHours()
+      const m = ist.getMinutes()
+      const mins = h * 60 + m
+      
+      if (day === 0 || day === 6) { setStatus('closed'); return }
+      if (mins >= 555 && mins < 915) { setStatus('open'); return }   // 9:15 – 15:15
+      if (mins >= 540 && mins < 555) { setStatus('pre'); return }    // 9:00 – 9:15
+      setStatus('closed')
+    }
+    check()
+    const id = setInterval(check, 60000)
+    return () => clearInterval(id)
+  }, [])
+  
+  return status
+}
+
+function useClock() {
+  const [time, setTime] = useState('')
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date()
+      setTime(now.toLocaleTimeString('en-IN', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        timeZone: 'Asia/Kolkata', hour12: false
+      }))
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+  return time
+}
 
 export default function TopbarRight() {
   const [activePanel, setActivePanel] = useState(null);
+  const { user, signOut } = useAuth();
+  const [profile, setProfile] = useState(null);
+  const marketStatus = useMarketStatus();
+
+  useEffect(() => {
+    async function loadProfile() {
+      if (!user) return;
+      try {
+        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        const pRow = data || {};
+        const name = pRow.full_name || pRow.display_name || user.user_metadata?.full_name || '';
+        const parts = name.trim().split(' ').filter(Boolean);
+        const initials = parts.length >= 2
+          ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+          : name.length > 0
+            ? name.slice(0, 2).toUpperCase()
+            : user.email.slice(0, 2).toUpperCase();
+            
+        setProfile({
+          display_name: pRow.display_name || name || user.email.split('@')[0],
+          initials
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    loadProfile();
+  }, [user]);
 
   const togglePanel = (name) => setActivePanel(prev => prev === name ? null : name);
 
@@ -36,7 +109,13 @@ export default function TopbarRight() {
       )}
       
       <div className="flex items-center relative z-50">
-        <MarketStatusBadge />
+        <div className="flex items-center gap-2">
+          <span className={`market-pill ${marketStatus === 'open' ? 'market-open' : 'market-closed'}`}>
+            <span className={`status-dot ${marketStatus === 'open' ? 'dot-gain' : 'dot-muted'}`} />
+            {marketStatus === 'open' ? 'MARKETS OPEN' : marketStatus === 'pre' ? 'PRE-OPEN' : 'MARKET CLOSED'}
+          </span>
+          <span className="topbar-clock font-mono text-[11px] text-[#7B7C70]">{useClock()}</span>
+        </div>
         <div style={{ width: 1, height: 16, background: 'rgba(45,60,55,0.55)', margin: '0 12px' }} />
 
         <div className="flex items-center gap-[8px]">
@@ -151,7 +230,7 @@ export default function TopbarRight() {
             className={`topbar-avatar ${activePanel === 'profile' ? 'active' : ''}`}
             onClick={() => togglePanel('profile')}
           >
-            AK
+            {profile?.initials ?? '..'}
           </button>
           
           <AnimatePresence>
@@ -165,9 +244,9 @@ export default function TopbarRight() {
                 style={{ right: 0, width: 220 }}
               >
                 <div className="flex items-center p-[14px_16px]">
-                  <div className="profile-large-avatar">AK</div>
+                  <div className="profile-large-avatar">{profile?.initials ?? '..'}</div>
                   <div className="ml-[12px]">
-                    <div className="font-inter font-semibold text-[13px] text-[#ECE0CC]">Arjun Kumar</div>
+                    <div className="font-inter font-semibold text-[13px] text-[#ECE0CC]">{profile?.display_name ?? 'Arca Member'}</div>
                     <div className="font-inter font-normal text-[10px] text-[#7B7C70]">Portfolio Owner</div>
                   </div>
                 </div>
@@ -186,7 +265,10 @@ export default function TopbarRight() {
                     </button>
                   ))}
                   <div className="panel-sep" style={{ margin: '6px 0' }} />
-                  <button className="profile-menu-item danger">
+                  <button onClick={async () => {
+                    await signOut();
+                    window.location.assign('/login');
+                  }} className="profile-menu-item danger">
                     <ArrowSquareOut size={14} className="pm-icon" />
                     <span>Sign Out</span>
                   </button>

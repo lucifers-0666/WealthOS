@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../lib/useAuth.js';
 import {
   Terminal,
   ChartPie,
@@ -77,6 +78,7 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { holdings, watchlist, refresh } = usePortfolio();
+  const { user } = useAuth();
   
   const path = location.pathname;
   const [title, sub] = titles[path] || ['Command Center', 'Portfolio intelligence cockpit'];
@@ -181,7 +183,7 @@ export default function Layout() {
               type="text"
               value={topSearch}
               onChange={(e) => setTopSearch(e.target.value)}
-              placeholder="Search holdings, watchlist, no..."
+              placeholder={user?.email ?? "Search holdings, watchlist, news..."}
               className="flex-1 bg-transparent border-none outline-none text-[#ECE0CC] font-inter text-[11px] placeholder:text-[#7B7C70]"
             />
             <span className="bg-[#1E3530] border border-[#2D3C37] rounded-[2px] px-[5px] py-[2px] text-[9px] text-[#7B7C70] font-inter shrink-0 leading-none">

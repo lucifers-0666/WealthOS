@@ -39,10 +39,9 @@ export default function LoginPage() {
 
         <div className="auth-divider" />
 
-        <div className="auth-tabs" role="tablist">
-          <button className="auth-tab active" role="tab">Sign In</button>
-          <button className="auth-tab" role="tab" onClick={() => navigate('/signup')}>Create Account</button>
-          <button className="auth-tab" role="tab" onClick={() => navigate('/forgot-password')}>Forgot Password</button>
+        <div className="auth-page-header">
+          <h2 className="auth-page-title">Sign In</h2>
+          <p className="auth-page-desc">Access your private wealth terminal.</p>
         </div>
 
         {error && (
@@ -88,9 +87,13 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14 }}>
-          <button type="button" className="auth-link" onClick={() => navigate('/forgot-password')}>Forgot password?</button>
-          <button type="button" className="auth-link" onClick={() => navigate('/signup')}>Need an account?</button>
+        <div className="auth-bottom-links">
+          <button type="button" className="auth-link" onClick={() => navigate('/forgot-password')}>
+            Forgot password?
+          </button>
+          <button type="button" className="auth-link auth-link-accent" onClick={() => navigate('/signup')}>
+            Create account &rarr;
+          </button>
         </div>
       </div>
     </AuthLayout>

@@ -174,6 +174,11 @@ export default function SignupPage() {
 
         <div className="auth-divider" />
 
+        <div className="auth-page-header">
+          <h2 className="auth-page-title">Create Account</h2>
+          <p className="auth-page-desc">Begin your Antigravity journey.</p>
+        </div>
+
         {renderStepIndicator()}
 
         {error && (

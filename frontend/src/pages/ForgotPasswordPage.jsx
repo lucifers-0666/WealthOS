@@ -60,10 +60,9 @@ export default function ForgotPasswordPage() {
 
         <div className="auth-divider" />
 
-        <div className="auth-tabs" role="tablist">
-          <button className="auth-tab" role="tab" onClick={() => navigate('/login')}>Sign In</button>
-          <button className="auth-tab" role="tab" onClick={() => navigate('/signup')}>Create Account</button>
-          <button className="auth-tab active" role="tab">Forgot Password</button>
+        <div className="auth-page-header">
+          <h2 className="auth-page-title">Recover Access</h2>
+          <p className="auth-page-desc">We'll send a secure reset link to your inbox.</p>
         </div>
 
         {error && (

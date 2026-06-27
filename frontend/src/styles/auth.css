@@ -673,3 +673,43 @@ input[type="password"] { padding-right: 40px; }
     font-size: 8px;
   }
 }
+
+/* ── Page-level card header (replaces tab strip) ── */
+.auth-page-header {
+  margin-bottom: 20px;
+}
+
+.auth-page-title {
+  font-family: 'Cinzel', serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #ECE0CC;
+  letter-spacing: 0.03em;
+  margin: 0 0 4px 0;
+}
+
+.auth-page-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: #ACA492;
+  margin: 0;
+}
+
+/* ── Bottom links row ── */
+.auth-bottom-links {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+}
+
+/* ── Accent link variant ── */
+.auth-link-accent {
+  color: #C8B38E !important;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+}
+.auth-link-accent:hover {
+  color: #ECE0CC !important;
+  text-decoration: underline;
+}

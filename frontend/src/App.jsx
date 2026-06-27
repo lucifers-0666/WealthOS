@@ -14,6 +14,8 @@ const News = lazy(() => import('./pages/News.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 const LoginPage = lazy(() => import('./pages/LoginPage.jsx'));
+const SignupPage = lazy(() => import('./pages/SignupPage.jsx'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage.jsx'));
 const Analytics = lazy(() => import('./pages/Analytics.jsx'));
 const Watchlist = lazy(() => import('./pages/Watchlist.jsx'));
 const Signals = lazy(() => import('./pages/Signals.jsx'));
@@ -46,6 +48,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route
           path="/onboarding"
           element={

@@ -1,206 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
-import { useLoginForm } from '../hooks/useLoginForm.js';
-import '../styles/login.css';
-
-function Field({ label, name, type = 'text', value, onChange, error, placeholder = '', rightSlot }) {
-  return (
-    <div className="auth-field">
-      <label className="auth-label" htmlFor={name}>{label}</label>
-      <div className="auth-input-wrap">
-        <input
-          id={name}
-          name={name}
-          type={type}
-          value={value}
-          onChange={onChange}
-          autoComplete={
-            name === 'password' ? 'current-password' :
-            name === 'confirmPassword' ? 'new-password' :
-            name === 'email' ? 'email' : 'off'
-          }
-          className={`auth-input${error ? ' auth-input-error' : ''}`}
-          placeholder={placeholder}
-          style={error ? { borderColor: '#B66A6A' } : {}}
-        />
-        {rightSlot}
-      </div>
-      {error && <p className="auth-error" style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: '#B66A6A', marginTop: '6px', marginBottom: 0 }}>{error}</p>}
-    </div>
-  );
-}
-
-function EyeBtn({ show, onToggle }) {
-  return (
-    <button type="button" onClick={onToggle} tabIndex={-1} className="eye-toggle" aria-label={show ? 'Hide password' : 'Show password'}>
-      {show ? <EyeOff size={16} /> : <Eye size={16} />}
-    </button>
-  );
-}
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/auth.js';
+import { ShieldCheck, Eye, EyeSlash, WarningCircle } from '@phosphor-icons/react';
+import AuthLayout from '../components/AuthLayout.jsx';
+import '../styles/auth.css';
 
 export default function LoginPage() {
-  const {
-    activeTab,
-    handleTabChange,
-    formData,
-    handleChange,
-    showPassword,
-    setShowPassword,
-    showConfirmPassword,
-    setShowConfirmPassword,
-    isLoading,
-    errors,
-    isSuccess,
-    forgotSent,
-    handleSubmit,
-  } = useLoginForm();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
-    const handleAnimationStart = (e) => {
-      if (e.animationName === 'onAutoFillStart') {
-        e.target.classList.add('autofilled');
-      }
-    };
-    const inputs = document.querySelectorAll('.auth-input');
-    inputs.forEach(input => input.addEventListener('animationstart', handleAnimationStart));
-    return () => {
-      inputs.forEach(input => input.removeEventListener('animationstart', handleAnimationStart));
-    };
-  }, [activeTab]);
-
-  const buttonLabel = activeTab === 'signin' ? 'Sign In' : activeTab === 'create' ? 'Create Account' : 'Send Reset Link';
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (signInError) {
+      setError(signInError.message);
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   return (
-    <div className="login-page">
-      <main className="login-main">
-        <div className="login-divider" aria-hidden="true"></div>
-
-        <div className="login-left">
-          <div className="login-eyebrow">
-            <span className="login-eyebrow-text">Private Wealth Terminal</span>
+    <AuthLayout>
+      <div className="auth-card">
+        <div className="auth-card-header">
+          <div className="auth-icon-wrap">
+            <ShieldCheck size={28} weight="fill" color="#C8B38E" />
           </div>
-
-          <h1 className="login-headline">
-            Arca,<br />
-            Reimagined<br />
-            for Elite<br />
-            Investors<span className="period">.</span>
-          </h1>
-
-          <div className="login-features">
-            <div className="login-feature">
-              <p className="login-feature-title">Protected Routes</p>
-              <p className="login-feature-desc">Session persistence and token sync</p>
-            </div>
-            <div className="login-feature">
-              <p className="login-feature-title">Email Verification</p>
-              <p className="login-feature-desc">Secure signup and password reset</p>
-            </div>
-            <div className="login-feature">
-              <p className="login-feature-title">Portfolio Intelligence</p>
-              <p className="login-feature-desc">Live holdings, allocation, and risk</p>
-            </div>
-            <div className="login-feature">
-              <p className="login-feature-title">AI Advisor</p>
-              <p className="login-feature-desc">Portfolio-aware financial analysis</p>
-            </div>
-          </div>
+          <p className="auth-brand-title">Access Terminal</p>
+          <p className="auth-brand-sub">Your private financial command center.</p>
         </div>
 
-        <div className="login-right">
-          <div className="auth-card">
-            <div className="auth-header">
-              <div className="auth-icon-wrap">
-                <svg width="22" height="22" viewBox="0 0 256 256" fill="none">
-                  <path d="M128 24L40 56v56c0 52.4 37.6 101.3 88 116 50.4-14.7 88-63.6 88-116V56L128 24z" 
-                        stroke="#C8B38E" strokeWidth="16" strokeLinejoin="round"/>
-                  <polyline points="96,128 112,144 160,96" 
-                            stroke="#C8B38E" strokeWidth="16" 
-                            strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div>
-                <p className="auth-brand-title">Access Terminal</p>
-                <p className="auth-brand-sub">Your private financial command center.</p>
-              </div>
-            </div>
+        <div className="auth-divider" />
 
-            <div className="auth-tabs" role="tablist">
-              <button className={`auth-tab ${activeTab === 'signin' ? 'active' : ''}`} role="tab" onClick={() => handleTabChange('signin')}>Sign In</button>
-              <button className={`auth-tab ${activeTab === 'create' ? 'active' : ''}`} role="tab" onClick={() => handleTabChange('create')}>Create Account</button>
-              <button className={`auth-tab ${activeTab === 'forgot' ? 'active' : ''}`} role="tab" onClick={() => handleTabChange('forgot')}>Forgot Password</button>
-            </div>
+        <div className="auth-tabs" role="tablist">
+          <button className="auth-tab active" role="tab">Sign In</button>
+          <button className="auth-tab" role="tab" onClick={() => navigate('/signup')}>Create Account</button>
+          <button className="auth-tab" role="tab" onClick={() => navigate('/forgot-password')}>Forgot Password</button>
+        </div>
 
-            <form id="auth-form" onSubmit={handleSubmit} noValidate>
-              {activeTab === 'create' && (
-                <Field label="Display Name" name="displayName" value={formData.displayName} onChange={handleChange} error={errors.displayName} placeholder="Your name" />
-              )}
-              <Field label="Email" name="email" type="email" value={formData.email} onChange={handleChange} error={errors.email} placeholder="you@example.com" />
-              
-              {(activeTab === 'signin' || activeTab === 'create') && (
-                <Field label="Password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleChange} error={errors.password} placeholder="••••••••" rightSlot={<EyeBtn show={showPassword} onToggle={() => setShowPassword(!showPassword)} />} />
-              )}
-              
-              {activeTab === 'create' && (
-                <Field label="Confirm Password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} placeholder="••••••••" rightSlot={<EyeBtn show={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)} />} />
-              )}
+        {error && (
+          <div style={{ backgroundColor: 'rgba(182,106,106,0.06)', border: '1px solid rgba(182,106,106,0.60)', padding: '10px 12px', borderRadius: 3, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <WarningCircle size={14} color="#B66A6A" weight="fill" />
+            <span style={{ fontFamily: 'Inter', fontSize: 11, color: '#B66A6A' }}>{error}</span>
+          </div>
+        )}
 
-              {activeTab === 'forgot' && forgotSent ? (
-                <div className="ag-forgot-success" style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#7B7C70', textAlign: 'center', padding: '16px 0 8px' }}>
-                  Reset link sent. Check your inbox.
-                </div>
-              ) : (
-                <button
-                  id="btn-sign-in"
-                  type="submit"
-                  className={`btn-auth-primary ${isSuccess ? 'state-success' : ''} ${isLoading ? 'state-loading' : ''}`}
-                  disabled={isLoading || isSuccess}
-                >
-                  {isSuccess ? (
-                    <>
-                      <svg className="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
-                      <span className="btn-label">AUTHENTICATED</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="btn-label">{isLoading ? 'VERIFYING...' : buttonLabel}</span>
-                      {!isLoading && <span className="btn-arrow">→</span>}
-                    </>
-                  )}
-                </button>
-              )}
-
-              {errors.general && (
-                <p className="auth-error" style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: '#B66A6A', marginTop: '10px', marginBottom: 0, textAlign: 'center' }}>
-                  {errors.general}
-                </p>
-              )}
-            </form>
-
-            <div className="auth-footer-links">
-              {activeTab === 'signin' && (
-                <>
-                  <button type="button" className="auth-link-forgot" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }} onClick={() => handleTabChange('forgot')}>Forgot password?</button>
-                  <button type="button" className="auth-link-create" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }} onClick={() => handleTabChange('create')}>Need an account?</button>
-                </>
-              )}
-              {activeTab === 'create' && (
-                <button type="button" className="auth-link-forgot" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }} onClick={() => handleTabChange('signin')}>Already have an account?</button>
-              )}
-              {activeTab === 'forgot' && (
-                <button type="button" className="auth-link-create" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', marginLeft: 'auto' }} onClick={() => handleTabChange('signin')}>Back to sign in</button>
-              )}
+        <form onSubmit={handleLogin}>
+          <div className="auth-field">
+            <label className="auth-label">Email</label>
+            <div className="auth-input-wrap">
+              <input 
+                type="email" 
+                className="auth-input" 
+                placeholder="you@example.com"
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                required 
+              />
             </div>
           </div>
-        </div>
-      </main>
+          <div className="auth-field">
+            <label className="auth-label">Password</label>
+            <div className="auth-input-wrap">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                className="auth-input" 
+                placeholder="••••••••"
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                required 
+              />
+              <button type="button" className="eye-toggle" onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <EyeSlash size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
 
-      <footer className="login-footer">
-        <span className="login-footer-left">Antigravity · Private Terminal · 2026</span>
-        <span className="login-footer-right">256-bit encrypted · SOC 2 aligned · No data sold</span>
-      </footer>
-    </div>
+          <button type="submit" className="auth-btn-primary" disabled={loading}>
+            {loading ? 'AUTHENTICATING...' : 'SIGN IN \u2192'}
+          </button>
+        </form>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14 }}>
+          <button type="button" className="auth-link" onClick={() => navigate('/forgot-password')}>Forgot password?</button>
+          <button type="button" className="auth-link" onClick={() => navigate('/signup')}>Need an account?</button>
+        </div>
+      </div>
+    </AuthLayout>
   );
 }

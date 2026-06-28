@@ -20,9 +20,8 @@ def parse_with_gemini(raw_text: str) -> Optional[list]:
         return None
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        from core.ai_client import GeminiClient
+        client = GeminiClient(api_key=api_key)
 
         prompt = f"""You are a financial data extraction AI. Extract all stock holdings from the following text.
 Return ONLY a valid JSON array. Each object must have these fields:
@@ -45,8 +44,9 @@ Text to parse:
 
 JSON:"""
 
-        response = model.generate_content(prompt)
-        text = response.text.strip()
+        text = client.ask(prompt).strip()
+        if text == client.FALLBACK_MESSAGE:
+            return None
 
         # Strip markdown code blocks if present
         text = re.sub(r"```json|```", "", text).strip()

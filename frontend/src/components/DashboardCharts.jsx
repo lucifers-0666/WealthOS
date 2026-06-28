@@ -2,13 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 const COLORS = [
-  '#C8B38E', // Soft Gold
-  '#6FAE8D', // Muted Green
+  'var(--color-gold)', // Soft Gold
+  'var(--color-gain)', // Muted Green
   '#A07840', // Warm Bronze
-  '#869FC4', // Muted Slate Blue
-  '#B66A6A', // Muted Rose
+  'var(--color-blue)', // Muted Slate Blue
+  'var(--color-loss)', // Muted Rose
   '#5A7A6A', // Forest Teal
-  '#7B7C70', // Muted Stone
+  'var(--color-text-faint)', // Muted Stone
 ];
 
 const money = v => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v || 0);

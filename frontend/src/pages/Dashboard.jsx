@@ -25,9 +25,9 @@ function SectionHeader({ title, icon: Icon, onIconClick, right }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {Icon
           ? <Icon size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          : <span style={{ display: 'inline-block', width: 2, height: 12, background: '#C8B38E', borderRadius: 1, flexShrink: 0 }} />
+          : <span style={{ display: 'inline-block', width: 2, height: 12, background: 'var(--color-gold)', borderRadius: 1, flexShrink: 0 }} />
         }
-        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#ACA492' }}>{title}</span>
+        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>{title}</span>
       </div>
       {right}
       {Icon && onIconClick && (
@@ -264,12 +264,12 @@ export default function Dashboard() {
             <PortfolioIntelligence holdings={holdings} summary={summary} />
 
             {/* Activity Feed */}
-            <div style={{ background: '#172923', border: '1px solid #2D3C37', borderRadius: 3, padding: 18 }}>
+            <div style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 3, padding: 18 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 {/* Header left: clock icon + title */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Clock size={13} style={{ color: '#7B7C70', flexShrink: 0 }} />
-                  <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#ACA492' }}>Activity Feed</span>
+                  <Clock size={13} style={{ color: 'var(--color-text-faint)', flexShrink: 0 }} />
+                  <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>Activity Feed</span>
                 </div>
                 {/* Tab filter */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -279,11 +279,11 @@ export default function Dashboard() {
                       letterSpacing: '0.10em', textTransform: 'uppercase',
                       background: 'none', border: 'none', cursor: 'pointer',
                       paddingBottom: 3,
-                      borderBottom: activityFilter === v ? '1px solid #C8B38E' : '1px solid transparent',
-                      color: activityFilter === v ? '#ECE0CC' : '#7B7C70'
+                      borderBottom: activityFilter === v ? '1px solid var(--color-gold)' : '1px solid transparent',
+                      color: activityFilter === v ? 'var(--color-text)' : 'var(--color-text-faint)'
                     }}
-                    onMouseEnter={e => { if (activityFilter !== v) e.target.style.color = '#ACA492'; }}
-                    onMouseLeave={e => { if (activityFilter !== v) e.target.style.color = '#7B7C70'; }}
+                    onMouseEnter={e => { if (activityFilter !== v) e.target.style.color = 'var(--color-text-muted)'; }}
+                    onMouseLeave={e => { if (activityFilter !== v) e.target.style.color = 'var(--color-text-faint)'; }}
                     >{v}</button>
                   ))}
                 </div>
@@ -297,7 +297,7 @@ export default function Dashboard() {
                   { type: 'BUY',  tick: 'TCS',  meta: '15 shares @ ₹3,820',   time: 'June 10 · 9:20 AM' },
                 ].filter(a => activityFilter === 'ALL' || a.type === activityFilter).map((act, i, arr) => (
                   <div key={i} style={{
-                    background: '#0A201F',
+                    background: 'var(--color-bg)',
                     border: '1px solid rgba(45,60,55,0.55)',
                     borderRadius: 3,
                     padding: '10px 12px',
@@ -320,26 +320,26 @@ export default function Dashboard() {
                           letterSpacing: '0.06em', textTransform: 'uppercase',
                           background: act.type === 'BUY' ? 'rgba(111,174,141,0.12)' : 'rgba(182,106,106,0.12)',
                           border: act.type === 'BUY' ? '1px solid rgba(111,174,141,0.28)' : '1px solid rgba(182,106,106,0.28)',
-                          color: act.type === 'BUY' ? '#6FAE8D' : '#B66A6A',
+                          color: act.type === 'BUY' ? 'var(--color-gain)' : 'var(--color-loss)',
                         }}>
                           {act.type === 'BUY' ? <ArrowUp size={9} /> : <ArrowDown size={9} />}
                           {act.type}
                         </span>
                         {/* Ticker */}
-                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 600, color: '#ECE0CC' }}>{act.tick}</span>
+                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>{act.tick}</span>
                       </div>
                       {/* Meta */}
-                      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 400, color: '#7B7C70' }}>{act.meta}</span>
+                      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 400, color: 'var(--color-text-faint)' }}>{act.meta}</span>
                     </div>
                     {/* RIGHT: date/time */}
-                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 9, fontWeight: 400, color: '#7B7C70', whiteSpace: 'nowrap', alignSelf: 'flex-start', textAlign: 'right' }}>{act.time}</span>
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 9, fontWeight: 400, color: 'var(--color-text-faint)', whiteSpace: 'nowrap', alignSelf: 'flex-start', textAlign: 'right' }}>{act.time}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Watchlist */}
-            <div style={{ background: '#172923', border: '1px solid #2D3C37', borderRadius: 3, padding: 18 }}>
+            <div style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 3, padding: 18 }}>
               <SectionHeader title="Watchlist" />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {[
@@ -357,16 +357,16 @@ export default function Dashboard() {
                     }}>
                       {/* LEFT: star + text column */}
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <Star size={13} style={{ color: '#C8B38E', flexShrink: 0, marginTop: 1 }} />
+                        <Star size={13} style={{ color: 'var(--color-gold)', flexShrink: 0, marginTop: 1 }} />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 600, color: '#ECE0CC' }}>{w.t}</span>
-                          <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, fontWeight: 400, color: '#7B7C70' }}>{w.n}</span>
+                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 600, color: 'var(--color-text)' }}>{w.t}</span>
+                          <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, fontWeight: 400, color: 'var(--color-text-faint)' }}>{w.n}</span>
                         </div>
                       </div>
                       {/* RIGHT: price + change stacked */}
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 400, color: '#ECE0CC' }}>{w.p}</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 400, color: isGain ? '#6FAE8D' : '#B66A6A' }}>{w.c}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 400, color: 'var(--color-text)' }}>{w.p}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 400, color: isGain ? 'var(--color-gain)' : 'var(--color-loss)' }}>{w.c}</span>
                       </div>
                     </div>
                   );

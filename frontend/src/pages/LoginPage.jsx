@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/auth.js';
+import { signIn } from '../lib/auth.js';
 import { ShieldCheck, Eye, EyeSlash, WarningCircle } from '@phosphor-icons/react';
 import AuthLayout from '../components/AuthLayout.jsx';
 import '../styles/auth.css';
@@ -17,12 +17,13 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (signInError) {
-      setError(signInError.message);
-    } else {
+    try {
+      await signIn(email, password);
       navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -31,7 +32,7 @@ export default function LoginPage() {
       <div className="auth-inner-container">
         <div className="auth-card-header">
           <div className="auth-icon-wrap">
-            <ShieldCheck size={28} weight="fill" color="#C8B38E" />
+            <ShieldCheck size={28} weight="fill" color="var(--color-gold)" />
           </div>
           <p className="auth-brand-title">Access Terminal</p>
           <p className="auth-brand-sub">Your private financial command center.</p>
@@ -46,8 +47,8 @@ export default function LoginPage() {
 
         {error && (
           <div style={{ backgroundColor: 'rgba(182,106,106,0.06)', border: '1px solid rgba(182,106,106,0.60)', padding: '10px 12px', borderRadius: 3, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <WarningCircle size={14} color="#B66A6A" weight="fill" />
-            <span style={{ fontFamily: 'Inter', fontSize: 11, color: '#B66A6A' }}>{error}</span>
+            <WarningCircle size={14} color="var(--color-loss)" weight="fill" />
+            <span style={{ fontFamily: 'Inter', fontSize: 11, color: 'var(--color-loss)' }}>{error}</span>
           </div>
         )}
 

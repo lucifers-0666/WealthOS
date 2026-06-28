@@ -35,7 +35,7 @@ export default function SignupPage() {
     return score;
   };
   const pwdScore = getPasswordScore(step1.password);
-  const getScoreColor = (sc) => sc <= 1 ? '#B66A6A' : sc === 2 ? '#D2A76D' : sc === 3 ? '#869FC4' : '#6FAE8D';
+  const getScoreColor = (sc) => sc <= 1 ? 'var(--color-loss)' : sc === 2 ? 'var(--color-warn)' : sc === 3 ? 'var(--color-blue)' : 'var(--color-gain)';
   const getScoreLabel = (sc) => sc <= 1 ? 'Weak' : sc === 2 ? 'Fair' : sc === 3 ? 'Good' : 'Strong';
 
   const handleStep1 = async (e) => {
@@ -164,7 +164,7 @@ export default function SignupPage() {
     <AuthLayout>
       <div className="auth-inner-container">
         <div className="auth-page-header" style={{ marginBottom: 0 }}>
-          <div style={{ fontFamily: 'Cinzel', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.20em', color: '#C8B38E', marginBottom: 6 }}>
+          <div style={{ fontFamily: 'Cinzel', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.20em', color: 'var(--color-gold)', marginBottom: 6 }}>
             ACCESS TERMINAL
           </div>
           <p className="auth-page-desc" style={{ fontSize: 12 }}>Your private financial command center.</p>
@@ -181,8 +181,8 @@ export default function SignupPage() {
 
         {error && (
           <div style={{ backgroundColor: 'rgba(182,106,106,0.06)', border: '1px solid rgba(182,106,106,0.60)', padding: '10px 12px', borderRadius: 3, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <WarningCircle size={14} color="#B66A6A" weight="fill" />
-            <span style={{ fontFamily: 'Inter', fontSize: 11, color: '#B66A6A' }}>{error}</span>
+            <WarningCircle size={14} color="var(--color-loss)" weight="fill" />
+            <span style={{ fontFamily: 'Inter', fontSize: 11, color: 'var(--color-loss)' }}>{error}</span>
           </div>
         )}
 
@@ -205,7 +205,7 @@ export default function SignupPage() {
                 <label className="auth-label">Phone Number</label>
                 <div className="auth-phone-row">
                   <div className="auth-phone-prefix">
-                    +91 <CaretDown size={12} color="#7B7C70" />
+                    +91 <CaretDown size={12} color="var(--color-text-faint)" />
                   </div>
                   <input className="auth-input auth-phone-input" type="tel" value={step1.phone} onChange={e => setStep1({...step1, phone: e.target.value})} placeholder="98765 43210" required />
                 </div>
@@ -222,7 +222,7 @@ export default function SignupPage() {
                   <div className="pwd-meter">
                     <div className="pwd-bars">
                       {[1, 2, 3, 4].map(idx => (
-                        <div key={idx} className="pwd-segment" style={{ background: pwdScore >= idx ? getScoreColor(pwdScore) : '#1E3530' }} />
+                        <div key={idx} className="pwd-segment" style={{ background: pwdScore >= idx ? getScoreColor(pwdScore) : 'var(--color-overlay)' }} />
                       ))}
                     </div>
                     <div className="pwd-label" style={{ color: getScoreColor(pwdScore) }}>{getScoreLabel(pwdScore)}</div>
@@ -254,7 +254,7 @@ export default function SignupPage() {
               )}
 
               <div style={{ textAlign: 'center', marginBottom: 12 }}>
-                <span style={{ fontFamily: 'Inter', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.10em', color: '#7B7C70' }}>
+                <span style={{ fontFamily: 'Inter', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.10em', color: 'var(--color-text-faint)' }}>
                   256-BIT ENCRYPTED &middot; SOC 2 ALIGNED &middot; NO DATA SOLD
                 </span>
               </div>
@@ -266,7 +266,7 @@ export default function SignupPage() {
 
           {step === 2 && (
             <>
-              <p style={{ fontFamily: 'Inter', fontSize: 12, color: '#ACA492', margin: '0 0 16px 0' }}>
+              <p style={{ fontFamily: 'Inter', fontSize: 12, color: 'var(--color-text-muted)', margin: '0 0 16px 0' }}>
                 Tell us about your investment background.
               </p>
               
@@ -331,7 +331,7 @@ export default function SignupPage() {
 
           {step === 3 && (
             <>
-              <p style={{ fontFamily: 'Inter', fontSize: 12, color: '#ACA492', margin: '0 0 16px 0' }}>
+              <p style={{ fontFamily: 'Inter', fontSize: 12, color: 'var(--color-text-muted)', margin: '0 0 16px 0' }}>
                 Define your investment strategy preferences.
               </p>
 
@@ -381,14 +381,14 @@ export default function SignupPage() {
               <div className="auth-field" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <label className="auth-checkbox-row">
                   <input type="checkbox" checked={step3.terms_accepted} onChange={e => setStep3({...step3, terms_accepted: e.target.checked})} />
-                  <div className="auth-checkbox-box">{step3.terms_accepted && <Check size={10} color="#0A201F" weight="bold" />}</div>
+                  <div className="auth-checkbox-box">{step3.terms_accepted && <Check size={10} color="var(--color-bg)" weight="bold" />}</div>
                   <span className="auth-checkbox-label">
                     I agree to the <a href="#">Terms of Service</a>
                   </span>
                 </label>
                 <label className="auth-checkbox-row">
                   <input type="checkbox" checked={step3.privacy_accepted} onChange={e => setStep3({...step3, privacy_accepted: e.target.checked})} />
-                  <div className="auth-checkbox-box">{step3.privacy_accepted && <Check size={10} color="#0A201F" weight="bold" />}</div>
+                  <div className="auth-checkbox-box">{step3.privacy_accepted && <Check size={10} color="var(--color-bg)" weight="bold" />}</div>
                   <span className="auth-checkbox-label">
                     I agree to the <a href="#">Privacy Policy</a>
                   </span>
@@ -430,7 +430,7 @@ export default function SignupPage() {
         </div>
 
         <div className="auth-absolute-bottom">
-          <span style={{ fontFamily: 'Inter', fontSize: 11, color: '#7B7C70' }}>Already have access? </span>
+          <span style={{ fontFamily: 'Inter', fontSize: 11, color: 'var(--color-text-faint)' }}>Already have access? </span>
           <button type="button" className="auth-link auth-link-accent" onClick={() => navigate('/login')}>Sign in &rarr;</button>
         </div>
       </div>

@@ -32,7 +32,7 @@ export default function DeleteConfirmModal({ title, message, onConfirm, onClose,
           <button
             onClick={onConfirm} disabled={loading}
             className={`arca-btn-primary ${loading ? 'loading' : ''}`}
-            style={{ background: 'var(--status-loss)', color: '#ECE0CC' }}
+            style={{ background: 'var(--status-loss)', color: 'var(--color-text)' }}
           >
             {loading ? <CircleNotch size={14} weight="bold" className="icon" style={{ animation: 'spin 1s linear infinite' }} /> : <Trash size={14} weight="bold" />}
             {loading ? 'DELETING...' : 'DELETE HOLDING'}

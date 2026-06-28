@@ -7,7 +7,7 @@ import React, { useState, useCallback } from 'react';
 import { parseImport, recordImportAudit } from '../lib/importEngine.js';
 import { theme, panelStyle } from '../lib/theme.js';
 import { Upload, CheckCircle, AlertTriangle, XCircle, FileText, RotateCcw, X } from 'lucide-react';
-
+import { Warning } from '@phosphor-icons/react';
 const confColor = { high: 'var(--color-success,#4ade80)', medium: 'var(--color-gold,#fbbf24)', low: 'var(--color-error,#f87171)' };
 
 export default function ImportModal({ existingHoldings = [], onImport, onClose }) {
@@ -144,7 +144,7 @@ export default function ImportModal({ existingHoldings = [], onImport, onClose }
                           </span>
                         </td>
                         <td style={{ padding: '9px 10px', fontSize: 11, color: theme.colors.textMuted }}>
-                          {row.isDuplicate && <span style={{ color: 'var(--color-gold,#fbbf24)', marginRight: 6 }}>⚠ Duplicate</span>}
+                          {row.isDuplicate && <span style={{ color: 'var(--color-gold,#fbbf24)', marginRight: 6 }}><Warning size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} weight="bold" />Duplicate</span>}
                           {row._warnings.join(', ')}
                         </td>
                       </tr>

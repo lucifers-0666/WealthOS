@@ -59,15 +59,14 @@ def generate_insights(holdings: list) -> dict:
     api_key = os.getenv("GEMINI_API_KEY")
     if api_key and total_invested > 0:
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            from core.ai_client import GeminiClient
+            client = GeminiClient(api_key=api_key)
             tickers = ", ".join(h["ticker"] for h in holdings[:15])
             prompt = f"""Analyse this Indian stock portfolio and give a 3-sentence professional insight covering diversification, risk, and one actionable suggestion. Be concise.
 Stocks: {tickers}
 Total invested: ₹{total_invested:,.0f}, P&L: {pnl_pct:.1f}%"""
-            resp = model.generate_content(prompt)
-            base_insights["ai_summary"] = resp.text.strip()
+            resp_text = client.ask(prompt)
+            base_insights["ai_summary"] = resp_text.strip()
         except Exception as e:
             logger.warning(f"Gemini insights failed: {e}")
 

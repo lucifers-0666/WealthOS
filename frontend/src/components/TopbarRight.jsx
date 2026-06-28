@@ -114,7 +114,7 @@ export default function TopbarRight() {
             <span className={`status-dot ${marketStatus === 'open' ? 'dot-gain' : 'dot-muted'}`} />
             {marketStatus === 'open' ? 'MARKETS OPEN' : marketStatus === 'pre' ? 'PRE-OPEN' : 'MARKET CLOSED'}
           </span>
-          <span className="topbar-clock font-mono text-[11px] text-[#7B7C70]">{useClock()}</span>
+          <span className="topbar-clock font-mono text-[11px] text-[var(--color-text-faint)]">{useClock()}</span>
         </div>
         <div style={{ width: 1, height: 16, background: 'rgba(45,60,55,0.55)', margin: '0 12px' }} />
 
@@ -191,16 +191,16 @@ export default function TopbarRight() {
                 <div className="panel-header" style={{ padding: '14px 16px' }}>
                   <span>NOTIFICATIONS</span>
                   <div className="flex items-center gap-[10px]">
-                    <button className="text-[9px] font-medium text-[#7B7C70] hover:text-[#ECE0CC] transition-colors">MARK ALL READ</button>
-                    <button onClick={() => setActivePanel(null)} className="text-[#7B7C70] hover:text-[#ECE0CC]"><X size={14} /></button>
+                    <button className="text-[9px] font-medium text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors">MARK ALL READ</button>
+                    <button onClick={() => setActivePanel(null)} className="text-[var(--color-text-faint)] hover:text-[var(--color-text)]"><X size={14} /></button>
                   </div>
                 </div>
                 <div className="panel-sep" style={{ margin: 0 }} />
                 
                 {notifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-[40px]">
-                    <BellSlash size={32} className="text-[#7B7C70] mb-2" />
-                    <span className="text-[#7B7C70] font-inter text-[12px]">No notifications</span>
+                    <BellSlash size={32} className="text-[var(--color-text-faint)] mb-2" />
+                    <span className="text-[var(--color-text-faint)] font-inter text-[12px]">No notifications</span>
                   </div>
                 ) : (
                   <div className="flex flex-col">
@@ -246,8 +246,8 @@ export default function TopbarRight() {
                 <div className="flex items-center p-[14px_16px]">
                   <div className="profile-large-avatar">{profile?.initials ?? '..'}</div>
                   <div className="ml-[12px]">
-                    <div className="font-inter font-semibold text-[13px] text-[#ECE0CC]">{profile?.display_name ?? 'Arca Member'}</div>
-                    <div className="font-inter font-normal text-[10px] text-[#7B7C70]">Portfolio Owner</div>
+                    <div className="font-inter font-semibold text-[13px] text-[var(--color-text)]">{profile?.display_name ?? 'Arca Member'}</div>
+                    <div className="font-inter font-normal text-[10px] text-[var(--color-text-faint)]">Portfolio Owner</div>
                   </div>
                 </div>
                 <div className="panel-sep" style={{ margin: '0 0 6px 0' }} />
@@ -273,7 +273,7 @@ export default function TopbarRight() {
                     <span>Sign Out</span>
                   </button>
                 </div>
-                <div className="p-[10px_16px] font-inter text-[9px] text-[#7B7C70]">
+                <div className="p-[10px_16px] font-inter text-[9px] text-[var(--color-text-faint)]">
                   v1.0.0 · Antigravity Terminal
                 </div>
               </motion.div>

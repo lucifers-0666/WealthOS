@@ -313,3 +313,140 @@ def load_portfolio_from_session() -> pd.DataFrame | None:
         return st.session_state.get("portfolio_df", None)
     except ImportError:
         return None
+
+
+BROKER_COLUMN_MAPS = {
+    "groww": {
+        "holdings": {
+            "symbol": "ticker",
+            "quantity": "quantity",
+            "average price": "avg_buy_price",
+            "ltp": "current_price",
+            "current value": "current_value",
+            "p&l": "unrealized_pnl",
+            "net change (%)": "pnl_percent"
+        },
+        "transactions": {
+            "trade date": "date",
+            "symbol": "ticker",
+            "trade type": "type",
+            "quantity": "quantity",
+            "price": "price",
+            "trade value": "total_value"
+        }
+    },
+    "zerodha": {
+        "holdings": {},
+        "transactions": {}
+    },
+    "generic": {
+        "holdings": {},
+        "transactions": {}
+    }
+}
+
+
+def detect_broker(df: pd.DataFrame) -> str:
+    cols = [str(c).strip().lower() for c in df.columns]
+    
+    # Groww Holdings signature
+    if "symbol" in cols and "quantity" in cols and "average price" in cols:
+        return "groww"
+    
+    # Groww Transactions signature
+    if "trade date" in cols and "symbol" in cols and "trade type" in cols:
+        return "groww"
+        
+    return "generic"
+
+
+def parse_holdings_csv(file_path: str, broker: str = "generic") -> list[dict]:
+    """
+    Reads a holdings CSV and returns a list of holding dicts.
+    Each dict must have keys: ticker, quantity, avg_buy_price, current_price
+    Normalizes column names to lowercase and strips whitespace.
+    Returns empty list on any error — never raises.
+    """
+    import pandas as pd
+    from pandas.errors import EmptyDataError
+    try:
+        df = pd.read_csv(file_path)
+        
+        detected = detect_broker(df)
+        if broker == "generic" and detected != "generic":
+            broker = detected
+            
+        if broker not in BROKER_COLUMN_MAPS:
+            broker = "generic"
+            
+        df.columns = [str(c).strip().lower() for c in df.columns]
+        
+        col_map = BROKER_COLUMN_MAPS[broker]["holdings"]
+        if col_map:
+            df.rename(columns=col_map, inplace=True)
+            
+        result = []
+        for _, row in df.iterrows():
+            result.append({
+                "ticker": str(row.get("ticker", "")),
+                "quantity": float(row.get("quantity", 0.0)),
+                "avg_buy_price": float(row.get("avg_buy_price", 0.0)),
+                "current_price": float(row.get("current_price", 0.0))
+            })
+        return result
+    except (FileNotFoundError, EmptyDataError, KeyError) as e:
+        print(f"Error parsing holdings csv: {e}")
+        return []
+    except Exception as e:
+        print(f"Error parsing holdings csv: {e}")
+        return []
+
+
+def parse_transactions_csv(file_path: str, broker: str = "generic") -> list[dict]:
+    """
+    Reads a transactions CSV and returns a list of transaction dicts.
+    Each dict must have keys: date, ticker, type (BUY/SELL), quantity, price
+    Normalizes column names to lowercase and strips whitespace.
+    Returns empty list on any error — never raises.
+    """
+    import pandas as pd
+    from pandas.errors import EmptyDataError
+    try:
+        df = pd.read_csv(file_path)
+        
+        detected = detect_broker(df)
+        if broker == "generic" and detected != "generic":
+            broker = detected
+            
+        if broker not in BROKER_COLUMN_MAPS:
+            broker = "generic"
+            
+        df.columns = [str(c).strip().lower() for c in df.columns]
+        
+        col_map = BROKER_COLUMN_MAPS[broker]["transactions"]
+        if col_map:
+            df.rename(columns=col_map, inplace=True)
+            
+        result = []
+        for _, row in df.iterrows():
+            t_type = str(row.get("type", "")).strip().upper()
+            if t_type == "B":
+                t_type = "BUY"
+            elif t_type == "S":
+                t_type = "SELL"
+                
+            result.append({
+                "date": str(row.get("date", "")),
+                "ticker": str(row.get("ticker", "")),
+                "type": t_type,
+                "quantity": float(row.get("quantity", 0.0)),
+                "price": float(row.get("price", 0.0))
+            })
+        return result
+    except (FileNotFoundError, EmptyDataError, KeyError) as e:
+        print(f"Error parsing transactions csv: {e}")
+        return []
+    except Exception as e:
+        print(f"Error parsing transactions csv: {e}")
+        return []
+

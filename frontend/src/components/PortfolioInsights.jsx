@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { Sparkle, Robot } from '@phosphor-icons/react';
 
 export default function PortfolioInsights({ insights }) {
   if (!insights || insights.stock_count === 0) return null;
@@ -20,7 +21,7 @@ export default function PortfolioInsights({ insights }) {
   return (
     <div className="insights-panel">
       <div className="insights-header">
-        <span className="insights-icon">✨</span>
+        <span className="insights-icon"><Sparkle size={20} weight="fill" /></span>
         <h3>AI Insights</h3>
       </div>
 
@@ -82,7 +83,7 @@ export default function PortfolioInsights({ insights }) {
       {/* AI Summary */}
       {ai_summary && (
         <div className="insight-card ai-summary-card">
-          <div className="insight-section-title">🤖 Gemini Analysis</div>
+          <div className="insight-section-title"><Robot size={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> Gemini Analysis</div>
           <p className="ai-summary-text">{ai_summary}</p>
         </div>
       )}

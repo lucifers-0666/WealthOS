@@ -163,30 +163,30 @@ export default function Layout() {
       <div className="layout-body">
         
         {/* ── Topbar ── */}
-        <header className="layout-topbar bg-[#102321] h-[48px] min-h-[48px] max-h-[48px] border-b border-[#2D3C37] px-[20px] pl-[24px] flex items-center justify-between">
+        <header className="layout-topbar bg-[var(--color-surface)] h-[48px] min-h-[48px] max-h-[48px] border-b border-[var(--color-border)] px-[20px] pl-[24px] flex items-center justify-between">
           {/* Left zone */}
           <div className="flex flex-col justify-center gap-[3px]">
-            <div className="font-inter text-[9px] font-medium tracking-[0.16em] uppercase text-[#7B7C70] leading-none">
+            <div className="font-inter text-[9px] font-medium tracking-[0.16em] uppercase text-[var(--color-text-faint)] leading-none">
               WEALTH INTELLIGENCE
             </div>
             <div className="flex flex-row items-center">
-              <h1 className="font-cinzel text-[18px] font-bold text-[#ECE0CC] m-0 leading-none">{title}</h1>
-              <span className="font-inter text-[11px] font-normal text-[#7B7C70] ml-[10px] leading-none">{sub}</span>
+              <h1 className="font-cinzel text-[18px] font-bold text-[var(--color-text)] m-0 leading-none">{title}</h1>
+              <span className="font-inter text-[11px] font-normal text-[var(--color-text-faint)] ml-[10px] leading-none">{sub}</span>
             </div>
           </div>
 
           {/* Center zone */}
-          <div className="flex items-center gap-[8px] bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-[10px] h-[30px] w-[300px] shrink-0 focus-within:border-[rgba(45,60,55,0.90)] transition-colors">
-            <MagnifyingGlass size={13} className="text-[#7B7C70] shrink-0" />
+          <div className="flex items-center gap-[8px] bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[3px] px-[10px] h-[30px] w-[300px] shrink-0 focus-within:border-[rgba(45,60,55,0.90)] transition-colors">
+            <MagnifyingGlass size={13} className="text-[var(--color-text-faint)] shrink-0" />
             <input
               ref={paletteInputRef}
               type="text"
               value={topSearch}
               onChange={(e) => setTopSearch(e.target.value)}
               placeholder={user?.email ?? "Search holdings, watchlist, news..."}
-              className="flex-1 bg-transparent border-none outline-none text-[#ECE0CC] font-inter text-[11px] placeholder:text-[#7B7C70]"
+              className="flex-1 bg-transparent border-none outline-none text-[var(--color-text)] font-inter text-[11px] placeholder:text-[var(--color-text-faint)]"
             />
-            <span className="bg-[#1E3530] border border-[#2D3C37] rounded-[2px] px-[5px] py-[2px] text-[9px] text-[#7B7C70] font-inter shrink-0 leading-none">
+            <span className="bg-[var(--color-overlay)] border border-[var(--color-border)] rounded-[2px] px-[5px] py-[2px] text-[9px] text-[var(--color-text-faint)] font-inter shrink-0 leading-none">
               CTRL K
             </span>
           </div>

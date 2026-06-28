@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
       <div className="auth-inner-container">
         <div className="auth-card-header">
           <div className="auth-icon-wrap">
-            <ShieldCheck size={28} weight="fill" color="#C8B38E" />
+            <ShieldCheck size={28} weight="fill" color="var(--color-gold)" />
           </div>
           <p className="auth-brand-title">Access Terminal</p>
           <p className="auth-brand-sub">Your private financial command center.</p>
@@ -67,15 +67,15 @@ export default function ForgotPasswordPage() {
 
         {error && (
           <div style={{ backgroundColor: 'rgba(182,106,106,0.06)', border: '1px solid rgba(182,106,106,0.60)', padding: '10px 12px', borderRadius: 3, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <span style={{ fontFamily: 'Inter', fontSize: 11, color: '#B66A6A' }}>{error}</span>
+            <span style={{ fontFamily: 'Inter', fontSize: 11, color: 'var(--color-loss)' }}>{error}</span>
           </div>
         )}
 
         {step === 1 ? (
           <form onSubmit={handleSendReset}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 16 }}>
-              <EnvelopeSimple size={32} color="#7B7C70" style={{ marginBottom: 12 }} />
-              <p style={{ fontFamily: 'Inter', fontSize: 12, color: '#ACA492', textAlign: 'center', maxWidth: 280, lineHeight: 1.55, margin: 0 }}>
+              <EnvelopeSimple size={32} color="var(--color-text-faint)" style={{ marginBottom: 12 }} />
+              <p style={{ fontFamily: 'Inter', fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center', maxWidth: 280, lineHeight: 1.55, margin: 0 }}>
                 Enter your registered email address. We'll send you a secure reset link.
               </p>
             </div>
@@ -105,14 +105,14 @@ export default function ForgotPasswordPage() {
           </form>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <CheckCircle size={40} color="#6FAE8D" weight="fill" style={{ marginBottom: 14 }} />
-            <h2 style={{ fontFamily: 'Cinzel', fontSize: 15, fontWeight: 700, color: '#ECE0CC', margin: '0 0 8px 0', textTransform: 'uppercase' }}>
+            <CheckCircle size={40} color="var(--color-gain)" weight="fill" style={{ marginBottom: 14 }} />
+            <h2 style={{ fontFamily: 'Cinzel', fontSize: 15, fontWeight: 700, color: 'var(--color-text)', margin: '0 0 8px 0', textTransform: 'uppercase' }}>
               Check your inbox
             </h2>
-            <p style={{ fontFamily: 'Inter', fontSize: 12, color: '#ACA492', textAlign: 'center', lineHeight: 1.55, margin: 0 }}>
+            <p style={{ fontFamily: 'Inter', fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center', lineHeight: 1.55, margin: 0 }}>
               A secure reset link has been sent to<br />{email}
             </p>
-            <p style={{ fontFamily: 'Inter', fontSize: 10, color: '#7B7C70', textAlign: 'center', margin: '12px 0 0 0' }}>
+            <p style={{ fontFamily: 'Inter', fontSize: 10, color: 'var(--color-text-faint)', textAlign: 'center', margin: '12px 0 0 0' }}>
               Link expires in 15 minutes. Check spam if not received.
             </p>
             

@@ -10,6 +10,7 @@ Endpoints:
 
 import uuid
 import logging
+import hashlib
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Header
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -53,6 +54,7 @@ class ConfirmImportRequest(BaseModel):
     merge_strategy: str = "skip"  # skip | update | always_add
     source: Optional[str] = "import"
     broker: Optional[str] = None
+    file_hash: Optional[str] = None
 
 
 # ── Upload & Process ─────────────────────────────────────────────────────
@@ -82,6 +84,18 @@ async def upload_and_process(
     if len(file_bytes) > 20 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File too large. Max 20 MB allowed.")
 
+    file_hash = hashlib.md5(file_bytes).hexdigest()
+    try:
+        from database.supabase_client import get_supabase
+        sb = get_supabase()
+        res = sb.table("import_history").select("id").eq("user_id", user_id).eq("file_hash", file_hash).execute()
+        if res.data:
+            raise HTTPException(status_code=409, detail="This file has already been imported.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Could not check import_history: {e}")
+
     logger.info(f"Import upload: user={user_id} file={file.filename} size={len(file_bytes)} type={file.content_type}")
 
     result = process_upload(file_bytes, file.content_type, file.filename)
@@ -101,6 +115,7 @@ async def upload_and_process(
         "ocr_confidence": result.get("ocr_confidence"),
         "file_type": result.get("file_type"),
         "count": len(holdings),
+        "file_hash": file_hash,
     }
 
 
@@ -138,6 +153,21 @@ async def confirm_import(
                 skipped.append(ticker)
                 continue
             elif body.merge_strategy == "update":
+                existing_holding = next(ex for ex in existing if ex["ticker"].upper() == ticker)
+                old_qty = float(existing_holding.get("quantity") or 0)
+                old_avg = float(existing_holding.get("avg_buy_price") or 0)
+                new_qty = float(h.quantity or 0)
+                new_avg = float(h.avg_buy_price or 0)
+                
+                total_qty = old_qty + new_qty
+                if total_qty > 0:
+                    weighted_avg = ((old_qty * old_avg) + (new_qty * new_avg)) / total_qty
+                else:
+                    weighted_avg = 0
+                
+                holding_data["quantity"] = total_qty
+                holding_data["avg_buy_price"] = weighted_avg
+                
                 upsert_holding(user_id, holding_data)
                 updated.append(ticker)
             else:  # always_add
@@ -146,6 +176,18 @@ async def confirm_import(
         else:
             upsert_holding(user_id, holding_data)
             saved.append(ticker)
+
+    if body.file_hash:
+        try:
+            from database.supabase_client import get_supabase
+            sb = get_supabase()
+            sb.table("import_history").insert({
+                "user_id": user_id,
+                "file_hash": body.file_hash,
+                "status": "completed"
+            }).execute()
+        except Exception as e:
+            logger.warning(f"Failed to record import_history: {e}")
 
     return {
         "saved": saved,
@@ -165,3 +207,15 @@ async def get_insights(
     holdings = [h.model_dump() for h in body.holdings]
     insights = generate_insights(holdings)
     return insights
+
+
+@router.get("/history")
+async def get_import_history(user_id: str = Depends(_get_user_id)):
+    try:
+        from database.supabase_client import get_supabase
+        sb = get_supabase()
+        res = sb.table("import_history").select("*").eq("user_id", user_id).order("imported_at", desc=True).limit(50).execute()
+        return {"history": res.data or []}
+    except Exception as e:
+        logger.error(f"get_import_history error: {e}", exc_info=e)
+        return {"history": []}

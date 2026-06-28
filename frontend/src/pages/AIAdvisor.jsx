@@ -144,17 +144,17 @@ export default function AIAdvisor() {
   }, [input, loading, buildPortfolioContext, tryStream, tryRegular]);
 
   return (
-    <div className="flex flex-col h-full bg-[#0A201F] animate-[fadeSlideUp_0.4s_ease-out]">
+    <div className="flex flex-col h-full bg-[var(--color-bg)] animate-[fadeSlideUp_0.4s_ease-out]">
       {/* 1. PAGE HEADER */}
-      <div className="px-6 py-5 border-b border-[#2D3C37] shrink-0">
+      <div className="px-6 py-5 border-b border-[var(--color-border)] shrink-0">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="font-cinzel text-xl font-bold text-[#ECE0CC] tracking-wide">AI Advisor</h1>
-            <p className="font-inter text-[11px] text-[#7B7C70] mt-1">Portfolio-aware · Gemini powered</p>
+            <h1 className="font-cinzel text-xl font-bold text-[var(--color-text)] tracking-wide">AI Advisor</h1>
+            <p className="font-inter text-[11px] text-[var(--color-text-faint)] mt-1">Portfolio-aware · Gemini powered</p>
           </div>
           {loading && (
-            <span className="flex items-center gap-2 font-inter text-[10px] uppercase text-[#6FAE8D] tracking-wide">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#6FAE8D] animate-pulse" />
+            <span className="flex items-center gap-2 font-inter text-[10px] uppercase text-[var(--color-gain)] tracking-wide">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-gain)] animate-pulse" />
               {streaming ? 'Streaming...' : 'Thinking...'}
             </span>
           )}
@@ -162,13 +162,13 @@ export default function AIAdvisor() {
       </div>
 
       {/* 3. PROMPT PILLS */}
-      <div className="px-6 py-4 flex gap-3 overflow-x-auto scrollbar-none border-b border-[#2D3C37] shrink-0">
+      <div className="px-6 py-4 flex gap-3 overflow-x-auto scrollbar-none border-b border-[var(--color-border)] shrink-0">
         {SMART_PROMPTS.map((sp, i) => (
           <button
             key={sp.label}
             onClick={() => sendMessage(sp.text)}
             disabled={loading}
-            className="shrink-0 px-3 py-1.5 rounded-[3px] border border-[#2D3C37] bg-[#0A201F] font-inter text-[9px] uppercase tracking-[0.1em] text-[#7B7C70] transition-colors disabled:opacity-40 hover:text-[#ECE0CC] hover:border-[#C8B38E]"
+            className="shrink-0 px-3 py-1.5 rounded-[3px] border border-[var(--color-border)] bg-[var(--color-bg)] font-inter text-[9px] uppercase tracking-[0.1em] text-[var(--color-text-faint)] transition-colors disabled:opacity-40 hover:text-[var(--color-text)] hover:border-[var(--color-gold)]"
             style={{ animation: `fadeSlideUp 0.3s ease-out ${i*50}ms backwards` }}
           >
             {sp.label}
@@ -183,18 +183,18 @@ export default function AIAdvisor() {
             <div
               className={`max-w-[80%] px-5 py-4 rounded-[4px] leading-relaxed whitespace-pre-wrap ${
                 msg.role === 'user'
-                  ? 'bg-[#172923] border border-[#2D3C37] text-[#ECE0CC] font-inter text-[13px]'
+                  ? 'bg-[var(--color-card)] border border-[var(--color-border)] text-[var(--color-text)] font-inter text-[13px]'
                   : msg.isError
-                  ? 'bg-[rgba(182,106,106,0.1)] border border-[rgba(182,106,106,0.3)] text-[#B66A6A] font-inter text-[13px]'
-                  : 'bg-transparent border-none text-[#ACA492] font-serif text-[15px]'
+                  ? 'bg-[rgba(182,106,106,0.1)] border border-[rgba(182,106,106,0.3)] text-[var(--color-loss)] font-inter text-[13px]'
+                  : 'bg-transparent border-none text-[var(--color-text-muted)] font-serif text-[15px]'
               }`}
             >
               {msg.content}
               {msg.streaming && (
                 <span className="inline-flex gap-1 ml-2 align-middle">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#6FAE8D] animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#6FAE8D] animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#6FAE8D] animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-gain)] animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-gain)] animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-gain)] animate-bounce" style={{ animationDelay: '300ms' }} />
                 </span>
               )}
             </div>
@@ -204,7 +204,7 @@ export default function AIAdvisor() {
       </div>
 
       {/* 5. INPUT BAR */}
-      <div className="px-6 py-5 border-t border-[#2D3C37] bg-[#0A201F] shrink-0">
+      <div className="px-6 py-5 border-t border-[var(--color-border)] bg-[var(--color-bg)] shrink-0">
         <div className="flex gap-3">
           <input
             value={input}
@@ -212,19 +212,19 @@ export default function AIAdvisor() {
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             placeholder="Ask anything about your portfolio..."
             disabled={loading}
-            className="flex-1 px-4 py-3 rounded-[3px] bg-[#172923] border border-[#2D3C37] text-[#ECE0CC] font-inter text-[13px] focus:outline-none focus:border-[rgba(200,179,142,0.5)] transition-colors disabled:opacity-50 placeholder-[#7B7C70]"
+            className="flex-1 px-4 py-3 rounded-[3px] bg-[var(--color-card)] border border-[var(--color-border)] text-[var(--color-text)] font-inter text-[13px] focus:outline-none focus:border-[rgba(200,179,142,0.5)] transition-colors disabled:opacity-50 placeholder-[var(--color-text-faint)]"
           />
           <button
             onClick={() => sendMessage()}
             disabled={loading || !input.trim()}
-            className="px-6 py-3 rounded-[3px] font-inter text-[12px] font-bold tracking-wide transition-all disabled:opacity-40 bg-[#C8B38E] text-[#0A201F] hover:brightness-110"
+            className="px-6 py-3 rounded-[3px] font-inter text-[12px] font-bold tracking-wide transition-all disabled:opacity-40 bg-[var(--color-gold)] text-[var(--color-bg)] hover:brightness-110"
           >
             {loading ? '...' : 'SEND'}
           </button>
         </div>
         <div className="flex justify-between items-center mt-3 px-1">
-          <p className="font-inter text-[9px] uppercase tracking-wide text-[#7B7C70]">Portfolio context auto-injected</p>
-          <p className="font-inter text-[9px] uppercase tracking-wide text-[#7B7C70]">Powered by Gemini</p>
+          <p className="font-inter text-[9px] uppercase tracking-wide text-[var(--color-text-faint)]">Portfolio context auto-injected</p>
+          <p className="font-inter text-[9px] uppercase tracking-wide text-[var(--color-text-faint)]">Powered by Gemini</p>
         </div>
       </div>
     </div>

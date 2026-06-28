@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useRef, useCallback } from 'react';
+import { ImageSquare, FileText, ChartBar, Folder, TrayArrowDown, Robot } from '@phosphor-icons/react';
 
 const ACCEPTED_TYPES = [
   'image/jpeg', 'image/png', 'image/webp',
@@ -15,11 +16,11 @@ const ACCEPTED_TYPES = [
 const ACCEPTED_EXTS = '.jpg,.jpeg,.png,.webp,.pdf,.csv,.xlsx,.xls';
 
 const FILE_TYPE_ICONS = {
-  'image/jpeg': '🖼️', 'image/png': '🖼️', 'image/webp': '🖼️',
-  'application/pdf': '📄',
-  'text/csv': '📊',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊',
-  'application/vnd.ms-excel': '📊',
+  'image/jpeg': <ImageSquare size={32} />, 'image/png': <ImageSquare size={32} />, 'image/webp': <ImageSquare size={32} />,
+  'application/pdf': <FileText size={32} />,
+  'text/csv': <ChartBar size={32} />,
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': <ChartBar size={32} />,
+  'application/vnd.ms-excel': <ChartBar size={32} />,
 };
 
 export default function ImportUploader({ onUpload, isProcessing }) {
@@ -96,7 +97,7 @@ export default function ImportUploader({ onUpload, isProcessing }) {
               <img src={preview} alt="Preview" className="file-preview-img" />
             ) : (
               <div className="file-icon-large">
-                {FILE_TYPE_ICONS[file.type] || '📁'}
+                {FILE_TYPE_ICONS[file.type] || <Folder size={32} />}
               </div>
             )}
             <div className="file-info">
@@ -113,7 +114,7 @@ export default function ImportUploader({ onUpload, isProcessing }) {
           </div>
         ) : (
           <div className="uploader-empty">
-            <div className="uploader-icon">📥</div>
+            <div className="uploader-icon"><TrayArrowDown size={32} /></div>
             <p className="uploader-main-text">Drop your portfolio file here</p>
             <p className="uploader-sub-text">or click to browse</p>
             <div className="supported-formats">
@@ -139,7 +140,7 @@ export default function ImportUploader({ onUpload, isProcessing }) {
       {file && !isProcessing && (
         <div className="uploader-action">
           <button className="btn-primary btn-lg" onClick={() => onUpload(file)}>
-            <span>🤖</span> Extract with AI
+            <span><Robot size={18} /></span> Extract with AI
           </button>
         </div>
       )}

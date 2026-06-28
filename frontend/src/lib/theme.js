@@ -4,20 +4,20 @@
 
 export const theme = {
   colors: {
-    bg:         '#0A201F',
-    bgSoft:     '#102321',
-    surface:    '#172923',
-    overlay:    '#1E3530',
-    border:     '#2D3C37',
+    bg:         'var(--color-bg)',
+    bgSoft:     'var(--color-surface)',
+    surface:    'var(--color-card)',
+    overlay:    'var(--color-overlay)',
+    border:     'var(--color-border)',
     borderSubtle: 'rgba(45,60,55,0.55)',
-    text:       '#ECE0CC',
-    textSoft:   '#ACA492',
-    textMuted:  '#7B7C70',
-    accent:     '#C8B38E',
-    gold:       '#C8B38E',
-    success:    '#6FAE8D',
-    warning:    '#D2A76D',
-    error:      '#B66A6A',
+    text:       'var(--color-text)',
+    textSoft:   'var(--color-text-muted)',
+    textMuted:  'var(--color-text-faint)',
+    accent:     'var(--color-gold)',
+    gold:       'var(--color-gold)',
+    success:    'var(--color-gain)',
+    warning:    'var(--color-warn)',
+    error:      'var(--color-loss)',
   },
   radius: {
     sm: 3,
@@ -31,8 +31,8 @@ export const theme = {
 
 export function panelStyle(extra = {}) {
   return {
-    background: '#172923',
-    border: '1px solid #2D3C37',
+    background: 'var(--color-card)',
+    border: '1px solid var(--color-border)',
     borderRadius: 3,
     ...extra,
   };
@@ -43,9 +43,9 @@ export function fieldStyle(extra = {}) {
     width: '100%',
     minHeight: 38,
     borderRadius: 3,
-    border: '1px solid #2D3C37',
-    background: '#0A201F',
-    color: '#ECE0CC',
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-bg)',
+    color: 'var(--color-text)',
     padding: '9px 12px',
     outline: 'none',
     fontFamily: 'Inter, sans-serif',

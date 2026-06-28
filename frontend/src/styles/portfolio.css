@@ -6,30 +6,30 @@
 /* ── Design Tokens ─────────────────────────────────────────────── */
 :root {
   /* Colors */
-  --bg-base:        #0A201F;
-  --bg-secondary:   #102321;
-  --bg-surface:     #172923;
+  --bg-base:        var(--color-bg);
+  --bg-secondary:   var(--color-surface);
+  --bg-surface:     var(--color-card);
   --bg-overlay:     rgba(30, 53, 48, 0.70);
 
-  --border-default: #2D3C37;
+  --border-default: var(--color-border);
   --border-subtle:  rgba(45, 60, 55, 0.55);
   --border-gold:    rgba(200, 179, 142, 0.25);
 
-  --text-primary:   #ECE0CC;
-  --text-secondary: #ACA492;
-  --text-muted:     #7B7C70;
+  --text-primary:   var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --text-muted:     var(--color-text-faint);
 
-  --accent-gold:     #C8B38E;
+  --accent-gold:     var(--color-gold);
   --accent-gold-dim: rgba(200, 179, 142, 0.12);
 
-  --status-gain:     #6FAE8D;
-  --status-loss:     #B66A6A;
+  --status-gain:     var(--color-gain);
+  --status-loss:     var(--color-loss);
   --fill-gain:       rgba(111, 174, 141, 0.12);
   --fill-loss:       rgba(182, 106, 106, 0.12);
   --border-gain:     rgba(111, 174, 141, 0.28);
   --border-loss:     rgba(182, 106, 106, 0.28);
 
-  --status-warning:  #D2A76D;
+  --status-warning:  var(--color-warn);
 
   /* Fonts */
   --font-display:   'Cinzel', 'Georgia', serif;
@@ -189,7 +189,7 @@
 .arca-kpi-card.neutral .arca-kpi-accent { background: rgba(45, 60, 55, 0.90); }
 .arca-kpi-card.gain .arca-kpi-accent { background: var(--status-gain); }
 .arca-kpi-card.loss .arca-kpi-accent { background: var(--status-loss); }
-.arca-kpi-card.blue .arca-kpi-accent { background: #869FC4; }
+.arca-kpi-card.blue .arca-kpi-accent { background: var(--color-blue); }
 
 .arca-kpi-live-badge {
   position: absolute;

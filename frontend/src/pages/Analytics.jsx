@@ -67,8 +67,8 @@ function calcBeta(portfolioReturns, benchmarkReturns) {
 function SectionHeader({ title }) {
   return (
     <div className="flex items-center gap-2 mb-4">
-      <div className="w-[2px] h-3 bg-[#C8B38E]"></div>
-      <h3 className="font-cinzel text-[10px] font-semibold uppercase tracking-[0.14em] text-[#ACA492]">
+      <div className="w-[2px] h-3 bg-[var(--color-gold)]"></div>
+      <h3 className="font-cinzel text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
         {title}
       </h3>
     </div>
@@ -210,19 +210,19 @@ export default function Analytics() {
       {/* 1. PAGE HEADER */}
       <div className="flex justify-between items-end mb-5 px-6 py-5 shrink-0 animate-[fadeSlideUp_0.4s_ease-out]">
         <div>
-          <div className="font-inter text-[9px] uppercase tracking-wide text-[#7B7C70] mb-1">WEALTH INTELLIGENCE</div>
-          <h1 className="font-cinzel text-xl font-bold text-[#ECE0CC] tracking-wide">Analytics</h1>
-          <div className="font-inter text-[11px] text-[#7B7C70] mt-1">Deep performance analysis & portfolio breakdown</div>
+          <div className="font-inter text-[9px] uppercase tracking-wide text-[var(--color-text-faint)] mb-1">WEALTH INTELLIGENCE</div>
+          <h1 className="font-cinzel text-xl font-bold text-[var(--color-text)] tracking-wide">Analytics</h1>
+          <div className="font-inter text-[11px] text-[var(--color-text-faint)] mt-1">Deep performance analysis & portfolio breakdown</div>
         </div>
-        <div className="flex bg-[#0A201F] border border-[#2D3C37] rounded-[3px] overflow-hidden">
+        <div className="flex bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[3px] overflow-hidden">
           {['1W','1M','3M','6M','1Y','ALL'].map((tab) => (
             <button
               key={tab}
               onClick={() => setRange(tab)}
               className={`px-3 py-1.5 font-inter text-[11px] font-medium transition-colors ${
                 range === tab 
-                  ? 'text-[#C8B38E] border-b border-[#C8B38E] bg-[rgba(200,179,142,0.05)]' 
-                  : 'text-[#7B7C70] hover:text-[#ACA492]'
+                  ? 'text-[var(--color-gold)] border-b border-[var(--color-gold)] bg-[rgba(200,179,142,0.05)]' 
+                  : 'text-[var(--color-text-faint)] hover:text-[var(--color-text-muted)]'
               }`}
             >
               {tab}
@@ -236,30 +236,30 @@ export default function Analytics() {
         
         {/* 2. KPI ROW */}
         <div className="grid grid-cols-4 gap-3 mb-4">
-          <div className="bg-[#172923] border border-[#2D3C37] border-l-[2px] border-l-[#C8B38E] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_60ms_both]">
-            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-2">CAGR</div>
-            <div className="font-mono text-[26px] font-bold text-[#C8B38E] mb-1 animate-[countUp_1s_ease-out]">{fmt(cagr)}%</div>
-            <div className="font-inter text-[11px] text-[#ACA492]">Annualized return</div>
+          <div className="bg-[var(--color-card)] border border-[var(--color-border)] border-l-[2px] border-l-[var(--color-gold)] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_60ms_both]">
+            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[var(--color-text-faint)] mb-2">CAGR</div>
+            <div className="font-mono text-[26px] font-bold text-[var(--color-gold)] mb-1 animate-[countUp_1s_ease-out]">{fmt(cagr)}%</div>
+            <div className="font-inter text-[11px] text-[var(--color-text-muted)]">Annualized return</div>
           </div>
-          <div className="bg-[#172923] border border-[#2D3C37] border-l-[2px] border-l-[rgba(134,159,196,0.9)] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_120ms_both]">
-            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-2">SHARPE RATIO</div>
-            <div className="font-mono text-[26px] font-bold text-[#ECE0CC] mb-1 animate-[countUp_1s_ease-out]">{fmt(sharpe)}</div>
-            <div className="font-inter text-[11px] text-[#ACA492]">Risk-adjusted return</div>
+          <div className="bg-[var(--color-card)] border border-[var(--color-border)] border-l-[2px] border-l-[rgba(134,159,196,0.9)] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_120ms_both]">
+            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[var(--color-text-faint)] mb-2">SHARPE RATIO</div>
+            <div className="font-mono text-[26px] font-bold text-[var(--color-text)] mb-1 animate-[countUp_1s_ease-out]">{fmt(sharpe)}</div>
+            <div className="font-inter text-[11px] text-[var(--color-text-muted)]">Risk-adjusted return</div>
           </div>
-          <div className="bg-[#172923] border border-[#2D3C37] border-l-[2px] border-l-[#B66A6A] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_180ms_both]">
-            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-2">MAX DRAWDOWN</div>
-            <div className="font-mono text-[26px] font-bold text-[#B66A6A] mb-1 animate-[countUp_1s_ease-out]">{fmt(maxDrawdown)}%</div>
-            <div className="font-inter text-[11px] text-[#ACA492]">Peak to trough</div>
+          <div className="bg-[var(--color-card)] border border-[var(--color-border)] border-l-[2px] border-l-[var(--color-loss)] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_180ms_both]">
+            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[var(--color-text-faint)] mb-2">MAX DRAWDOWN</div>
+            <div className="font-mono text-[26px] font-bold text-[var(--color-loss)] mb-1 animate-[countUp_1s_ease-out]">{fmt(maxDrawdown)}%</div>
+            <div className="font-inter text-[11px] text-[var(--color-text-muted)]">Peak to trough</div>
           </div>
-          <div className="bg-[#172923] border border-[#2D3C37] border-l-[2px] border-l-[#6FAE8D] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_240ms_both]">
-            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-2">WIN RATE</div>
-            <div className="font-mono text-[26px] font-bold text-[#6FAE8D] mb-1 animate-[countUp_1s_ease-out]">{fmt(winRate)}%</div>
-            <div className="font-inter text-[11px] text-[#ACA492]">Profitable trades</div>
+          <div className="bg-[var(--color-card)] border border-[var(--color-border)] border-l-[2px] border-l-[var(--color-gain)] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_240ms_both]">
+            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[var(--color-text-faint)] mb-2">WIN RATE</div>
+            <div className="font-mono text-[26px] font-bold text-[var(--color-gain)] mb-1 animate-[countUp_1s_ease-out]">{fmt(winRate)}%</div>
+            <div className="font-inter text-[11px] text-[var(--color-text-muted)]">Profitable trades</div>
           </div>
         </div>
 
         {/* 3. PERFORMANCE CHART CARD */}
-        <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 mb-4 animate-[fadeSlideUp_0.4s_ease-out_300ms_both]">
+        <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-[3px] p-5 mb-4 animate-[fadeSlideUp_0.4s_ease-out_300ms_both]">
           <div className="flex justify-between items-center mb-4">
             <SectionHeader title="PORTFOLIO PERFORMANCE" />
             <div className="flex gap-4">
@@ -268,7 +268,7 @@ export default function Analytics() {
                   key={tab}
                   onClick={() => setChartTab(tab)}
                   className={`font-inter text-[9px] uppercase pb-1 transition-colors ${
-                    chartTab === tab ? 'text-[#ECE0CC] border-b border-[#C8B38E]' : 'text-[#7B7C70] hover:text-[#ACA492]'
+                    chartTab === tab ? 'text-[var(--color-text)] border-b border-[var(--color-gold)]' : 'text-[var(--color-text-faint)] hover:text-[var(--color-text-muted)]'
                   }`}
                 >
                   {tab}
@@ -277,24 +277,24 @@ export default function Analytics() {
             </div>
           </div>
           
-          <div className="h-[220px] bg-[#0A201F] rounded-[3px] p-2 relative overflow-hidden group">
+          <div className="h-[220px] bg-[var(--color-bg)] rounded-[3px] p-2 relative overflow-hidden group">
             {loadingHistory ? (
-               <div className="absolute inset-0 flex items-center justify-center text-[#7B7C70] font-inter text-xs">Loading chart data...</div>
+               <div className="absolute inset-0 flex items-center justify-center text-[var(--color-text-faint)] font-inter text-xs">Loading chart data...</div>
             ) : chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid stroke="rgba(45,60,55,0.45)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="date" tick={{ fill: '#7B7C70', fontSize: 9, fontFamily: 'Inter' }} axisLine={false} tickLine={false} minTickGap={30} />
-                  <YAxis tick={{ fill: '#7B7C70', fontSize: 9, fontFamily: 'Inter' }} axisLine={false} tickLine={false} width={40} />
+                  <XAxis dataKey="date" tick={{ fill: 'var(--color-text-faint)', fontSize: 9, fontFamily: 'Inter' }} axisLine={false} tickLine={false} minTickGap={30} />
+                  <YAxis tick={{ fill: 'var(--color-text-faint)', fontSize: 9, fontFamily: 'Inter' }} axisLine={false} tickLine={false} width={40} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#1E3530', border: '1px solid #2D3C37', borderRadius: '3px', color: '#ECE0CC', fontFamily: 'Inter', fontSize: '11px' }}
-                    itemStyle={{ color: '#C8B38E' }}
+                    contentStyle={{ backgroundColor: 'var(--color-overlay)', border: '1px solid var(--color-border)', borderRadius: '3px', color: 'var(--color-text)', fontFamily: 'Inter', fontSize: '11px' }}
+                    itemStyle={{ color: 'var(--color-gold)' }}
                   />
                   <ReferenceLine y={0} stroke="rgba(200,179,142,0.25)" strokeDasharray="3 3" />
                   <Line 
                     type="monotone" 
                     dataKey={chartTab === 'Returns' ? 'returns' : chartTab === 'Benchmark' ? 'benchmark' : 'portfolio'} 
-                    stroke="#C8B38E" 
+                    stroke="var(--color-gold)" 
                     strokeWidth={1.5} 
                     dot={false}
                     isAnimationActive={true}
@@ -305,25 +305,25 @@ export default function Analytics() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-[#7B7C70] font-inter text-xs">No chart data available.</div>
+              <div className="absolute inset-0 flex items-center justify-center text-[var(--color-text-faint)] font-inter text-xs">No chart data available.</div>
             )}
           </div>
         </div>
 
         {/* 4. SECTOR BREAKDOWN + MONTHLY RETURNS */}
         <div className="grid grid-cols-[auto_316px] gap-4 mb-4">
-          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_360ms_both]">
+          <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_360ms_both]">
             <SectionHeader title="SECTOR EXPOSURE" />
             <div className="flex flex-col gap-[14px] mt-4">
               {sectors.slice(0, 6).map((sec, i) => (
                 <div key={sec.name} className="flex flex-col group transition-colors duration-180 hover:bg-[rgba(255,255,255,0.025)] p-1 -mx-1 rounded">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-inter text-[12px] text-[#ECE0CC]">{sec.name}</span>
-                    <span className="font-mono text-[12px] text-[#C8B38E]">{fmt(sec.pct, 1)}%</span>
+                    <span className="font-inter text-[12px] text-[var(--color-text)]">{sec.name}</span>
+                    <span className="font-mono text-[12px] text-[var(--color-gold)]">{fmt(sec.pct, 1)}%</span>
                   </div>
                   <div className="h-[6px] rounded-[2px] bg-[rgba(45,60,55,0.5)] w-full overflow-hidden">
                     <div 
-                      className="h-full bg-[#C8B38E] rounded-[2px]"
+                      className="h-full bg-[var(--color-gold)] rounded-[2px]"
                       style={{ 
                         width: `${sec.pct}%`, 
                         animation: `slideRight 0.8s ease-out ${i*80}ms backwards` 
@@ -335,26 +335,26 @@ export default function Analytics() {
             </div>
           </div>
 
-          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_420ms_both]">
+          <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_420ms_both]">
             <SectionHeader title="MONTHLY RETURNS" />
             <div className="grid grid-cols-3 gap-1 mt-4">
               {monthlyReturns.map((m, i) => {
                 let bg = 'rgba(45,60,55,0.4)';
-                let color = '#ACA492';
-                if (m.val > 3) { bg = 'rgba(111,174,141,0.35)'; color = '#6FAE8D'; }
-                else if (m.val > 1) { bg = 'rgba(111,174,141,0.15)'; color = '#6FAE8D'; }
-                else if (m.val < -3) { bg = 'rgba(182,106,106,0.30)'; color = '#B66A6A'; }
-                else if (m.val < -1) { bg = 'rgba(182,106,106,0.15)'; color = '#B66A6A'; }
+                let color = 'var(--color-text-muted)';
+                if (m.val > 3) { bg = 'rgba(111,174,141,0.35)'; color = 'var(--color-gain)'; }
+                else if (m.val > 1) { bg = 'rgba(111,174,141,0.15)'; color = 'var(--color-gain)'; }
+                else if (m.val < -3) { bg = 'rgba(182,106,106,0.30)'; color = 'var(--color-loss)'; }
+                else if (m.val < -1) { bg = 'rgba(182,106,106,0.15)'; color = 'var(--color-loss)'; }
                 return (
                   <div 
                     key={m.month} 
-                    className="h-[40px] rounded-[2px] border border-[#2D3C37] flex flex-col justify-center items-center transition-colors duration-180 hover:brightness-125"
+                    className="h-[40px] rounded-[2px] border border-[var(--color-border)] flex flex-col justify-center items-center transition-colors duration-180 hover:brightness-125"
                     style={{ 
                       backgroundColor: bg,
                       animation: `fadeSlideUp 0.4s ease-out ${420 + i*30}ms backwards` 
                     }}
                   >
-                    <span className="font-inter text-[9px] text-[#7B7C70] uppercase">{m.month}</span>
+                    <span className="font-inter text-[9px] text-[var(--color-text-faint)] uppercase">{m.month}</span>
                     <span className="font-mono text-[11px] font-bold" style={{ color }}>{m.val > 0 ? '+' : ''}{fmt(m.val, 1)}%</span>
                   </div>
                 );
@@ -365,7 +365,7 @@ export default function Analytics() {
 
         {/* 5. RISK METRICS + TOP MOVERS */}
         <div className="grid grid-cols-[auto_316px] gap-4">
-          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_480ms_both]">
+          <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_480ms_both]">
             <SectionHeader title="RISK METRICS" />
             <div className="flex flex-col mt-2">
               {[
@@ -377,14 +377,14 @@ export default function Analytics() {
                 { label: 'Correlation', val: '0.73 vs NIFTY' }
               ].map((metric, i) => (
                 <div key={metric.label} className="flex justify-between items-center py-3 border-b border-[rgba(45,60,55,0.55)] last:border-0 group hover:bg-[rgba(255,255,255,0.025)] transition-colors">
-                  <span className="font-inter text-[11px] text-[#ACA492]">{metric.label}</span>
-                  <span className="font-mono text-[13px] font-bold text-[#ECE0CC]">{metric.val}</span>
+                  <span className="font-inter text-[11px] text-[var(--color-text-muted)]">{metric.label}</span>
+                  <span className="font-mono text-[13px] font-bold text-[var(--color-text)]">{metric.val}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_540ms_both]">
+          <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-[3px] p-5 animate-[fadeSlideUp_0.4s_ease-out_540ms_both]">
             <div className="flex justify-between items-center mb-4">
               <SectionHeader title="TOP MOVERS" />
               <div className="flex gap-3">
@@ -393,7 +393,7 @@ export default function Analytics() {
                     key={tab}
                     onClick={() => setMoversTab(tab)}
                     className={`font-inter text-[9px] uppercase pb-1 transition-colors ${
-                      moversTab === tab ? 'text-[#ECE0CC] border-b border-[#C8B38E]' : 'text-[#7B7C70] hover:text-[#ACA492]'
+                      moversTab === tab ? 'text-[var(--color-text)] border-b border-[var(--color-gold)]' : 'text-[var(--color-text-faint)] hover:text-[var(--color-text-muted)]'
                     }`}
                   >
                     {tab}
@@ -404,12 +404,12 @@ export default function Analytics() {
             
             <div className="flex flex-col">
               {(moversTab === 'GAINERS' ? sorted.filter(s=>s.pnl>0).slice(0,4) : sorted.filter(s=>s.pnl<0).reverse().slice(0,4)).map((s, i) => (
-                <div key={s.ticker} className="flex justify-between items-center py-2.5 border-b border-[#2D3C37] last:border-0 group hover:bg-[rgba(255,255,255,0.025)] transition-colors">
+                <div key={s.ticker} className="flex justify-between items-center py-2.5 border-b border-[var(--color-border)] last:border-0 group hover:bg-[rgba(255,255,255,0.025)] transition-colors">
                   <div className="flex flex-col">
-                    <span className="font-cinzel text-[13px] text-[#ECE0CC]">{s.ticker}</span>
-                    <span className="font-inter text-[10px] text-[#7B7C70]">{s.sector || 'Equities'}</span>
+                    <span className="font-cinzel text-[13px] text-[var(--color-text)]">{s.ticker}</span>
+                    <span className="font-inter text-[10px] text-[var(--color-text-faint)]">{s.sector || 'Equities'}</span>
                   </div>
-                  <div className={`font-mono text-[13px] font-bold flex items-center gap-1 ${s.pnl > 0 ? 'text-[#6FAE8D]' : 'text-[#B66A6A]'}`}>
+                  <div className={`font-mono text-[13px] font-bold flex items-center gap-1 ${s.pnl > 0 ? 'text-[var(--color-gain)]' : 'text-[var(--color-loss)]'}`}>
                     <span>{s.pnl > 0 ? '↑' : '↓'}</span>
                     <span>{fmt(s.pnlPct)}%</span>
                   </div>

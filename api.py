@@ -19,6 +19,10 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Hea
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import logging
@@ -55,7 +59,13 @@ from backend.services.live_market_engine import LiveMarketEngine
 
 live_market_engine = LiveMarketEngine()
 
+limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
+
 app = FastAPI(title="WealthOS API", version="2.3.0")
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 
 @app.on_event("startup")

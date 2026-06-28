@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { Warning, Trash, ArrowUUpLeft } from '@phosphor-icons/react';
 
 export default function ImportPreview({ holdings, onChange }) {
   const [editingIdx, setEditingIdx] = useState(null);
@@ -55,7 +56,7 @@ export default function ImportPreview({ holdings, onChange }) {
             </tr>
           </thead>
           <tbody>
-            {holdings.map((h, idx) => {
+            {holdings.slice(0, 10).map((h, idx) => {
               if (h._deleted) return null;
               const isEditing = editingIdx === idx;
               const pnl = h.pnl !== null && h.pnl !== undefined ? h.pnl :
@@ -84,7 +85,7 @@ export default function ImportPreview({ holdings, onChange }) {
                         title={!h.ticker_valid ? 'Unrecognised ticker — click to edit' : ''}
                       >
                         {h.ticker}
-                        {!h.ticker_valid && <span className="warn-dot">⚠</span>}
+                        {!h.ticker_valid && <span className="warn-dot"><Warning size={12} weight="bold" /></span>}
                       </span>
                     )}
                   </td>
@@ -164,7 +165,7 @@ export default function ImportPreview({ holdings, onChange }) {
 
                   <td className="row-action">
                     <button className="row-delete" onClick={() => deleteRow(idx)} title="Remove row">
-                      🗑
+                      <Trash size={16} weight="bold" />
                     </button>
                   </td>
                 </tr>
@@ -172,6 +173,11 @@ export default function ImportPreview({ holdings, onChange }) {
             })}
           </tbody>
         </table>
+        {holdings.length > 10 && (
+          <div className="p-3 text-center text-[var(--color-text-faint)] font-inter text-[11px] border-t border-[var(--color-border)]">
+            + {holdings.length - 10} more rows (only previewing first 10)
+          </div>
+        )}
       </div>
 
       {/* Deleted rows restore section */}
@@ -180,7 +186,7 @@ export default function ImportPreview({ holdings, onChange }) {
           <span className="deleted-label">{deleted.length} removed</span>
           {holdings.map((h, idx) => h._deleted ? (
             <button key={idx} className="restore-btn" onClick={() => restoreRow(idx)}>
-              ↩ {h.ticker}
+              <ArrowUUpLeft size={14} weight="bold" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {h.ticker}
             </button>
           ) : null)}
         </div>

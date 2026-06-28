@@ -21,9 +21,9 @@ export default function Signals() {
   }
 
   const kpis = [
-    { label: 'ACTIVE SIGNALS', value: '14', border: '#C8B38E' },
+    { label: 'ACTIVE SIGNALS', value: '14', border: 'var(--color-gold)' },
     { label: 'SUCCESS RATE', value: '68.5%', border: 'rgba(134,159,196,0.9)' },
-    { label: 'AVG RETURN', value: '+4.2%', border: '#6FAE8D', valColor: '#6FAE8D' },
+    { label: 'AVG RETURN', value: '+4.2%', border: 'var(--color-gain)', valColor: 'var(--color-gain)' },
   ];
 
   return (
@@ -31,10 +31,10 @@ export default function Signals() {
       {/* 1. PAGE HEADER */}
       <div className="flex justify-between items-center mb-6 shrink-0">
         <div>
-          <h1 className="font-cinzel text-xl font-bold text-[#ECE0CC] tracking-wide">Algorithmic Signals</h1>
-          <div className="font-inter text-[11px] text-[#7B7C70] mt-1">Automated technical & quantitative alerts</div>
+          <h1 className="font-cinzel text-xl font-bold text-[var(--color-text)] tracking-wide">Algorithmic Signals</h1>
+          <div className="font-inter text-[11px] text-[var(--color-text-faint)] mt-1">Automated technical & quantitative alerts</div>
         </div>
-        <button className="border border-[#2D3C37] text-[#ACA492] rounded-[3px] px-3 py-1.5 font-inter text-[12px] hover:border-[rgba(200,179,142,0.3)] hover:text-[#ECE0CC] transition-colors">
+        <button className="border border-[var(--color-border)] text-[var(--color-text-muted)] rounded-[3px] px-3 py-1.5 font-inter text-[12px] hover:border-[rgba(200,179,142,0.3)] hover:text-[var(--color-text)] transition-colors">
           Configure
         </button>
       </div>
@@ -42,9 +42,9 @@ export default function Signals() {
       {/* 2. SIGNAL CARDS ROW */}
       <div className="grid grid-cols-3 gap-4 mb-6 shrink-0">
         {kpis.map((k, i) => (
-          <div key={k.label} className="bg-[#172923] border border-[#2D3C37] border-l-[2px] rounded-[3px] p-4 animate-[fadeSlideUp_0.4s_ease-out_both]" style={{ borderLeftColor: k.border, animationDelay: `${i*100}ms` }}>
-            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#7B7C70] mb-2">{k.label}</div>
-            <div className="font-mono text-[24px] font-bold" style={{ color: k.valColor || '#ECE0CC' }}>{k.value}</div>
+          <div key={k.label} className="bg-[var(--color-card)] border border-[var(--color-border)] border-l-[2px] rounded-[3px] p-4 animate-[fadeSlideUp_0.4s_ease-out_both]" style={{ borderLeftColor: k.border, animationDelay: `${i*100}ms` }}>
+            <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[var(--color-text-faint)] mb-2">{k.label}</div>
+            <div className="font-mono text-[24px] font-bold" style={{ color: k.valColor || 'var(--color-text)' }}>{k.value}</div>
           </div>
         ))}
       </div>
@@ -54,13 +54,13 @@ export default function Signals() {
         <select 
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-3 py-1.5 font-inter text-[12px] text-[#ECE0CC] outline-none"
+          className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[3px] px-3 py-1.5 font-inter text-[12px] text-[var(--color-text)] outline-none"
         >
           <option>All Types</option>
           <option>Technical</option>
           <option>Fundamental</option>
         </select>
-        <select className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-3 py-1.5 font-inter text-[12px] text-[#ECE0CC] outline-none">
+        <select className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[3px] px-3 py-1.5 font-inter text-[12px] text-[var(--color-text)] outline-none">
           <option>Status: Active</option>
           <option>Status: Resolved</option>
         </select>
@@ -69,7 +69,7 @@ export default function Signals() {
           placeholder="Search signals..." 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="bg-[#0A201F] border border-[#2D3C37] rounded-[3px] px-3 py-1.5 font-inter text-[12px] text-[#ECE0CC] outline-none focus:border-[rgba(45,60,55,0.9)] w-[200px]"
+          className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[3px] px-3 py-1.5 font-inter text-[12px] text-[var(--color-text)] outline-none focus:border-[rgba(45,60,55,0.9)] w-[200px]"
         />
       </div>
 
@@ -77,15 +77,15 @@ export default function Signals() {
       <div className="flex-1 overflow-y-auto pr-2 pb-6 min-h-0">
         <div className="grid grid-cols-2 gap-4">
           {filtered.map((sig, i) => (
-            <div key={sig.id} className="bg-[#172923] border border-[#2D3C37] rounded-[3px] p-5 flex flex-col gap-4 animate-[fadeSlideUp_0.4s_ease-out_both] group hover:bg-[rgba(255,255,255,0.02)] transition-colors" style={{ animationDelay: `${300 + i*50}ms` }}>
+            <div key={sig.id} className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-[3px] p-5 flex flex-col gap-4 animate-[fadeSlideUp_0.4s_ease-out_both] group hover:bg-[rgba(255,255,255,0.02)] transition-colors" style={{ animationDelay: `${300 + i*50}ms` }}>
               <div className="flex justify-between items-start">
-                <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[#C8B38E] border border-[#C8B38E] bg-[rgba(200,179,142,0.1)] px-2 py-0.5 rounded-[2px]">{sig.type}</div>
-                <div className="font-inter text-[10px] text-[#7B7C70]">{sig.time}</div>
+                <div className="font-inter text-[9px] uppercase tracking-[0.14em] text-[var(--color-gold)] border border-[var(--color-gold)] bg-[rgba(200,179,142,0.1)] px-2 py-0.5 rounded-[2px]">{sig.type}</div>
+                <div className="font-inter text-[10px] text-[var(--color-text-faint)]">{sig.time}</div>
               </div>
               
               <div className="flex justify-between items-center">
-                <div className="font-cinzel text-[18px] font-bold text-[#ECE0CC]">{sig.stock}</div>
-                <div className={`font-inter text-[14px] font-bold flex items-center gap-1 ${sig.action === 'BUY' ? 'text-[#6FAE8D]' : 'text-[#B66A6A]'}`}>
+                <div className="font-cinzel text-[18px] font-bold text-[var(--color-text)]">{sig.stock}</div>
+                <div className={`font-inter text-[14px] font-bold flex items-center gap-1 ${sig.action === 'BUY' ? 'text-[var(--color-gain)]' : 'text-[var(--color-loss)]'}`}>
                   {sig.action === 'BUY' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
                   {sig.action}
                 </div>
@@ -93,12 +93,12 @@ export default function Signals() {
               
               <div className="flex justify-between items-end border-t border-[rgba(45,60,55,0.55)] pt-3 mt-1">
                 <div className="flex flex-col gap-1.5 flex-1 pr-6">
-                  <div className="font-inter text-[10px] text-[#ACA492]">Confidence: {sig.confidence}%</div>
+                  <div className="font-inter text-[10px] text-[var(--color-text-muted)]">Confidence: {sig.confidence}%</div>
                   <div className="h-[4px] bg-[rgba(45,60,55,0.5)] rounded-full overflow-hidden w-full">
-                    <div className={`h-full rounded-full ${sig.confidence > 80 ? 'bg-[#6FAE8D]' : sig.confidence > 60 ? 'bg-[#C8B38E]' : 'bg-[#B66A6A]'}`} style={{ width: `${sig.confidence}%` }}></div>
+                    <div className={`h-full rounded-full ${sig.confidence > 80 ? 'bg-[var(--color-gain)]' : sig.confidence > 60 ? 'bg-[var(--color-gold)]' : 'bg-[var(--color-loss)]'}`} style={{ width: `${sig.confidence}%` }}></div>
                   </div>
                 </div>
-                <button className="font-inter text-[10px] uppercase tracking-wide text-[#869FC4] hover:text-[#ECE0CC] transition-colors">
+                <button className="font-inter text-[10px] uppercase tracking-wide text-[var(--color-blue)] hover:text-[var(--color-text)] transition-colors">
                   View Chart →
                 </button>
               </div>

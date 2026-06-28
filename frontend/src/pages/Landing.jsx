@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Play, LockSimple, ShieldCheck, Check, TwitterLogo, 
   LinkedinLogo, GithubLogo, Eye, Lock, UserMinus, 
-  Warning, TrendUp, Star
+  Warning, TrendUp, Star, Copyright
 } from '@phosphor-icons/react';
 import './Landing.css';
 
@@ -98,11 +98,11 @@ const Navbar = () => {
 // Coded Donut Chart component supporting multiple sizes
 const DonutChart = ({ size = 128, strokeWidth = 20 }) => {
   const segments = [
-    { pct: 18.5, color: '#C8B38E' },
-    { pct: 15.2, color: '#6FAE8D' },
+    { pct: 18.5, color: 'var(--color-gold)' },
+    { pct: 15.2, color: 'var(--color-gain)' },
     { pct: 12.8, color: '#A07840' },
-    { pct: 11.3, color: '#869FC4' },
-    { pct: 9.7,  color: '#B66A6A' },
+    { pct: 11.3, color: 'var(--color-blue)' },
+    { pct: 9.7,  color: 'var(--color-loss)' },
     { pct: 8.4,  color: '#5A7A6A' },
     { pct: 24.1, color: '#3D4D47' },
   ];
@@ -113,7 +113,7 @@ const DonutChart = ({ size = 128, strokeWidth = 20 }) => {
   let offset = 0;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#172923" strokeWidth={strokeWidth} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--color-card)" strokeWidth={strokeWidth} />
       {segments.map((seg, i) => {
         const dash = (seg.pct / 100) * circ;
         const gap = circ - dash;
@@ -131,9 +131,9 @@ const DonutChart = ({ size = 128, strokeWidth = 20 }) => {
         );
       })}
       <text x={cx} y={cy - (size * 0.03)} textAnchor="middle"
-        fontFamily="JetBrains Mono" fontSize={size * 0.09} fontWeight="700" fill="#ECE0CC">7</text>
+        fontFamily="JetBrains Mono" fontSize={size * 0.09} fontWeight="700" fill="var(--color-text)">7</text>
       <text x={cx} y={cy + (size * 0.08)} textAnchor="middle"
-        fontFamily="Inter" fontSize={size * 0.055} fill="#7B7C70" letterSpacing="1">HOLDINGS</text>
+        fontFamily="Inter" fontSize={size * 0.055} fill="var(--color-text-faint)" letterSpacing="1">HOLDINGS</text>
     </svg>
   );
 };
@@ -217,7 +217,7 @@ const HeroSection = () => {
               OPEN TERMINAL →
             </button>
             <button className="btn-secondary">
-              <span className="play-icon">▶</span> Watch 90-sec Demo
+              <span className="play-icon"><Play size={12} weight="fill" /></span> Watch 90-sec Demo
             </button>
           </div>
         </div>
@@ -322,7 +322,7 @@ const FeaturesSection = () => {
                 <span className="bar-val">18.5%</span>
               </div>
               <div className="bar-track">
-                <div className="bar-fill" style={{ width: '18.5%', background: '#C8B38E' }}></div>
+                <div className="bar-fill" style={{ width: '18.5%', background: 'var(--color-gold)' }}></div>
               </div>
             </div>
             <div className="card-a-bar-row">
@@ -331,7 +331,7 @@ const FeaturesSection = () => {
                 <span className="bar-val">12.8%</span>
               </div>
               <div className="bar-track">
-                <div className="bar-fill" style={{ width: '12.8%', background: '#869FC4' }}></div>
+                <div className="bar-fill" style={{ width: '12.8%', background: 'var(--color-blue)' }}></div>
               </div>
             </div>
             <div className="card-a-bar-row">
@@ -442,7 +442,7 @@ const FeaturesSection = () => {
           <div className="wl-rows">
             <div className="wl-row">
               <span className="wl-icon">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#C8B38E" strokeWidth="1.5"><path d="M8 1.5 L10.2 6 L15 6.5 L11.3 9.7 L12.5 14.5 L8 12 L3.5 14.5 L4.7 9.7 L1 6.5 L5.8 6 Z" strokeLinejoin="round" fill="none"/></svg>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--color-gold)" strokeWidth="1.5"><path d="M8 1.5 L10.2 6 L15 6.5 L11.3 9.7 L12.5 14.5 L8 12 L3.5 14.5 L4.7 9.7 L1 6.5 L5.8 6 Z" strokeLinejoin="round" fill="none"/></svg>
               </span>
               <span className="wl-ticker">BAJFINANCE</span>
               <span className="wl-price">₹7,245</span>
@@ -450,7 +450,7 @@ const FeaturesSection = () => {
             </div>
             <div className="wl-row">
               <span className="wl-icon">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#C8B38E" strokeWidth="1.5"><path d="M8 1.5 L10.2 6 L15 6.5 L11.3 9.7 L12.5 14.5 L8 12 L3.5 14.5 L4.7 9.7 L1 6.5 L5.8 6 Z" strokeLinejoin="round" fill="none"/></svg>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--color-gold)" strokeWidth="1.5"><path d="M8 1.5 L10.2 6 L15 6.5 L11.3 9.7 L12.5 14.5 L8 12 L3.5 14.5 L4.7 9.7 L1 6.5 L5.8 6 Z" strokeLinejoin="round" fill="none"/></svg>
               </span>
               <span className="wl-ticker">ASIANPAINT</span>
               <span className="wl-price">₹2,892</span>
@@ -458,7 +458,7 @@ const FeaturesSection = () => {
             </div>
             <div className="wl-row">
               <span className="wl-icon">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#C8B38E" strokeWidth="1.5"><path d="M8 1.5 L10.2 6 L15 6.5 L11.3 9.7 L12.5 14.5 L8 12 L3.5 14.5 L4.7 9.7 L1 6.5 L5.8 6 Z" strokeLinejoin="round" fill="none"/></svg>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--color-gold)" strokeWidth="1.5"><path d="M8 1.5 L10.2 6 L15 6.5 L11.3 9.7 L12.5 14.5 L8 12 L3.5 14.5 L4.7 9.7 L1 6.5 L5.8 6 Z" strokeLinejoin="round" fill="none"/></svg>
               </span>
               <span className="wl-ticker">HDFCLIFE</span>
               <span className="wl-price">₹645</span>
@@ -506,22 +506,22 @@ const ProductPreview = () => {
             <div className="b-dot g"></div>
           </div>
           <span className="browser-url">app.arca.finance/dashboard</span>
-          <LockSimple size={12} color="#6FAE8D" style={{marginLeft: 'auto'}} />
+          <LockSimple size={12} color="var(--color-gain)" style={{marginLeft: 'auto'}} />
         </div>
         <div className="dashboard-frame-wrapper">
           <div className="dashboard-scale-container">
             {/* Coded mockup of the full dashboard UI layout */}
-            <div style={{display: 'flex', height: '420px', background: '#0A201F'}}>
+            <div style={{display: 'flex', height: '420px', background: 'var(--color-bg)'}}>
               {/* Sidebar (120px) */}
-              <div style={{width: '120px', borderRight: '1px solid #2D3C37', background: '#102321', display: 'flex', flexDirection: 'column', padding: '16px 12px'}}>
+              <div style={{width: '120px', borderRight: '1px solid var(--color-border)', background: 'var(--color-surface)', display: 'flex', flexDirection: 'column', padding: '16px 12px'}}>
                 <div style={{display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '24px'}}>
-                  <div style={{width: '16px', height: '16px', borderRadius: '50%', border: '1px solid #C8B38E'}}></div>
-                  <span style={{fontFamily: 'Cinzel', fontSize: '10px', fontWeight: 'bold', color: '#ECE0CC'}}>ARCA</span>
+                  <div style={{width: '16px', height: '16px', borderRadius: '50%', border: '1px solid var(--color-gold)'}}></div>
+                  <span style={{fontFamily: 'Cinzel', fontSize: '10px', fontWeight: 'bold', color: 'var(--color-text)'}}>ARCA</span>
                 </div>
                 <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                   {['Dashboard', 'Watchlist', 'Analytics', 'Alerts', 'Settings'].map((item, i) => (
-                    <div key={i} style={{fontSize: '9px', fontFamily: 'Inter', color: i === 0 ? '#ECE0CC' : '#7B7C70', display: 'flex', alignItems: 'center', gap: '6px'}}>
-                      <div style={{width: '6px', height: '6px', background: i === 0 ? '#C8B38E' : 'transparent', borderRadius: '50%'}}></div>
+                    <div key={i} style={{fontSize: '9px', fontFamily: 'Inter', color: i === 0 ? 'var(--color-text)' : 'var(--color-text-faint)', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                      <div style={{width: '6px', height: '6px', background: i === 0 ? 'var(--color-gold)' : 'transparent', borderRadius: '50%'}}></div>
                       {item}
                     </div>
                   ))}
@@ -530,8 +530,8 @@ const ProductPreview = () => {
               
               <div style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
                 {/* Topbar */}
-                <div style={{height: '36px', borderBottom: '1px solid #2D3C37', background: '#102321', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px'}}>
-                  <div style={{fontFamily: 'Cinzel', fontSize: '9px', color: '#ECE0CC'}}>COMMAND CENTER</div>
+                <div style={{height: '36px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px'}}>
+                  <div style={{fontFamily: 'Cinzel', fontSize: '9px', color: 'var(--color-text)'}}>COMMAND CENTER</div>
                   <div className="db-status-pill"><div className="db-status-dot"></div>MARKETS OPEN</div>
                 </div>
                 
@@ -540,44 +540,44 @@ const ProductPreview = () => {
                   {/* Top: 4 KPI cards */}
                   <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px'}}>
                     <div className="db-kpi-card gold-border" style={{padding: '8px 12px'}}>
-                      <div style={{fontSize: '7px', color: '#7B7C70', textTransform: 'uppercase'}}>PORTFOLIO VALUE</div>
-                      <div style={{fontSize: '13px', color: '#ECE0CC', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>₹25,74,000</div>
+                      <div style={{fontSize: '7px', color: 'var(--color-text-faint)', textTransform: 'uppercase'}}>PORTFOLIO VALUE</div>
+                      <div style={{fontSize: '13px', color: 'var(--color-text)', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>₹25,74,000</div>
                     </div>
                     <div className="db-kpi-card" style={{padding: '8px 12px'}}>
-                      <div style={{fontSize: '7px', color: '#7B7C70', textTransform: 'uppercase'}}>TOTAL INVESTED</div>
-                      <div style={{fontSize: '13px', color: '#ECE0CC', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>₹22,10,000</div>
+                      <div style={{fontSize: '7px', color: 'var(--color-text-faint)', textTransform: 'uppercase'}}>TOTAL INVESTED</div>
+                      <div style={{fontSize: '13px', color: 'var(--color-text)', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>₹22,10,000</div>
                     </div>
                     <div className="db-kpi-card" style={{padding: '8px 12px'}}>
-                      <div style={{fontSize: '7px', color: '#7B7C70', textTransform: 'uppercase'}}>TOTAL P&L</div>
-                      <div style={{fontSize: '13px', color: '#6FAE8D', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>+₹3,64,000</div>
+                      <div style={{fontSize: '7px', color: 'var(--color-text-faint)', textTransform: 'uppercase'}}>TOTAL P&L</div>
+                      <div style={{fontSize: '13px', color: 'var(--color-gain)', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>+₹3,64,000</div>
                     </div>
                     <div className="db-kpi-card" style={{padding: '8px 12px'}}>
-                      <div style={{fontSize: '7px', color: '#7B7C70', textTransform: 'uppercase'}}>TODAY'S CHANGE</div>
-                      <div style={{fontSize: '13px', color: '#6FAE8D', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>+2.34%</div>
+                      <div style={{fontSize: '7px', color: 'var(--color-text-faint)', textTransform: 'uppercase'}}>TODAY'S CHANGE</div>
+                      <div style={{fontSize: '13px', color: 'var(--color-gain)', fontFamily: 'JetBrains Mono', fontWeight: 'bold'}}>+2.34%</div>
                     </div>
                   </div>
                   
                   {/* Middle Row */}
                   <div style={{display: 'flex', gap: '12px', flex: 1}}>
                     {/* Middle-left: Donut */}
-                    <div style={{flex: 3, background: '#172923', border: '1px solid #2D3C37', borderRadius: '3px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px'}}>
+                    <div style={{flex: 3, background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '3px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px'}}>
                       <DonutChart size={100} strokeWidth={14} />
                       <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                        <div style={{fontSize: '9px', color: '#ECE0CC', fontFamily: 'Cinzel', fontWeight: 'bold'}}>Allocation</div>
-                        <div style={{fontSize: '8px', color: '#7B7C70'}}>7 major holdings across financials, technology, and energy sectors.</div>
+                        <div style={{fontSize: '9px', color: 'var(--color-text)', fontFamily: 'Cinzel', fontWeight: 'bold'}}>Allocation</div>
+                        <div style={{fontSize: '8px', color: 'var(--color-text-faint)'}}>7 major holdings across financials, technology, and energy sectors.</div>
                       </div>
                     </div>
                     {/* Middle-right: Position Weights */}
-                    <div style={{flex: 2, background: '#172923', border: '1px solid #2D3C37', borderRadius: '3px', padding: '12px'}}>
-                      <div style={{fontSize: '8px', color: '#7B7C70', textTransform: 'uppercase', marginBottom: '8px'}}>POSITION WEIGHTS</div>
+                    <div style={{flex: 2, background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '3px', padding: '12px'}}>
+                      <div style={{fontSize: '8px', color: 'var(--color-text-faint)', textTransform: 'uppercase', marginBottom: '8px'}}>POSITION WEIGHTS</div>
                       <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'JetBrains Mono', color: '#ECE0CC'}}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'JetBrains Mono', color: 'var(--color-text)'}}>
                           <span>HDFCBANK</span><span>18.5%</span>
                         </div>
-                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'JetBrains Mono', color: '#ECE0CC'}}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'JetBrains Mono', color: 'var(--color-text)'}}>
                           <span>RELIANCE</span><span>12.8%</span>
                         </div>
-                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'JetBrains Mono', color: '#ECE0CC'}}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'JetBrains Mono', color: 'var(--color-text)'}}>
                           <span>INFY</span><span>11.3%</span>
                         </div>
                       </div>
@@ -585,11 +585,11 @@ const ProductPreview = () => {
                   </div>
 
                   {/* Bottom: Activity Feed */}
-                  <div style={{background: '#172923', border: '1px solid #2D3C37', borderRadius: '3px', padding: '10px 12px'}}>
-                    <div style={{fontSize: '8px', color: '#7B7C70', textTransform: 'uppercase', marginBottom: '4px'}}>ACTIVITY FEED</div>
+                  <div style={{background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '3px', padding: '10px 12px'}}>
+                    <div style={{fontSize: '8px', color: 'var(--color-text-faint)', textTransform: 'uppercase', marginBottom: '4px'}}>ACTIVITY FEED</div>
                     <div style={{display: 'flex', gap: '16px', fontSize: '9px', fontFamily: 'JetBrains Mono'}}>
-                      <div style={{color: '#6FAE8D'}}>[BUY] INFY 50 @ ₹1,425</div>
-                      <div style={{color: '#B66A6A'}}>[SELL] ITC 100 @ ₹412</div>
+                      <div style={{color: 'var(--color-gain)'}}>[BUY] INFY 50 @ ₹1,425</div>
+                      <div style={{color: 'var(--color-loss)'}}>[SELL] ITC 100 @ ₹412</div>
                     </div>
                   </div>
                 </div>
@@ -927,7 +927,7 @@ const Footer = () => {
         <div className="f-top">
           <div className="f-left">
             <div className="f-brand">
-              <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="#C8B38E" strokeWidth="1.5">
+              <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="var(--color-gold)" strokeWidth="1.5">
                 <path d="M6 22 A10 10 0 0 1 10 8" strokeLinecap="round" />
                 <path d="M6 18 C5 17 7 16 7 16" />
                 <path d="M8 14 C7 13 9 12 9 12" />
@@ -938,9 +938,9 @@ const Footer = () => {
                 <path d="M22 10 C23 9 21 8 21 8" />
                 <circle cx="13" cy="13" r="2.5" strokeWidth="1.2" />
                 <circle cx="19" cy="13" r="2.5" strokeWidth="1.2" />
-                <circle cx="13" cy="13" r="0.8" fill="#C8B38E" />
-                <circle cx="19" cy="13" r="0.8" fill="#C8B38E" />
-                <path d="M16 14.5 L15 16.5 L17 16.5 Z" fill="#C8B38E" stroke="none" />
+                <circle cx="13" cy="13" r="0.8" fill="var(--color-gold)" />
+                <circle cx="19" cy="13" r="0.8" fill="var(--color-gold)" />
+                <path d="M16 14.5 L15 16.5 L17 16.5 Z" fill="var(--color-gold)" stroke="none" />
                 <path d="M11 10.5 C12 9.5 14 9.5 16 10 C18 9.5 20 9.5 21 10.5 L21.5 13.5 C21.5 18 19 21 16 21 C13 21 10.5 18 10.5 13.5 Z" strokeWidth="1.2" strokeLinejoin="round" />
                 <path d="M11 14 C12 16 12.5 18 13.5 19.5" strokeWidth="1" />
                 <path d="M21 14 C20 16 19.5 18 18.5 19.5" strokeWidth="1" />
@@ -994,7 +994,7 @@ const Footer = () => {
         
         <div className="f-bottom">
           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            <span className="f-copy">© 2026 ARCA. All rights reserved.</span>
+            <span className="f-copy"><Copyright size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> 2026 ARCA. All rights reserved.</span>
             <span style={{ color: 'var(--border-default)' }}>·</span>
             <span className="f-copy">Not SEBI Registered · Not AMFI Registered</span>
           </div>

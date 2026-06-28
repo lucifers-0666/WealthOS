@@ -6,7 +6,7 @@
 
 .landing-page {
   /* ── V7 COLOR TOKENS ─────────────────────────────────── */
-  --bg-base:          #0A201F;   /* deep forest black-green */
+  --bg-base:          var(--color-bg);   /* deep forest black-green */
   --bg-secondary:     #0E2420;
   --bg-surface:       #152820;
   --bg-overlay:       #1C3028;
@@ -18,14 +18,14 @@
   --text-secondary:   #B0A890;
   --text-muted:       #72776A;
 
-  --accent-gold:      #D4A017;   /* V7 bright gold — up from #C8B38E */
+  --accent-gold:      #D4A017;   /* V7 bright gold — up from var(--color-gold) */
   --accent-gold-dim:  rgba(200,179,142, 0.10);
   --accent-gold-glow: rgba(200,179,142, 0.06);
-  --accent-blue:      #869FC4;
+  --accent-blue:      var(--color-blue);
 
-  --status-gain:      #6FAE8D;
-  --status-loss:      #B66A6A;
-  --status-warning:   #D2A76D;
+  --status-gain:      var(--color-gain);
+  --status-loss:      var(--color-loss);
+  --status-warning:   var(--color-warn);
   --fill-gain:        rgba(111, 174, 141, 0.10);
   --fill-loss:        rgba(182, 106, 106, 0.10);
   --fill-warning:     rgba(210, 167, 109, 0.10);

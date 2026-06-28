@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck } from 'lucide-react'; // Or phosphor, we use SVG for mobile header
+import { ShieldCheck, EnvelopeSimple, ChartPieSlice, Brain } from '@phosphor-icons/react';
 import '../styles/auth.css';
 
 export default function AuthLayout({ children }) {
@@ -20,8 +20,12 @@ export default function AuthLayout({ children }) {
 
       {/* Left Panel */}
       <div className="auth-left">
-        <div className="auth-eyebrow">
-          <span className="auth-eyebrow-text">PRIVATE WEALTH TERMINAL</span>
+        <div className="auth-logo-row">
+          <svg width="24" height="24" viewBox="0 0 256 256" fill="none">
+            <path d="M128 24L40 56v56c0 52.4 37.6 101.3 88 116 50.4-14.7 88-63.6 88-116V56L128 24z" stroke="#C8B38E" strokeWidth="16" strokeLinejoin="round"/>
+            <polyline points="96,128 112,144 160,96" stroke="#C8B38E" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span className="auth-logo-text">Antigravity</span>
         </div>
         
         <h1 className="auth-headline">
@@ -31,36 +35,49 @@ export default function AuthLayout({ children }) {
           <span>INVESTORS.</span>
         </h1>
 
-        <div className="auth-features">
-          <div className="auth-feature-cell top-left">
-            <div className="auth-feature-title">Protected Routes</div>
-            <div className="auth-feature-desc">Session persistence and token sync</div>
+        <div className="auth-headline-sub">Private wealth intelligence. Minimum ₹10 Lakh.</div>
+        <div className="auth-headline-rule" />
+
+        <div className="auth-features-list">
+          <div className="auth-feature-row">
+            <ShieldCheck size={18} color="#C8B38E" weight="regular" className="auth-feature-icon" />
+            <div>
+              <div className="auth-feature-title">Protected Routes</div>
+              <div className="auth-feature-desc">Session persistence and token sync</div>
+            </div>
           </div>
-          <div className="auth-feature-cell top-right">
-            <div className="auth-feature-title">Email Verification</div>
-            <div className="auth-feature-desc">Secure signup with verified email</div>
+          <div className="auth-feature-row">
+            <EnvelopeSimple size={18} color="#C8B38E" weight="regular" className="auth-feature-icon" />
+            <div>
+              <div className="auth-feature-title">Email Verification</div>
+              <div className="auth-feature-desc">Secure signup with verified email</div>
+            </div>
           </div>
-          <div className="auth-feature-cell bottom-left">
-            <div className="auth-feature-title">Portfolio Intelligence</div>
-            <div className="auth-feature-desc">Live holdings, allocation, and risk</div>
+          <div className="auth-feature-row">
+            <ChartPieSlice size={18} color="#C8B38E" weight="regular" className="auth-feature-icon" />
+            <div>
+              <div className="auth-feature-title">Portfolio Intelligence</div>
+              <div className="auth-feature-desc">Live holdings, allocation, and risk</div>
+            </div>
           </div>
-          <div className="auth-feature-cell bottom-right">
-            <div className="auth-feature-title">AI Advisor</div>
-            <div className="auth-feature-desc">Portfolio-aware financial analysis</div>
+          <div className="auth-feature-row">
+            <Brain size={18} color="#C8B38E" weight="regular" className="auth-feature-icon" />
+            <div>
+              <div className="auth-feature-title">AI Advisor</div>
+              <div className="auth-feature-desc">Portfolio-aware financial analysis</div>
+            </div>
           </div>
         </div>
 
         <div className="auth-footer-left">
-          ANTIGRAVITY · PRIVATE TERMINAL · 2026
+          <div>ANTIGRAVITY · PRIVATE TERMINAL · 2026</div>
+          <div className="auth-footer-left-sub">256-BIT ENCRYPTED · SOC 2 ALIGNED · NO DATA SOLD</div>
         </div>
       </div>
 
       {/* Right Panel */}
       <div className="auth-right">
         {children}
-        <div className="auth-footer-right">
-          256-BIT ENCRYPTED · SOC 2 ALIGNED · NO DATA SOLD
-        </div>
       </div>
     </div>
   );

@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthLayout>
-      <div className="auth-card">
+      <div className="auth-inner-container">
         <div className="auth-card-header">
           <div className="auth-icon-wrap">
             <ShieldCheck size={28} weight="fill" color="#C8B38E" />

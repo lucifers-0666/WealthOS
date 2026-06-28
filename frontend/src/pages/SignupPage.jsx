@@ -137,24 +137,23 @@ export default function SignupPage() {
   };
 
   const renderStepIndicator = () => (
-    <div className="auth-steps">
-      <div className="auth-step-connector">
-        <div className="auth-step-connector-fill" style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }} />
-      </div>
+    <div className="auth-steps-bar">
       {[
-        { num: 1, label: 'CREDENTIALS' },
-        { num: 2, label: 'PROFILE' },
-        { num: 3, label: 'STRATEGY' }
+        { num: '01', label: 'CREDENTIALS', stepIdx: 1 },
+        { num: '02', label: 'PROFILE', stepIdx: 2 },
+        { num: '03', label: 'STRATEGY', stepIdx: 3 }
       ].map(s => {
-        const isActive = step === s.num;
-        const isCompleted = step > s.num;
-        const isUpcoming = step < s.num;
+        const isActive = step === s.stepIdx;
+        const isCompleted = step > s.stepIdx;
+        const isUpcoming = step < s.stepIdx;
+        const className = `auth-step-tile ${isActive ? 'active' : isCompleted ? 'completed' : 'upcoming'}`;
         return (
-          <div key={s.num} className="auth-step-node">
-            <div className={`auth-step-circle ${isActive ? 'active' : isCompleted ? 'completed' : 'inactive'}`}>
-              {isCompleted ? <Check size={10} color="#0A201F" weight="bold" /> : <span className="auth-step-num">{s.num}</span>}
+          <div key={s.stepIdx} className={className}>
+            <span className="auth-step-num">{s.num}</span>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span className="auth-step-name">{s.label}</span>
+              {isCompleted && <CheckCircle size={10} weight="fill" className="auth-step-check" />}
             </div>
-            <div className={`auth-step-label ${isActive ? 'active' : ''}`}>{s.label}</div>
           </div>
         );
       })}
@@ -163,20 +162,19 @@ export default function SignupPage() {
 
   return (
     <AuthLayout>
-      <div className="auth-card">
-        <div className="auth-card-header">
-          <div className="auth-icon-wrap">
-            <ShieldCheck size={28} weight="fill" color="#C8B38E" />
+      <div className="auth-inner-container">
+        <div className="auth-page-header" style={{ marginBottom: 0 }}>
+          <div style={{ fontFamily: 'Cinzel', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.20em', color: '#C8B38E', marginBottom: 6 }}>
+            ACCESS TERMINAL
           </div>
-          <p className="auth-brand-title">Access Terminal</p>
-          <p className="auth-brand-sub">Your private financial command center.</p>
+          <p className="auth-page-desc" style={{ fontSize: 12 }}>Your private financial command center.</p>
         </div>
 
-        <div className="auth-divider" />
+        <div className="auth-divider" style={{ margin: '20px 0' }} />
 
-        <div className="auth-page-header">
-          <h2 className="auth-page-title">Create Account</h2>
-          <p className="auth-page-desc">Begin your Antigravity journey.</p>
+        <div className="auth-page-header" style={{ marginBottom: 24 }}>
+          <h2 className="auth-page-title" style={{ fontSize: 24, letterSpacing: '0.01em' }}>Begin Access</h2>
+          <p className="auth-page-desc" style={{ fontSize: 12, maxWidth: 380, marginTop: 6 }}>Your journey into institutional-grade portfolio intelligence.</p>
         </div>
 
         {renderStepIndicator()}
@@ -255,14 +253,14 @@ export default function SignupPage() {
                 </div>
               )}
 
+              <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                <span style={{ fontFamily: 'Inter', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.10em', color: '#7B7C70' }}>
+                  256-BIT ENCRYPTED &middot; SOC 2 ALIGNED &middot; NO DATA SOLD
+                </span>
+              </div>
               <button type="submit" className="auth-btn-primary" disabled={loading}>
                 {loading ? 'PROCESSING...' : 'CREATE ACCOUNT \u2192'}
               </button>
-              
-              <div style={{ textAlign: 'center', marginTop: 14 }}>
-                <span style={{ fontFamily: 'Inter', fontSize: 11, color: '#7B7C70' }}>Already have an account? </span>
-                <button type="button" className="auth-link auth-link-accent" onClick={() => navigate('/login')}>Sign In</button>
-              </div>
             </>
           )}
 
@@ -408,6 +406,33 @@ export default function SignupPage() {
             </>
           )}
         </form>
+
+        <div className="auth-divider" style={{ margin: '20px 0' }} />
+        
+        <div className="auth-trust-block">
+          <div className="auth-trust-title">TRUSTED BY</div>
+          <div className="auth-trust-rows">
+            <div className="auth-trust-row">
+              <div className="auth-trust-avatar">R</div>
+              <div className="auth-trust-content">
+                <p className="auth-trust-name">Rehan M. &nbsp;&middot;&nbsp; ₹32L Portfolio</p>
+                <p className="auth-trust-quote">"Best dashboard I've used for my equity portfolio"</p>
+              </div>
+            </div>
+            <div className="auth-trust-row">
+              <div className="auth-trust-avatar">P</div>
+              <div className="auth-trust-content">
+                <p className="auth-trust-name">Priya S. &nbsp;&middot;&nbsp; ₹18L Portfolio</p>
+                <p className="auth-trust-quote">"The AI advisor actually understands Indian markets."</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="auth-absolute-bottom">
+          <span style={{ fontFamily: 'Inter', fontSize: 11, color: '#7B7C70' }}>Already have access? </span>
+          <button type="button" className="auth-link auth-link-accent" onClick={() => navigate('/login')}>Sign in &rarr;</button>
+        </div>
       </div>
     </AuthLayout>
   );

@@ -22,6 +22,7 @@ const Signals = lazy(() => import('./pages/Signals.jsx'));
 const ImportPortfolio = lazy(() => import('./pages/ImportPortfolio.jsx'));
 const MarketWatch = lazy(() => import('./pages/MarketWatch.jsx'));
 const Transactions = lazy(() => import('./pages/Transactions.jsx'));
+const Sandbox = lazy(() => import('./pages/Sandbox/index.jsx'));
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/import" element={<ImportPortfolio />} />
+          <Route path="/sandbox" element={<Sandbox />} />
         </Route>
         {/* Legacy redirects */}
         <Route path="/app/*" element={<Navigate to="/dashboard" replace />} />

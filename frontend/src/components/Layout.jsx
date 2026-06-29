@@ -13,7 +13,8 @@ import {
   UserCircle,
   MagnifyingGlass,
   SquaresFour,
-  Bell
+  Bell,
+  Sword
 } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Fuse from 'fuse.js';
@@ -29,6 +30,7 @@ const NAV = [
   { to: '/advisor', label: 'Advisor', icon: Brain, group: 'INTELLIGENCE' },
   { to: '/signals', label: 'Signals', icon: Broadcast, group: 'INTELLIGENCE' },
   { to: '/watchlist', label: 'Watchlist', icon: Star, group: 'INTELLIGENCE' },
+  { to: '/sandbox', label: 'Sandbox', icon: Sword, group: 'INTELLIGENCE' },
   { to: '/settings', label: 'Settings', icon: Gear, group: 'CONTROL' },
   { to: '/profile', label: 'Profile', icon: UserCircle, group: 'CONTROL' },
 ];
@@ -49,6 +51,7 @@ const titles = {
   '/watchlist': ['Watchlist', 'Tracked symbols and price targets'],
   '/settings': ['Settings', 'Keys, targets, and preferences'],
   '/profile': ['Client Profile', 'Account settings'],
+  '/sandbox': ['Sandbox', 'Paper trading and options demo'],
 };
 
 // Nav item component

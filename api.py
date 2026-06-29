@@ -56,6 +56,7 @@ from core.import_engine import process_import_file, apply_confirm
 from ai.cfo_advisor import get_cfo_response
 from ai.rag_engine import fetch_news_for_symbols
 from backend.services.live_market_engine import LiveMarketEngine
+from api.sandbox_routes import router as sandbox_router
 
 live_market_engine = LiveMarketEngine()
 
@@ -71,6 +72,8 @@ app.add_middleware(SlowAPIMiddleware)
 @app.on_event("startup")
 async def _start_live_market_engine():
     await live_market_engine.start()
+
+app.include_router(sandbox_router)
 
 
 @app.on_event("shutdown")

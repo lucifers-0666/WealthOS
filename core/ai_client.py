@@ -75,3 +75,27 @@ class GeminiClient:
                     return self.FALLBACK_MESSAGE
                     
         return self.FALLBACK_MESSAGE
+
+    def analyze_sandbox_trade(self, trade_details: dict, portfolio_context: list) -> str:
+        prompt = (
+            f"Analyze this paper trade: {trade_details}. "
+            f"Current portfolio: {portfolio_context}. "
+            "Keep the analysis concise, under 3 sentences. Focus on risk and allocation."
+        )
+        return self.ask(prompt)
+
+    def explain_option_greeks(self, position: dict) -> str:
+        prompt = (
+            f"Explain the Greeks for this options position: {position}. "
+            "What do delta, theta, and gamma mean for this specific trade? "
+            "Explain simply for a retail trader in 3-4 sentences."
+        )
+        return self.ask(prompt)
+
+    def suggest_option_strategy(self, portfolio_holdings: list) -> str:
+        prompt = (
+            f"Based on these equity holdings: {portfolio_holdings}, "
+            "suggest one simple options strategy (like a covered call or protective put). "
+            "Explain why in 2 sentences."
+        )
+        return self.ask(prompt)

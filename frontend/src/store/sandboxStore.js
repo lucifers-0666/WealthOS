@@ -1,14 +1,14 @@
 import { create } from 'zustand';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-const getHeaders = () => {
-  const token = localStorage.getItem('sb-access-token') || sessionStorage.getItem('sb-access-token') || '';
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
-  };
-};
+import {
+  getSandboxWallet,
+  getSandboxHoldings,
+  getSandboxOrders,
+  getSandboxOptionPositions,
+  placeSandboxEquityOrder,
+  placeSandboxOptionOrder,
+  resetSandboxWallet
+} from '../services/sandbox.js';
 
 export const useSandboxStore = create((set, get) => ({
   wallet: { balance: 0, initial_balance: 500000, portfolio_value: 0, total_pnl: 0, total_pnl_percent: 0 },
@@ -28,11 +28,8 @@ export const useSandboxStore = create((set, get) => ({
   actions: {
     loadWallet: async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/sandbox/wallet`, { headers: getHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          set({ wallet: data });
-        }
+        const data = await getSandboxWallet();
+        set({ wallet: data });
       } catch (e) {
         console.error("Failed to load sandbox wallet", e);
       }
@@ -41,11 +38,8 @@ export const useSandboxStore = create((set, get) => ({
     loadHoldings: async () => {
       set({ isLoading: true });
       try {
-        const res = await fetch(`${API_BASE}/api/sandbox/holdings`, { headers: getHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          set({ holdings: data, lastPriceUpdate: new Date().toLocaleTimeString() });
-        }
+        const data = await getSandboxHoldings();
+        set({ holdings: data, lastPriceUpdate: new Date().toLocaleTimeString() });
       } catch (e) {
         console.error("Failed to load sandbox holdings", e);
       } finally {
@@ -55,11 +49,8 @@ export const useSandboxStore = create((set, get) => ({
 
     loadOrders: async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/sandbox/orders`, { headers: getHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          set({ orders: data });
-        }
+        const data = await getSandboxOrders();
+        set({ orders: data });
       } catch (e) {
         console.error("Failed to load sandbox orders", e);
       }
@@ -68,20 +59,13 @@ export const useSandboxStore = create((set, get) => ({
     placeEquityOrder: async (ticker, action, quantity) => {
       set({ isLoading: true });
       try {
-        const res = await fetch(`${API_BASE}/api/sandbox/order/equity`, {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify({ ticker, action, quantity })
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.detail || "Order failed");
-        }
-        const data = await res.json();
+        const data = await placeSandboxEquityOrder({ ticker, action, quantity });
         await get().actions.loadWallet();
         await get().actions.loadHoldings();
         await get().actions.loadOrders();
         return data;
+      } catch (err) {
+        throw new Error(err.message || "Order failed");
       } finally {
         set({ isLoading: false });
       }
@@ -105,11 +89,8 @@ export const useSandboxStore = create((set, get) => ({
 
     loadOptionPositions: async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/sandbox/options/positions`, { headers: getHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          set({ optionPositions: data });
-        }
+        const data = await getSandboxOptionPositions();
+        set({ optionPositions: data });
       } catch (e) {
         console.error("Failed to load option positions", e);
       }
@@ -118,20 +99,13 @@ export const useSandboxStore = create((set, get) => ({
     placeOptionOrder: async (params) => {
       set({ isLoading: true });
       try {
-        const res = await fetch(`${API_BASE}/api/sandbox/order/option`, {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify(params)
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.detail || "Order failed");
-        }
-        const data = await res.json();
+        const data = await placeSandboxOptionOrder(params);
         await get().actions.loadWallet();
         await get().actions.loadOptionPositions();
         await get().actions.loadOrders();
         return data;
+      } catch (err) {
+        throw new Error(err.message || "Order failed");
       } finally {
         set({ isLoading: false });
       }
@@ -140,13 +114,11 @@ export const useSandboxStore = create((set, get) => ({
     resetSandbox: async () => {
       set({ isLoading: true });
       try {
-        const res = await fetch(`${API_BASE}/api/sandbox/wallet/reset`, { method: 'POST', headers: getHeaders() });
-        if (res.ok) {
-          await get().actions.loadWallet();
-          await get().actions.loadHoldings();
-          await get().actions.loadOptionPositions();
-          await get().actions.loadOrders();
-        }
+        await resetSandboxWallet();
+        await get().actions.loadWallet();
+        await get().actions.loadHoldings();
+        await get().actions.loadOptionPositions();
+        await get().actions.loadOrders();
       } catch (e) {
         console.error("Failed to reset sandbox", e);
       } finally {

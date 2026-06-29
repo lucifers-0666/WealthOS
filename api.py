@@ -351,6 +351,22 @@ def read_user_activity(limit: int = 50, current_user: dict = Depends(get_current
     return {"activity": data}
 
 
+@app.delete("/api/user", tags=["User"])
+def delete_user_account(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    if user_id == os.getenv("DEV_USER_ID", "7eb3ccbc-f8ab-4e6b-92a4-3d173be5b073"):
+        return {"success": True}
+        
+    try:
+        from database.supabase_client import get_supabase_service
+        admin_client = get_supabase_service()
+        admin_client.auth.admin.delete_user(user_id)
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Failed to delete user {user_id}: {e}", exc_info=e)
+        raise HTTPException(status_code=500, detail=f"Failed to delete account: {e}")
+
+
 # ── Holdings ─────────────────────────────────────────────────────
 @app.get("/holdings")
 def read_holdings(user_id: str = Depends(get_user_id)):

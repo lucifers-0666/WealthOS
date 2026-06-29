@@ -5,7 +5,8 @@ import TabBar from './components/TabBar';
 import EquityDesk from './components/equity/EquityDesk';
 import OptionsDesk from './components/options/OptionsDesk';
 import FuturesDesk from './components/futures/FuturesDesk';
-import { ChartLineUp, Strategy, ClockCounterClockwise } from '@phosphor-icons/react';
+import OrdersHistory from './components/OrdersHistory';
+import { ChartLineUp, Strategy, ClockCounterClockwise, ListDashes } from '@phosphor-icons/react';
 
 export default function Sandbox() {
   const { loadWallet, activeTab } = useSandboxStore(state => state.actions);
@@ -25,7 +26,8 @@ export default function Sandbox() {
           tabs={[
             { id: 'equity', label: 'Paper Equity', icon: <ChartLineUp size={16} /> },
             { id: 'options', label: 'Options Desk', icon: <Strategy size={16} /> },
-            { id: 'futures', label: 'Futures Desk', icon: <ClockCounterClockwise size={16} /> }
+            { id: 'futures', label: 'Futures Desk', icon: <ClockCounterClockwise size={16} /> },
+            { id: 'orders', label: 'Order History', icon: <ListDashes size={16} /> }
           ]} 
           activeTab={currentTab} 
           onChange={(id) => useSandboxStore.getState().setActiveTab(id)} 
@@ -35,6 +37,7 @@ export default function Sandbox() {
           {currentTab === 'equity' && <EquityDesk />}
           {currentTab === 'options' && <OptionsDesk />}
           {currentTab === 'futures' && <FuturesDesk />}
+          {currentTab === 'orders' && <OrdersHistory />}
         </div>
       </div>
     </div>

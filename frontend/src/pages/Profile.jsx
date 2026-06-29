@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../lib/useAuth.js';
 import { supabase } from '../lib/auth.js';
 import { PhosphorLogo, WarningCircle, X } from '@phosphor-icons/react'; // Phosphor icons fallback
+import { request } from '../services/api.js';
 
 const PLAN_LABELS = {
   free:          'Free Tier',
@@ -153,25 +154,10 @@ export default function Profile() {
   const handleDeleteAccount = async () => {
     if (confirm("Are you sure you want to permanently delete your account? This action cannot be undone.")) {
       try {
-        const { data: session } = await supabase.auth.getSession();
-        
-        const response = await fetch((import.meta.env.VITE_SUPABASE_URL || '') + '/functions/v1/delete-account', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.session?.access_token}`,
-          },
-          body: JSON.stringify({ user_id: profile.id })
-        });
-        
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || 'Failed to delete account');
-        }
-        
+        await request('DELETE', '/api/user');
         await handleSignOut();
       } catch (err) {
-        setError(err.message);
+        setError(err.message || 'Failed to delete account');
       }
     }
   };

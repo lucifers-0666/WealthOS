@@ -6,16 +6,27 @@ from database.supabase_client import get_supabase
 from core.price_fetcher import fetch_price
 from core.greeks_calculator import get_option_chain
 import math
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/api/sandbox", tags=["sandbox"])
 
-def _get_user_id(authorization: str = Header(None)) -> str:
+import jwt
+from fastapi import Request
+
+def _get_user_id(request: Request, authorization: str = Header(None)) -> str:
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
+    token = authorization.replace("Bearer ", "")
     try:
-        sb = get_supabase()
-        user = sb.auth.get_user(authorization.replace("Bearer ", ""))
-        return user.user.id
+        # Fast local unverified decode to save Supabase roundtrip
+        payload = jwt.decode(token, options={"verify_signature": False})
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        return user_id
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -71,8 +82,8 @@ async def reset_wallet(user_id: str = Depends(_get_user_id)):
     
     sb.table("sandbox_orders").insert({
         "user_id": user_id,
-        "order_type": "EQUITY",
-        "action": "BUY", # dummy
+        "order_type": "RESET",
+        "action": "RESET",
         "ticker": "RESET",
         "quantity": 0,
         "price": 0,
@@ -108,7 +119,8 @@ async def get_holdings(user_id: str = Depends(_get_user_id)):
     return holdings
 
 @router.post("/order/equity")
-async def place_equity_order(order: SandboxEquityOrder, user_id: str = Depends(_get_user_id)):
+@limiter.limit("1/second")
+async def place_equity_order(request: Request, order: SandboxEquityOrder, user_id: str = Depends(_get_user_id)):
     if not order.ticker or len(order.ticker) > 20:
         raise HTTPException(status_code=400, detail="Invalid ticker")
     if order.quantity < 1 or order.quantity > 10000:
@@ -159,8 +171,10 @@ async def place_equity_order(order: SandboxEquityOrder, user_id: str = Depends(_
         if not existing_holding or float(existing_holding["quantity"]) < order.quantity:
             raise HTTPException(status_code=400, detail="Insufficient holdings")
             
+        realized_pnl = (curr_price - float(existing_holding["avg_buy_price"])) * order.quantity
         new_balance = balance + total_val
-        sb.table("sandbox_wallet").update({"balance": new_balance}).eq("user_id", user_id).execute()
+        new_realized_pnl = float(wallet.get("realized_pnl", 0)) + realized_pnl
+        sb.table("sandbox_wallet").update({"balance": new_balance, "realized_pnl": new_realized_pnl}).eq("user_id", user_id).execute()
         
         new_qty = float(existing_holding["quantity"]) - order.quantity
         if new_qty == 0:
@@ -290,8 +304,10 @@ async def place_option_order(order: SandboxOptionOrder, user_id: str = Depends(_
         if not existing_pos or existing_pos["lots_held"] < order.lots:
             raise HTTPException(status_code=400, detail="Insufficient holdings")
             
+        realized_pnl = (premium - float(existing_pos["avg_premium"])) * order.lots * lot_size
         new_balance = balance + total_cost
-        sb.table("sandbox_wallet").update({"balance": new_balance}).eq("user_id", user_id).execute()
+        new_realized_pnl = float(wallet.get("realized_pnl", 0)) + realized_pnl
+        sb.table("sandbox_wallet").update({"balance": new_balance, "realized_pnl": new_realized_pnl}).eq("user_id", user_id).execute()
         
         new_lots = existing_pos["lots_held"] - order.lots
         if new_lots == 0:

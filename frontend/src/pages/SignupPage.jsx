@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/auth.js';
+import { supabase, isDemoMode, generateUniqueUserId } from '../lib/auth.js';
 import { 
-  ShieldCheck, Eye, EyeSlash, CaretDown, Check, WarningCircle, CheckSquare, Square
+  ShieldCheck, Eye, EyeSlash, CaretDown, Check, CheckCircle, WarningCircle, CheckSquare, Square
 } from '@phosphor-icons/react';
 import AuthLayout from '../components/AuthLayout.jsx';
 import '../styles/auth.css';
@@ -52,34 +52,94 @@ export default function SignupPage() {
       setError('Please fill all required fields'); setLoading(false); return;
     }
 
-    if (step1.referral_code) {
-      const { data: refData, error: refErr } = await supabase.from('referral_codes').select('code').eq('code', step1.referral_code).single();
-      if (refErr || !refData) {
-        setError('Invalid referral code'); setLoading(false); return;
+    if (step1.referral_code && supabase) {
+      try {
+        const { data: refData, error: refErr } = await supabase.from('referral_codes').select('code').eq('code', step1.referral_code).single();
+        if (refErr || !refData) {
+          setError('Invalid referral code'); setLoading(false); return;
+        }
+      } catch (e) {
+        console.warn('Referral code check skipped', e);
       }
     }
 
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+    let uid = null;
+    if (isDemoMode || !supabase) {
+      uid = generateUniqueUserId();
+      const authUser = {
+        id: uid,
+        email: step1.email.trim().toLowerCase(),
+        user_metadata: { full_name: step1.full_name, phone: step1.phone }
+      };
+      localStorage.setItem('arca_auth_user', JSON.stringify(authUser));
+      
+      // Store in registered users database array
+      const existingUsers = JSON.parse(localStorage.getItem('arca_registered_users') || '[]');
+      const userIdx = existingUsers.findIndex(u => u.email.toLowerCase() === step1.email.trim().toLowerCase());
+      const userRecord = {
+        id: uid,
+        email: step1.email.trim().toLowerCase(),
+        password: step1.password,
+        full_name: step1.full_name,
+        profile: {
+          id: uid,
+          email: step1.email.trim().toLowerCase(),
+          full_name: step1.full_name,
+          display_name: step1.full_name,
+          phone: step1.phone,
+          referral_code: step1.referral_code || null
+        }
+      };
+      if (userIdx >= 0) existingUsers[userIdx] = userRecord;
+      else existingUsers.push(userRecord);
+      localStorage.setItem('arca_registered_users', JSON.stringify(existingUsers));
+    } else {
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: step1.email,
+        password: step1.password,
+        options: { data: { full_name: step1.full_name, phone: step1.phone } }
+      });
+
+      if (signUpError) {
+        setError(signUpError.message); setLoading(false); return;
+      }
+      uid = authData.user?.id;
+      if (!uid) {
+        setError('Signup failed. Try again.'); setLoading(false); return;
+      }
+
+      const profilePayload = {
+        id: uid,
+        user_id: uid,
+        email: step1.email,
+        full_name: step1.full_name,
+        display_name: step1.full_name,
+        phone: step1.phone,
+        referral_code: step1.referral_code || null,
+        onboarding_step: 2
+      };
+
+      try {
+        await supabase.from('profiles').upsert(profilePayload);
+      } catch (err) {
+        console.warn('Profile creation warning:', err);
+      }
+    }
+
+    // Always cache locally so profile page reflects user input immediately
+    const existingCached = JSON.parse(localStorage.getItem('arca_profile') || '{}');
+    localStorage.setItem('arca_profile', JSON.stringify({
+      ...existingCached,
+      id: uid,
       email: step1.email,
-      password: step1.password,
-      options: { data: { full_name: step1.full_name, phone: step1.phone } }
-    });
-
-    if (signUpError) {
-      setError(signUpError.message); setLoading(false); return;
-    }
-    const uid = authData.user?.id;
-    if (!uid) {
-      setError('Signup failed. Try again.'); setLoading(false); return;
-    }
-    setUserId(uid);
-
-    await supabase.from('profiles').update({
+      full_name: step1.full_name,
+      display_name: step1.full_name,
       phone: step1.phone,
       referral_code: step1.referral_code || null,
       onboarding_step: 2
-    }).eq('id', uid);
+    }));
 
+    setUserId(uid);
     setLoading(false);
     setStep(2);
   };
@@ -92,16 +152,38 @@ export default function SignupPage() {
       setError('Please fill all fields'); setLoading(false); return;
     }
 
-    const { error: updateError } = await supabase.from('profiles').update({
+    const step2Payload = {
+      date_of_birth: step2.date_of_birth || null,
+      gender: step2.gender,
+      country: step2.country,
       city: step2.city,
       occupation: step2.occupation,
       annual_income: step2.annual_income,
       experience_years: step2.experience_years,
       onboarding_step: 3
-    }).eq('id', userId);
+    };
 
-    if (updateError) {
-      setError(updateError.message); setLoading(false); return;
+    if (supabase && userId && !userId.startsWith('demo-user')) {
+      const { error: updateError } = await supabase.from('profiles').upsert({
+        id: userId,
+        user_id: userId,
+        ...step2Payload
+      });
+
+      if (updateError) {
+        console.warn('Step 2 profile update warning:', updateError.message);
+      }
+    }
+
+    const existingCached = JSON.parse(localStorage.getItem('arca_profile') || '{}');
+    const mergedProfile = { ...existingCached, ...step2Payload };
+    localStorage.setItem('arca_profile', JSON.stringify(mergedProfile));
+
+    const existingUsers = JSON.parse(localStorage.getItem('arca_registered_users') || '[]');
+    const userIdx = existingUsers.findIndex(u => u.id === userId);
+    if (userIdx >= 0) {
+      existingUsers[userIdx].profile = { ...(existingUsers[userIdx].profile || {}), ...step2Payload };
+      localStorage.setItem('arca_registered_users', JSON.stringify(existingUsers));
     }
 
     setLoading(false);
@@ -119,17 +201,36 @@ export default function SignupPage() {
       setError('You must accept the Terms and Privacy Policy to continue.'); setLoading(false); return;
     }
 
-    const { error: updateError } = await supabase.from('profiles').update({
+    const step3Payload = {
       risk_profile: step3.risk_profile,
       investment_goal: step3.investment_goal,
-      experience_years: step3.investment_horizon, // mapping horizon to unused db field for now
+      investment_horizon: step3.investment_horizon,
       terms_accepted: true,
       onboarding_done: true,
       onboarding_step: 3
-    }).eq('id', userId);
+    };
 
-    if (updateError) {
-      setError(updateError.message); setLoading(false); return;
+    if (supabase && userId && !userId.startsWith('demo-user')) {
+      const { error: updateError } = await supabase.from('profiles').upsert({
+        id: userId,
+        user_id: userId,
+        ...step3Payload
+      });
+
+      if (updateError) {
+        console.warn('Step 3 profile update warning:', updateError.message);
+      }
+    }
+
+    const existingCached = JSON.parse(localStorage.getItem('arca_profile') || '{}');
+    const mergedProfile = { ...existingCached, ...step3Payload };
+    localStorage.setItem('arca_profile', JSON.stringify(mergedProfile));
+
+    const existingUsers = JSON.parse(localStorage.getItem('arca_registered_users') || '[]');
+    const userIdx = existingUsers.findIndex(u => u.id === userId);
+    if (userIdx >= 0) {
+      existingUsers[userIdx].profile = { ...(existingUsers[userIdx].profile || {}), ...step3Payload };
+      localStorage.setItem('arca_registered_users', JSON.stringify(existingUsers));
     }
 
     setLoading(false);

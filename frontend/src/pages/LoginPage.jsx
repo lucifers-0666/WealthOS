@@ -7,7 +7,7 @@ import '../styles/auth.css';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -18,7 +18,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      await signIn(email, password);
+      await signIn(identifier, password);
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Authentication failed');
@@ -54,14 +54,14 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin}>
           <div className="auth-field">
-            <label className="auth-label">Email</label>
+            <label className="auth-label">Email or User ID</label>
             <div className="auth-input-wrap">
               <input 
-                type="email" 
+                type="text" 
                 className="auth-input" 
-                placeholder="you@example.com"
-                value={email} 
-                onChange={e => setEmail(e.target.value)} 
+                placeholder="you@example.com or ARCA-123456"
+                value={identifier} 
+                onChange={e => setIdentifier(e.target.value)} 
                 required 
               />
             </div>

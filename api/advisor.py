@@ -6,7 +6,7 @@ import asyncio
 import json
 import logging
 from typing import AsyncGenerator
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -26,10 +26,24 @@ class ChatRequest(BaseModel):
     message: str
 
 
+def get_user_dependency(authorization: str = Header(None)) -> dict:
+    from api import get_current_user
+    return get_current_user(authorization)
+
+
 @router.post("/chat")
-async def advisor_chat(req: ChatRequest):
+async def advisor_chat(req: ChatRequest, current_user: dict = Depends(get_user_dependency)):
     from core.ai_client import GeminiClient
     from config import settings
+    from database.crud import get_or_create_profile
+    
+    user_id = current_user["id"]
+    profile = get_or_create_profile(user_id)
+    api_key = (
+        profile.get("gemini_api_key") or 
+        profile.get("ui_preferences", {}).get("gemini_api_key") or 
+        settings.GEMINI_API_KEY
+    )
     
     context = (
         "You are WealthOS AI Advisor — an expert Indian equity portfolio advisor. "
@@ -38,13 +52,13 @@ async def advisor_chat(req: ChatRequest):
         "with bullet points where appropriate. Keep responses under 400 words."
     )
     
-    if not settings.GEMINI_API_KEY:
+    if not api_key:
         global _fallback_idx
         resp = FALLBACK_RESPONSES[_fallback_idx % len(FALLBACK_RESPONSES)]
         _fallback_idx += 1
         return {"reply": resp}
         
-    client = GeminiClient(settings.GEMINI_API_KEY)
+    client = GeminiClient(api_key)
     reply = await asyncio.get_event_loop().run_in_executor(
         None, lambda: client.ask(req.message, context=context)
     )
@@ -52,9 +66,18 @@ async def advisor_chat(req: ChatRequest):
 
 
 @router.post("/stream")
-async def advisor_stream(req: ChatRequest):
+async def advisor_stream(req: ChatRequest, current_user: dict = Depends(get_user_dependency)):
     from core.ai_client import GeminiClient
     from config import settings
+    from database.crud import get_or_create_profile
+    
+    user_id = current_user["id"]
+    profile = get_or_create_profile(user_id)
+    api_key = (
+        profile.get("gemini_api_key") or 
+        profile.get("ui_preferences", {}).get("gemini_api_key") or 
+        settings.GEMINI_API_KEY
+    )
     
     context = (
         "You are WealthOS AI Advisor — an expert Indian equity portfolio advisor. "
@@ -63,7 +86,7 @@ async def advisor_stream(req: ChatRequest):
         "with bullet points where appropriate. Keep responses under 400 words."
     )
 
-    if not settings.GEMINI_API_KEY:
+    if not api_key:
         async def fallback_stream():
             global _fallback_idx
             text = FALLBACK_RESPONSES[_fallback_idx % len(FALLBACK_RESPONSES)]
@@ -75,7 +98,7 @@ async def advisor_stream(req: ChatRequest):
         return StreamingResponse(fallback_stream(), media_type="text/event-stream")
 
     async def stream_gen():
-        client = GeminiClient(settings.GEMINI_API_KEY)
+        client = GeminiClient(api_key)
         # Using ask() and simulating stream to frontend
         reply = await asyncio.get_event_loop().run_in_executor(
             None, lambda: client.ask(req.message, context=context)

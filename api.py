@@ -222,6 +222,8 @@ class UserProfileUpdateIn(BaseModel):
     notification_settings: Optional[dict] = None
     ui_preferences: Optional[dict] = None
     investment_profile: Optional[dict] = None
+    alphavantage_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
 
 
 class UserPreferencesIn(BaseModel):

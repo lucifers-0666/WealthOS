@@ -104,7 +104,7 @@ async def upload_and_process(
         raise HTTPException(status_code=422, detail=result["error"])
 
     holdings = result.get("holdings", [])
-    insights = generate_insights(holdings) if holdings else {}
+    insights = generate_insights(holdings, user_id=user_id) if holdings else {}
 
     return {
         "upload_id": str(uuid.uuid4()),
@@ -205,7 +205,7 @@ async def get_insights(
     user_id: str = Depends(_get_user_id),
 ):
     holdings = [h.model_dump() for h in body.holdings]
-    insights = generate_insights(holdings)
+    insights = generate_insights(holdings, user_id=user_id)
     return insights
 
 

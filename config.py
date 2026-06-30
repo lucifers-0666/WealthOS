@@ -135,3 +135,33 @@ COLOR_SECONDARY = "#D6C7A1"
 NEWS_LOOKBACK_DAYS = int(os.getenv("NEWS_LOOKBACK_DAYS", "7"))
 NEWS_MAX_ARTICLES = int(os.getenv("NEWS_MAX_ARTICLES", "20"))
 PRICE_CACHE_TTL = 300   # 5 minutes
+
+
+# ── Settings Class Wrapper ──────────────────────────────────────
+class Settings:
+    @property
+    def GEMINI_API_KEY(self) -> str:
+        return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
+
+    @property
+    def ALPHA_VANTAGE_KEY(self) -> str:
+        return os.getenv("ALPHA_VANTAGE_KEY") or os.getenv("ALPHA_VANTAGE_KEY", "")
+
+    @property
+    def SUPABASE_URL(self) -> str:
+        return os.getenv("SUPABASE_URL", "")
+
+    @property
+    def SUPABASE_ANON_KEY(self) -> str:
+        return os.getenv("SUPABASE_ANON_KEY", "")
+
+    @property
+    def SUPABASE_SERVICE_ROLE_KEY(self) -> str:
+        return os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+
+    @property
+    def SECRET_KEY(self) -> str:
+        return os.getenv("SECRET_KEY", "")
+
+settings = Settings()
+

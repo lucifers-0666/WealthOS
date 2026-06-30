@@ -196,10 +196,19 @@ async def place_equity_order(request: Request, order: SandboxEquityOrder, user_i
     # Try calling AI if needed (Phase 4 integration)
     try:
         from core.ai_client import GeminiClient
-        client = GeminiClient()
-        # Stub call for later...
-    except Exception:
-        pass
+        from database.crud import get_or_create_profile
+        from config import settings
+        profile = get_or_create_profile(user_id)
+        api_key = (
+            profile.get("gemini_api_key") or 
+            profile.get("ui_preferences", {}).get("gemini_api_key") or 
+            settings.GEMINI_API_KEY
+        )
+        if api_key:
+            client = GeminiClient(api_key)
+            # Stub call for later...
+    except Exception as e:
+        logger.warning(f"Failed to initiate sandbox AI call: {e}")
         
     return {
         "executed_price": curr_price,

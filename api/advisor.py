@@ -9,6 +9,7 @@ from typing import AsyncGenerator
 from fastapi import APIRouter, Depends, Request, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from api.auth import get_current_user
 
 logger = logging.getLogger("wealthos.advisor")
 router = APIRouter(prefix="/api/advisor", tags=["advisor"])
@@ -26,13 +27,8 @@ class ChatRequest(BaseModel):
     message: str
 
 
-def get_user_dependency(authorization: str = Header(None)) -> dict:
-    from api import get_current_user
-    return get_current_user(authorization)
-
-
 @router.post("/chat")
-async def advisor_chat(req: ChatRequest, current_user: dict = Depends(get_user_dependency)):
+async def advisor_chat(req: ChatRequest, current_user: dict = Depends(get_current_user)):
     from core.ai_client import GeminiClient
     from config import settings
     from database.crud import get_or_create_profile
@@ -66,7 +62,7 @@ async def advisor_chat(req: ChatRequest, current_user: dict = Depends(get_user_d
 
 
 @router.post("/stream")
-async def advisor_stream(req: ChatRequest, current_user: dict = Depends(get_user_dependency)):
+async def advisor_stream(req: ChatRequest, current_user: dict = Depends(get_current_user)):
     from core.ai_client import GeminiClient
     from config import settings
     from database.crud import get_or_create_profile

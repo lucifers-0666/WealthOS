@@ -145,7 +145,7 @@ class Settings:
 
     @property
     def ALPHA_VANTAGE_KEY(self) -> str:
-        return os.getenv("ALPHA_VANTAGE_KEY") or os.getenv("ALPHA_VANTAGE_KEY", "")
+        return os.getenv("ALPHA_VANTAGE_KEY") or os.getenv("ALPHAVANTAGE_API_KEY", "")
 
     @property
     def SUPABASE_URL(self) -> str:

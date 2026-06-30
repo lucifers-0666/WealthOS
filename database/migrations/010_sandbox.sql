@@ -91,9 +91,11 @@ CREATE POLICY "sandbox_option_positions_own" ON sandbox_option_positions
 
 -- Auto-create wallet when new user signs up
 CREATE OR REPLACE FUNCTION create_sandbox_wallet()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER 
+SET search_path = ''
+AS $$
 BEGIN
-  INSERT INTO sandbox_wallet (user_id, balance, initial_balance)
+  INSERT INTO public.sandbox_wallet (user_id, balance, initial_balance)
   VALUES (NEW.id, 500000.00, 500000.00)
   ON CONFLICT (user_id) DO NOTHING;
   RETURN NEW;

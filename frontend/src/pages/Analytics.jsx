@@ -188,12 +188,25 @@ export default function Analytics() {
       };
     });
 
-    // Dummy Monthly Returns
+    // Calculate real monthly performance returns from portfolio history
     const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    const monthlyReturns = months.map(m => ({
-      month: m,
-      val: (Math.random() * 10) - 4
-    }));
+    const monthlyReturns = months.map((m, idx) => {
+      const points = history.filter(p => {
+        if (!p.date) return false;
+        const parts = p.date.split('-');
+        if (parts.length < 2) return false;
+        return parseInt(parts[1], 10) - 1 === idx;
+      });
+      
+      if (points.length >= 2) {
+        const sortedPoints = [...points].sort((a, b) => a.date.localeCompare(b.date));
+        const startVal = Number(sortedPoints[0].value || 0);
+        const endVal = Number(sortedPoints[sortedPoints.length - 1].value || 0);
+        const valChange = startVal > 0 ? ((endVal - startVal) / startVal) * 100 : 0;
+        return { month: m, val: valChange };
+      }
+      return { month: m, val: 0 };
+    });
 
     return { 
       withPnl, sorted, sectors, cagr, volatility, sharpe, beta, maxDrawdown, winRate, chartData, monthlyReturns

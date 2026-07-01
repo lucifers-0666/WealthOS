@@ -765,17 +765,56 @@ def market_history(symbol: str, range: str = "1M", user_id: str = Depends(get_us
 
 
 @app.get("/api/news", tags=["News"])
-def market_news(sentiment: Optional[str] = None, user_id: str = Depends(get_user_id)):
+def market_news(
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    sentiment: Optional[str] = None,
+    user_id: str = Depends(get_user_id)
+):
     try:
-        holdings = get_holdings(user_id)
-        watchlist = get_watchlist(user_id)
-        symbols = []
-        for row in [*holdings, *watchlist]:
-            ticker = (row.get("ticker") or row.get("symbol") or "").upper()
-            if ticker and ticker not in symbols:
-                symbols.append(ticker)
+        import requests
+        from config import NEWSAPI_KEY
+        
+        api_key = NEWSAPI_KEY or os.getenv("NEWSAPI_KEY")
+        if not api_key:
+            return {"articles": [], "error": "NEWSAPI_KEY is not configured on the server."}
 
-        articles = fetch_news_for_symbols(tuple(symbols)) or []
+        category_queries = {
+            "All": "Indian stock market NSE BSE economy",
+            "Markets": "Indian stock market Nifty Sensex NSE BSE",
+            "Economy": "India economy RBI inflation GDP",
+            "Stocks": "NSE stocks earnings corporate results",
+            "Mutual Funds": "Indian mutual funds SIP portfolio",
+            "Global": "global markets Wall Street Fed equities",
+        }
+
+        # Determine query term
+        if q:
+            effective_query = q
+        elif category and category in category_queries:
+            effective_query = category_queries[category]
+        else:
+            # Fallback to portfolio + watchlist tickers
+            holdings = get_holdings(user_id)
+            watchlist = get_watchlist(user_id)
+            symbols = []
+            for row in [*holdings, *watchlist]:
+                ticker = (row.get("ticker") or row.get("symbol") or "").upper()
+                if ticker and ticker not in symbols:
+                    symbols.append(ticker)
+            
+            clean_symbols = [s.split('.')[0] for s in symbols]
+            query_terms = clean_symbols[:5]
+            query_terms += ["NSE", "BSE", "Indian stock market", "Sensex", "Nifty"]
+            effective_query = " OR ".join(query_terms[:8]) if query_terms else "NSE OR BSE OR India"
+
+        url = f"https://newsapi.org/v2/everything?q={effective_query}&language=en&sortBy=publishedAt&pageSize=20&apiKey={api_key}"
+        resp = requests.get(url, timeout=8.0)
+        data = resp.json()
+        if resp.status_code != 200 or data.get("status") != "ok":
+            return {"articles": [], "error": data.get("message", "Failed to fetch news")}
+
+        articles = data.get("articles", [])
         normalized = []
         for article in articles:
             text = f"{article.get('title', '')} {article.get('description', '')}".lower()
@@ -796,14 +835,15 @@ def market_news(sentiment: Optional[str] = None, user_id: str = Depends(get_user
                 "title": article.get("title"),
                 "description": article.get("description"),
                 "url": article.get("url"),
-                "source": (article.get("source") or {}).get("name") if isinstance(article.get("source"), dict) else article.get("source"),
+                "urlToImage": article.get("urlToImage"),
+                "source": {"name": (article.get("source") or {}).get("name") if isinstance(article.get("source"), dict) else article.get("source")},
                 "publishedAt": article.get("publishedAt"),
-                "sentiment": article_sentiment,
+                "sentiment": article_sentiment.capitalize(),
             })
 
         return {"articles": normalized[:20]}
     except Exception as e:
-        logger.warning(f"market_news failed: {e}")
+        logger.warning(f"market_news proxy failed: {e}")
         return {"articles": []}
 
 

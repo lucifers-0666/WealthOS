@@ -1,4 +1,6 @@
 import { theme } from '../lib/theme.js';
+import { request } from './api.js';
+
 
 const NEWSAPI_KEY = import.meta.env.VITE_NEWSAPI_KEY || '';
 const NEWS_CACHE_KEY = 'arca:market-news-cache';
@@ -45,70 +47,14 @@ export function classifySentiment(article) {
   return 'Neutral';
 }
 
-export async function fetchMarketNews({ query, category = 'All', portfolioTickers = [] } = {}) {
-  const readCache = () => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const cached = JSON.parse(window.localStorage.getItem(NEWS_CACHE_KEY) || '[]');
-      return Array.isArray(cached) ? cached : [];
-    } catch {
-      window.localStorage.removeItem(NEWS_CACHE_KEY);
-      return [];
-    }
-  };
-
-  const writeCache = (articles) => {
-    if (typeof window === 'undefined' || !Array.isArray(articles) || !articles.length) return;
-    window.localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify(articles.slice(0, 40)));
-  };
-
-  if (!NEWSAPI_KEY) {
-    const cached = readCache();
-    return {
-      articles: cached,
-      error: cached.length ? 'Live news key is missing. Showing cached intelligence.' : 'Add VITE_NEWSAPI_KEY to load live market news.',
-      cached: cached.length > 0,
-    };
-  }
-
-  const effectiveQuery = query?.trim() || CATEGORY_QUERIES[category] || CATEGORY_QUERIES.All;
-  const url = new URL('https://newsapi.org/v2/everything');
-  url.searchParams.set('q', effectiveQuery);
-  url.searchParams.set('language', 'en');
-  url.searchParams.set('sortBy', 'publishedAt');
-  url.searchParams.set('pageSize', '20');
-  url.searchParams.set('apiKey', NEWSAPI_KEY);
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8_000);
-
+export async function fetchMarketNews({ query, category = 'All' } = {}) {
   try {
-    const res = await fetch(url.toString(), { signal: controller.signal });
-    const data = await res.json();
-    if (!res.ok || data.status !== 'ok') {
-      return { articles: [], error: data.message || 'Failed to load news.' };
-    }
-
-    const articles = (data.articles || [])
-      .map((article) => ({
-        ...article,
-        sentiment: classifySentiment(article),
-        relevanceScore: scoreArticle(article, portfolioTickers),
-      }))
-      .sort((a, b) => b.relevanceScore - a.relevanceScore || new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
-
-    writeCache(articles);
-    return { articles, error: null };
+    const data = await request('GET', '/api/news', null, { q: query || '', category });
+    return { articles: data.articles || [], error: data.error || null };
   } catch (error) {
-    const cached = readCache();
     return {
-      articles: cached,
-      error: error.name === 'AbortError'
-        ? 'Market intelligence feed is delayed. Showing cached intelligence while reconnecting.'
-        : error.message,
-      cached: cached.length > 0,
+      articles: [],
+      error: error.message || 'Failed to load news from backend proxy.',
     };
-  } finally {
-    clearTimeout(timeout);
   }
 }

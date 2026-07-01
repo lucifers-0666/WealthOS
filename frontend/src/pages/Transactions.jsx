@@ -137,8 +137,21 @@ export default function Transactions() {
                   const qty = Number(txn.quantity || 0);
                   const price = Number(txn.price || 0);
                   const total = qty * price;
-                  // Mock Realised PnL for demo if SELL
-                  const pnlRealised = action === 'SELL' ? (Math.random() * 2000 - 500) : null;
+                  
+                  // Compute real realised P&L based on preceding purchases
+                  let pnlRealised = null;
+                  if (action === 'SELL') {
+                    const sellDate = new Date(dateStr);
+                    const precedingBuys = txns.filter(t => 
+                      t.ticker === txn.ticker && 
+                      (t.action || 'buy').toUpperCase() === 'BUY' && 
+                      new Date(t.transaction_date || t.date || 0) <= sellDate
+                    );
+                    const totalBuyQty = precedingBuys.reduce((acc, t) => acc + Number(t.quantity || 0), 0);
+                    const totalBuyVal = precedingBuys.reduce((acc, t) => acc + (Number(t.quantity || 0) * Number(t.price || 0)), 0);
+                    const avgBuyPrice = totalBuyQty > 0 ? (totalBuyVal / totalBuyQty) : 0;
+                    pnlRealised = (price - avgBuyPrice) * qty;
+                  }
                   const isGain = pnlRealised >= 0;
 
                   return (

@@ -6,7 +6,8 @@ import EquityDesk from './components/equity/EquityDesk';
 import OptionsDesk from './components/options/OptionsDesk';
 import FuturesDesk from './components/futures/FuturesDesk';
 import OrdersHistory from './components/OrdersHistory';
-import { ChartLineUp, Strategy, ClockCounterClockwise, ListDashes } from '@phosphor-icons/react';
+import SandboxRulesHub from './components/SandboxRulesHub';
+import { ChartLineUp, Strategy, ClockCounterClockwise, ListDashes, BookOpen } from '@phosphor-icons/react';
 
 export default function Sandbox() {
   const { loadWallet, activeTab } = useSandboxStore(state => state.actions);
@@ -27,7 +28,8 @@ export default function Sandbox() {
             { id: 'equity', label: 'Paper Equity', icon: <ChartLineUp size={16} /> },
             { id: 'options', label: 'Options Desk', icon: <Strategy size={16} /> },
             { id: 'futures', label: 'Futures Desk', icon: <ClockCounterClockwise size={16} /> },
-            { id: 'orders', label: 'Order History', icon: <ListDashes size={16} /> }
+            { id: 'orders', label: 'Order History', icon: <ListDashes size={16} /> },
+            { id: 'rules', label: 'Academy & Rules', icon: <BookOpen size={16} /> }
           ]} 
           activeTab={currentTab} 
           onChange={(id) => useSandboxStore.getState().setActiveTab(id)} 
@@ -38,6 +40,7 @@ export default function Sandbox() {
           {currentTab === 'options' && <OptionsDesk />}
           {currentTab === 'futures' && <FuturesDesk />}
           {currentTab === 'orders' && <OrdersHistory />}
+          {currentTab === 'rules' && <SandboxRulesHub />}
         </div>
       </div>
     </div>

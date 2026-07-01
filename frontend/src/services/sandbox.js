@@ -39,3 +39,11 @@ export async function getSandboxFuturesContracts() {
 export async function placeSandboxFutureOrder(order) {
   return request('POST', '/api/sandbox/order/future', order);
 }
+
+export async function getSandboxFuturesPositions() {
+  return request('GET', '/api/sandbox/futures/positions');
+}
+
+export async function getSandboxPrice(ticker) {
+  return request('GET', `/api/sandbox/price?ticker=${ticker}`);
+}

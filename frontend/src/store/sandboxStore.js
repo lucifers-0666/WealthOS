@@ -7,14 +7,20 @@ import {
   getSandboxOptionPositions,
   placeSandboxEquityOrder,
   placeSandboxOptionOrder,
-  resetSandboxWallet
+  resetSandboxWallet,
+  getSandboxOptionsChain,
+  getSandboxFuturesContracts,
+  placeSandboxFutureOrder,
+  getSandboxFuturesPositions
 } from '../services/sandbox.js';
 
 export const useSandboxStore = create((set, get) => ({
-  wallet: { balance: 0, initial_balance: 500000, portfolio_value: 0, total_pnl: 0, total_pnl_percent: 0 },
+  wallet: { balance: 0, initial_balance: 500000, portfolio_value: 0, total_pnl: 0, total_pnl_percent: 0, realized_pnl: 0 },
   holdings: [],
   orders: [],
   optionPositions: [],
+  futuresPositions: [],
+  futuresContracts: [],
   selectedTicker: null,
   selectedContract: null,
   activeTab: 'equity', // "equity" | "options" | "futures"
@@ -74,11 +80,8 @@ export const useSandboxStore = create((set, get) => ({
     loadOptionChain: async (underlying, expiry) => {
       set({ isLoading: true });
       try {
-        const res = await fetch(`${API_BASE}/api/sandbox/options/chain?underlying=${underlying}&expiry=${expiry}`, { headers: getHeaders() });
-        if (res.ok) {
-          return await res.json();
-        }
-        return [];
+        const data = await getSandboxOptionsChain(underlying, expiry);
+        return data || [];
       } catch (e) {
         console.error("Failed to load options chain", e);
         return [];
@@ -110,6 +113,39 @@ export const useSandboxStore = create((set, get) => ({
         set({ isLoading: false });
       }
     },
+
+    loadFuturesPositions: async () => {
+      try {
+        const data = await getSandboxFuturesPositions();
+        set({ futuresPositions: data });
+      } catch (e) {
+        console.error("Failed to load futures positions", e);
+      }
+    },
+
+    loadFuturesContracts: async () => {
+      try {
+        const data = await getSandboxFuturesContracts();
+        set({ futuresContracts: data });
+      } catch (e) {
+        console.error("Failed to load futures contracts", e);
+      }
+    },
+
+    placeFutureOrder: async (params) => {
+      set({ isLoading: true });
+      try {
+        const data = await placeSandboxFutureOrder(params);
+        await get().actions.loadWallet();
+        await get().actions.loadFuturesPositions();
+        await get().actions.loadOrders();
+        return data;
+      } catch (err) {
+        throw new Error(err.message || "Order failed");
+      } finally {
+        set({ isLoading: false });
+      }
+    },
     
     resetSandbox: async () => {
       set({ isLoading: true });
@@ -118,6 +154,7 @@ export const useSandboxStore = create((set, get) => ({
         await get().actions.loadWallet();
         await get().actions.loadHoldings();
         await get().actions.loadOptionPositions();
+        await get().actions.loadFuturesPositions();
         await get().actions.loadOrders();
       } catch (e) {
         console.error("Failed to reset sandbox", e);

@@ -61,22 +61,28 @@ export default function TopbarRight() {
     async function loadProfile() {
       if (!user) return;
       try {
-        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        const pRow = data || {};
+        let pRow = {};
+        if (supabase) {
+          const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+          pRow = data || {};
+        } else {
+          pRow = JSON.parse(localStorage.getItem('arca_profile') || '{}');
+        }
+
         const name = pRow.full_name || pRow.display_name || user.user_metadata?.full_name || '';
         const parts = name.trim().split(' ').filter(Boolean);
         const initials = parts.length >= 2
           ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
           : name.length > 0
             ? name.slice(0, 2).toUpperCase()
-            : user.email.slice(0, 2).toUpperCase();
+            : (user.email || 'US').slice(0, 2).toUpperCase();
             
         setProfile({
-          display_name: pRow.display_name || name || user.email.split('@')[0],
+          display_name: pRow.display_name || name || (user.email ? user.email.split('@')[0] : 'User'),
           initials
         });
       } catch (e) {
-        console.error(e);
+        console.error("Failed to load profile in TopbarRight", e);
       }
     }
     loadProfile();

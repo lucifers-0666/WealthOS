@@ -380,14 +380,192 @@ async def get_option_positions(user_id: str = Depends(_get_user_id)):
         
     return positions
 
-# ── FUTURES ENDPOINTS ────────────────────────────────────────────
+# ── MARKET DATA & FUTURES ENDPOINTS ──────────────────────────────
+
+@router.get("/price")
+async def get_live_price(ticker: str):
+    """Fetch live ticker price for sandbox trading quotes."""
+    try:
+        res = fetch_price(ticker)
+        if res.get("error"):
+            raise HTTPException(status_code=400, detail=res["error"])
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/futures/contracts")
 async def get_futures_contracts():
-    return [
-        {"underlying": "NIFTY", "expiry": "2026-07-30", "lot_size": 50, "current_price": 22100.0, "margin_required": 110000.0}
-    ]
+    contracts = []
+    for u, details in FUTURES_CONTRACTS.items():
+        p = fetch_price(details["ticker"])
+        price = p.get("price", 0.0)
+        contracts.append({
+            "underlying": u,
+            "ticker": details["ticker"],
+            "lot_size": details["lot_size"],
+            "current_price": price,
+            "margin_required": round(price * details["lot_size"] * details["margin_pct"], 2),
+            "expiry": "2026-07-30"
+        })
+    return contracts
+
+@router.get("/futures/positions")
+async def get_futures_positions(user_id: str = Depends(_get_user_id)):
+    sb = get_supabase()
+    res = sb.table("sandbox_orders").select("*").eq("user_id", user_id).eq("order_type", "FUTURE").order("executed_at", desc=False).execute()
+    
+    positions = []
+    for u, details in FUTURES_CONTRACTS.items():
+        u_orders = [o for o in res.data if o["ticker"] == u]
+        if not u_orders:
+            continue
+        
+        net_qty = 0.0
+        buy_value = 0.0
+        buy_qty = 0.0
+        sell_value = 0.0
+        sell_qty = 0.0
+        
+        for o in u_orders:
+            qty = float(o["quantity"])
+            price = float(o["price"])
+            if o["action"] == "BUY":
+                net_qty += qty
+                buy_value += qty * price
+                buy_qty += qty
+            elif o["action"] == "SELL":
+                net_qty -= qty
+                sell_value += qty * price
+                sell_qty += qty
+                
+        if net_qty != 0:
+            lot_size = details["lot_size"]
+            lots = int(abs(net_qty) // lot_size)
+            
+            p = fetch_price(details["ticker"])
+            curr_price = p.get("price", 0.0)
+            
+            if net_qty > 0:
+                avg_price = buy_value / buy_qty if buy_qty > 0 else 0.0
+                unrealized_pnl = (curr_price - avg_price) * net_qty
+                pos_type = "LONG"
+            else:
+                avg_price = sell_value / sell_qty if sell_qty > 0 else 0.0
+                unrealized_pnl = (avg_price - curr_price) * abs(net_qty)
+                pos_type = "SHORT"
+                
+            margin_required = curr_price * abs(net_qty) * details["margin_pct"]
+            
+            positions.append({
+                "underlying": u,
+                "position_type": pos_type,
+                "lots": lots,
+                "quantity": abs(net_qty),
+                "avg_price": round(avg_price, 2),
+                "current_price": curr_price,
+                "unrealized_pnl": round(unrealized_pnl, 2),
+                "margin_required": round(margin_required, 2),
+                "expiry_date": u_orders[-1]["expiry_date"]
+            })
+            
+    return positions
 
 @router.post("/order/future")
-async def place_future_order(user_id: str = Depends(_get_user_id)):
-    return {"message": "Futures trading coming soon"}
+async def place_future_order(order: SandboxFutureOrder, user_id: str = Depends(_get_user_id)):
+    if order.lots < 1 or order.lots > 50:
+        raise HTTPException(status_code=400, detail="Invalid lots count. Min: 1, Max: 50.")
+    if order.expiry_date <= date.today():
+        raise HTTPException(status_code=400, detail="Contract expiry date must be in the future.")
+
+    u = order.underlying.upper().strip()
+    if u not in FUTURES_CONTRACTS:
+        raise HTTPException(status_code=400, detail="Invalid underlying index/stock for futures")
+        
+    details = FUTURES_CONTRACTS[u]
+    lot_size = details["lot_size"]
+    qty = order.lots * lot_size
+    
+    p = fetch_price(details["ticker"])
+    curr_price = p.get("price", 0.0)
+    if not curr_price:
+        raise HTTPException(status_code=400, detail="Could not fetch current market price for underlying")
+        
+    contract_val = qty * curr_price
+    margin_req = contract_val * details["margin_pct"]
+    
+    sb = get_supabase()
+    wallet_res = sb.table("sandbox_wallet").select("*").eq("user_id", user_id).execute()
+    if not wallet_res.data:
+        raise HTTPException(status_code=404, detail="Sandbox wallet not initialized")
+    wallet = wallet_res.data[0]
+    balance = float(wallet["balance"])
+    
+    orders_res = sb.table("sandbox_orders").select("*").eq("user_id", user_id).eq("order_type", "FUTURE").eq("ticker", u).order("executed_at", desc=False).execute()
+    
+    net_qty = 0.0
+    buy_value = 0.0
+    buy_qty = 0.0
+    sell_value = 0.0
+    sell_qty = 0.0
+    
+    for o in orders_res.data:
+        q = float(o["quantity"])
+        pr = float(o["price"])
+        if o["action"] == "BUY":
+            net_qty += q
+            buy_value += q * pr
+            buy_qty += q
+        elif o["action"] == "SELL":
+            net_qty -= q
+            sell_value += q * pr
+            sell_qty += q
+            
+    realized_pnl = 0.0
+    is_closing = False
+    
+    if net_qty > 0 and order.action == "SELL":
+        is_closing = True
+        close_qty = min(net_qty, qty)
+        avg_buy = buy_value / buy_qty if buy_qty > 0 else curr_price
+        realized_pnl = (curr_price - avg_buy) * close_qty
+    elif net_qty < 0 and order.action == "BUY":
+        is_closing = True
+        close_qty = min(abs(net_qty), qty)
+        avg_sell = sell_value / sell_qty if sell_qty > 0 else curr_price
+        realized_pnl = (avg_sell - curr_price) * close_qty
+        
+    if not is_closing or qty > abs(net_qty):
+        final_net_qty = net_qty + qty if order.action == "BUY" else net_qty - qty
+        final_margin = abs(final_net_qty) * curr_price * details["margin_pct"]
+        if balance < final_margin:
+            raise HTTPException(status_code=400, detail=f"Insufficient margin. Required: ₹{final_margin:,.2f}, Available: ₹{balance:,.2f}")
+            
+    new_balance = balance + realized_pnl
+    new_realized_pnl = float(wallet.get("realized_pnl", 0)) + realized_pnl
+    sb.table("sandbox_wallet").update({
+        "balance": new_balance,
+        "realized_pnl": new_realized_pnl
+    }).eq("user_id", user_id).execute()
+    
+    sb.table("sandbox_orders").insert({
+        "user_id": user_id,
+        "order_type": "FUTURE",
+        "action": order.action,
+        "ticker": u,
+        "quantity": qty,
+        "price": curr_price,
+        "total_value": contract_val,
+        "contract_size": lot_size,
+        "margin_used": margin_req,
+        "expiry_date": order.expiry_date.isoformat(),
+        "status": "EXECUTED"
+    }).execute()
+    
+    return {
+        "executed_price": curr_price,
+        "total_value": contract_val,
+        "margin_used": margin_req,
+        "new_balance": new_balance,
+        "realized_pnl": realized_pnl,
+        "message": f"Placed {order.action} order for {order.lots} lots of {u} Future at ₹{curr_price:,.2f}"
+    }

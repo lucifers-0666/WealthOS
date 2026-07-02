@@ -56,15 +56,18 @@ function StatCard({ label, value, sub, toneClass, sparklineClass }) {
   );
 }
 
-function TickerItem({ name, value, change }) {
-  const isGain = change >= 0;
-  const valStr = typeof value === "number" ? value.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "-";
+function TickerItem({ label, name, price, value, change, change_pct, isSkeleton }) {
+  const title = label || name;
+  const val = price != null ? price : value;
+  const chg = change_pct != null ? change_pct : change;
+  const isGain = chg >= 0;
+  const valStr = typeof val === "number" ? val.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : "-";
   return (
-    <div className="ticker-item">
-      <span className="ticker-name">{name}</span>
-      <span className="ticker-value">{valStr}</span>
+    <div className={`ticker-item ${isSkeleton ? 'opacity-45 animate-pulse' : ''}`}>
+      <span className="ticker-name">{title}</span>
+      <span className="ticker-value">₹{valStr}</span>
       <span className={isGain ? 'ticker-change-up' : 'ticker-change-down'}>
-        {isGain ? '▲' : '▼'} {Math.abs(change).toFixed(2)}%
+        {isGain ? '▲' : '▼'} {Math.abs(chg).toFixed(2)}%
       </span>
     </div>
   );
@@ -83,14 +86,38 @@ export default function Dashboard() {
   const isMarketOpen = marketStatus.status === 'open' || marketStatus.status === 'preopen';
 
   const [sparkData, setSparkData] = useState([]);
-  const [tickerItems, setTickerItems] = useState([
-    { name: "NIFTY 50", value: 22419.95, change: 0.42 },
-    { name: "SENSEX", value: 73806.15, change: 0.45 },
-    { name: "USD/INR", value: 83.24, change: -0.12 },
-    { name: "GOLD", value: 71200, change: 1.20 },
-    { name: "MIDCAP 150", value: 11847.30, change: 0.54 },
-    { name: "IT INDEX", value: 36214.80, change: -0.18 },
-  ]);
+  
+  // Dynamic Index marquee state
+  const [indices, setIndices] = useState(null);
+
+  const SKELETON_INDICES = [
+    { label: "NIFTY 50", price: 22419.95, change_pct: 0.42 },
+    { label: "SENSEX", price: 73806.15, change_pct: 0.45 },
+    { label: "BANK NIFTY", price: 48116.50, change_pct: -0.23 },
+    { label: "MIDCAP 150", price: 18240.20, change_pct: 0.54 },
+    { label: "INDIA VIX", price: 12.87, change_pct: 1.98 },
+    { label: "USD/INR", price: 83.47, change_pct: -0.06 },
+  ];
+
+  useEffect(() => {
+    async function fetchIndices() {
+      try {
+        const data = await request('GET', '/api/market/indices');
+        if (Array.isArray(data) && data.length > 0) {
+          setIndices(data);
+        }
+      } catch (err) {
+        console.error("Indices marquee reload failed", err);
+      }
+    }
+    
+    fetchIndices();
+    const intervalId = setInterval(fetchIndices, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const tickerItems = indices || SKELETON_INDICES;
+  const isSkeleton = !indices;
 
   const [dismissed, setDismissed] = useState(false);
   const [activityFilter, setActivityFilter] = useState('ALL');
@@ -143,13 +170,15 @@ export default function Dashboard() {
           <span className="ticker-live-text">{isMarketOpen ? 'LIVE' : 'CLOSED'}</span>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+        <div className="ticker-track-container">
           <div className={`ticker-track ${!isMarketOpen ? 'paused' : ''}`}>
-            {[...tickerItems, ...tickerItems].map((item, i) => <TickerItem key={i} {...item} />)}
+            {[...tickerItems, ...tickerItems].map((item, i) => (
+              <TickerItem key={i} {...item} isSkeleton={isSkeleton} />
+            ))}
           </div>
         </div>
 
-        <div style={{ width: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: '1px solid var(--border-default)', height: '100%', flexShrink: 0 }}>
+        <div className="ticker-status-wrapper">
           <span className="nav-section-label" style={{ color: isMarketOpen ? 'var(--status-gain)' : 'var(--text-muted)' }}>
             {marketStatus.label}
           </span>

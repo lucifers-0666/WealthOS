@@ -6,8 +6,19 @@ from database.supabase_client import get_supabase
 from core.price_fetcher import fetch_price
 from core.greeks_calculator import get_option_chain
 import math
+import logging
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
+logger = logging.getLogger("sandbox-routes")
+
+FUTURES_CONTRACTS = {
+    "NIFTY": {"ticker": "^NSEI", "lot_size": 50, "margin_pct": 0.10},
+    "BANKNIFTY": {"ticker": "^NSEBANK", "lot_size": 15, "margin_pct": 0.10},
+    "RELIANCE": {"ticker": "RELIANCE.NS", "lot_size": 250, "margin_pct": 0.12},
+    "TCS": {"ticker": "TCS.NS", "lot_size": 175, "margin_pct": 0.12},
+    "INFY": {"ticker": "INFY.NS", "lot_size": 400, "margin_pct": 0.12},
+}
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -42,6 +53,12 @@ class SandboxOptionOrder(BaseModel):
     strike_price: float
     expiry_date: date
     lots: int
+
+class SandboxFutureOrder(BaseModel):
+    underlying: str
+    action: Literal["BUY", "SELL"]
+    lots: int
+    expiry_date: date
 
 # ── WALLET ENDPOINTS ─────────────────────────────────────────────
 

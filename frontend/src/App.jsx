@@ -24,8 +24,12 @@ const MarketWatch = lazy(() => import('./pages/MarketWatch.jsx'));
 const Transactions = lazy(() => import('./pages/Transactions.jsx'));
 const Sandbox = lazy(() => import('./pages/Sandbox/index.jsx'));
 
+import { useLocation } from 'react-router-dom';
+
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+
   if (loading) {
     return (
       <div className="auth-loading">
@@ -40,7 +44,17 @@ function ProtectedRoute({ children }) {
       </div>
     );
   }
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const isVerified = localStorage.getItem('broker_verified') === 'true';
+  if (!isVerified && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return children;
 }
 
 export default function App() {

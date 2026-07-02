@@ -29,6 +29,8 @@ import logging
 import asyncio
 import json
 from PIL import Image
+import pandas as pd
+import yfinance as yf
 
 load_dotenv()
 
@@ -55,8 +57,10 @@ from core.market_status import get_market_status
 from core.import_engine import process_import_file, apply_confirm
 from ai.cfo_advisor import get_cfo_response
 from ai.rag_engine import fetch_news_for_symbols
-from backend.services.live_market_engine import LiveMarketEngine
+from backend.services.live_market_engine import LiveMarketEngine  # type: ignore
 from api.sandbox_routes import router as sandbox_router
+from api.signals import router as signals_router
+from api.broker import router as broker_router
 
 live_market_engine = LiveMarketEngine()
 
@@ -74,6 +78,8 @@ async def _start_live_market_engine():
     await live_market_engine.start()
 
 app.include_router(sandbox_router)
+app.include_router(signals_router, tags=["Signals"])
+app.include_router(broker_router, tags=["Broker"])
 
 
 @app.on_event("shutdown")
@@ -762,6 +768,72 @@ def market_history(symbol: str, range: str = "1M", user_id: str = Depends(get_us
     except Exception as e:
         logger.warning(f"market_history failed: {e}")
         return {"points": []}
+
+
+# In-memory cache for market indices: {"expires_at": datetime, "data": [...]}
+INDICES_CACHE = {"expires_at": None, "data": []}
+
+@app.get("/api/market/indices", tags=["Market"])
+def get_market_indices(user_id: str = Depends(get_user_id)):
+    global INDICES_CACHE
+    now = datetime.now()
+    if INDICES_CACHE["expires_at"] and INDICES_CACHE["expires_at"] > now:
+        return INDICES_CACHE["data"]
+
+    symbols_map = {
+        "^NSEI": "NIFTY 50",
+        "^BSESN": "SENSEX",
+        "^NSEBANK": "BANK NIFTY",
+        "NIFTYMIDCAP150.NS": "MIDCAP 150",
+        "^INDIAVIX": "INDIA VIX",
+        "USDINR=X": "USD/INR",
+    }
+
+    results = []
+    for sym, label in symbols_map.items():
+        try:
+            df = yf.download(sym, period="2d", interval="1d", progress=False)
+            if df.empty or len(df) < 1:
+                continue
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            
+            closes = df["Close"]
+            if len(closes) >= 2:
+                prev = float(closes.iloc[-2])
+                today = float(closes.iloc[-1])
+            else:
+                prev = float(closes.iloc[-1])
+                today = float(closes.iloc[-1])
+            
+            change = today - prev
+            change_pct = (change / prev * 100) if prev > 0 else 0.0
+            
+            results.append({
+                "symbol": sym,
+                "label": label,
+                "price": round(today, 2),
+                "change": round(change, 2),
+                "change_pct": round(change_pct, 2)
+            })
+        except Exception as e:
+            logger.warning(f"Error fetching index {sym}: {e}")
+
+    if results:
+        INDICES_CACHE = {
+            "expires_at": now + timedelta(seconds=60),
+            "data": results
+        }
+        return results
+
+    return INDICES_CACHE["data"] or [
+        {"symbol": "^NSEI", "label": "NIFTY 50", "price": 22419.95, "change": 93.80, "change_pct": 0.42},
+        {"symbol": "^BSESN", "label": "SENSEX", "price": 73806.15, "change": 328.60, "change_pct": 0.45},
+        {"symbol": "^NSEBANK", "label": "BANK NIFTY", "price": 48116.50, "change": -112.30, "change_pct": -0.23},
+        {"symbol": "NIFTYMIDCAP150.NS", "label": "MIDCAP 150", "price": 18240.20, "change": 98.40, "change_pct": 0.54},
+        {"symbol": "^INDIAVIX", "label": "INDIA VIX", "price": 12.87, "change": 0.25, "change_pct": 1.98},
+        {"symbol": "USDINR=X", "label": "USD/INR", "price": 83.47, "change": -0.05, "change_pct": -0.06},
+    ]
 
 
 @app.get("/api/news", tags=["News"])

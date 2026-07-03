@@ -113,27 +113,38 @@ export default function TopbarRight() {
       {activePanel && (
         <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActivePanel(null)} />
       )}
-      
-      <div className="flex items-center relative z-50">
-        <div className="flex items-center gap-2">
-          <span className={`market-pill ${marketStatus === 'open' ? 'market-open' : 'market-closed'}`}>
-            <span className={`status-dot ${marketStatus === 'open' ? 'dot-gain' : 'dot-muted'}`} />
-            {marketStatus === 'open' ? 'MARKETS OPEN' : marketStatus === 'pre' ? 'PRE-OPEN' : 'MARKET CLOSED'}
-          </span>
-          <span className="topbar-clock font-mono text-[11px] text-[var(--color-text-faint)]">{useClock()}</span>
-        </div>
-        <div style={{ width: 1, height: 16, background: 'rgba(45,60,55,0.55)', margin: '0 12px' }} />
+        <div className="flex items-center relative z-50 gap-4" style={{ paddingRight: 20 }}>
+        {/* "MARKETS OPEN" pill */}
+        <span 
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '4px 10px',
+            background: 'var(--fill-gain)',
+            border: '1px solid var(--border-gain)',
+            borderRadius: '3px',
+            color: 'var(--status-gain)',
+            fontFamily: 'Inter, sans-serif',
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase'
+          }}
+        >
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--status-gain)', display: 'inline-block' }} />
+          MARKETS OPEN
+        </span>
 
-        <div className="flex items-center gap-[8px]">
-          {/* Quick Launch */}
-          <div className="relative flex items-center justify-center" style={{ width: 32, height: 32 }}>
-            <button 
-              className={`topbar-icon-btn ${activePanel === 'quicklaunch' ? 'active' : ''}`}
-              style={{ padding: 8, width: '100%', height: '100%' }}
-              onClick={() => togglePanel('quicklaunch')}
-            >
-              <SquaresFour size={16} weight={activePanel === 'quicklaunch' ? 'fill' : 'regular'} />
-            </button>
+        {/* Quick Launch */}
+        <div className="relative flex items-center justify-center" style={{ width: 32, height: 32 }}>
+          <button 
+            className={`topbar-icon-btn ${activePanel === 'quicklaunch' ? 'active' : ''}`}
+            style={{ padding: 8, width: '100%', height: '100%', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}
+            onClick={() => togglePanel('quicklaunch')}
+          >
+            <SquaresFour size={16} weight={activePanel === 'quicklaunch' ? 'fill' : 'regular'} />
+          </button>
           <AnimatePresence>
             {activePanel === 'quicklaunch' && (
               <motion.div
@@ -169,18 +180,16 @@ export default function TopbarRight() {
           </AnimatePresence>
         </div>
 
-        
-
         {/* Notifications */}
         <div className="relative flex items-center justify-center" style={{ width: 32, height: 32 }}>
           <button 
             className={`topbar-icon-btn ${activePanel === 'notifications' ? 'active' : ''}`}
-            style={{ padding: 8, width: '100%', height: '100%' }}
+            style={{ padding: 8, width: '100%', height: '100%', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', position: 'relative' }}
             onClick={() => togglePanel('notifications')}
           >
-            <Bell size={16} weight={activePanel === 'notifications' ? 'fill' : 'regular'} className={unreadCount > 0 && activePanel !== 'notifications' ? 'text-primary' : ''} />
+            <Bell size={16} weight={activePanel === 'notifications' ? 'fill' : 'regular'} />
             {unreadCount > 0 && (
-              <span className="notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+              <span style={{ position: 'absolute', top: 5, right: 5, width: 6, height: 6, borderRadius: '50%', background: 'var(--status-loss)' }} />
             )}
           </button>
           
@@ -228,13 +237,27 @@ export default function TopbarRight() {
           </AnimatePresence>
         </div>
 
-        
-
         {/* Profile Dropdown */}
         <div className="relative flex items-center justify-center" style={{ width: 32, height: 32 }}>
           <button 
             className={`topbar-avatar ${activePanel === 'profile' ? 'active' : ''}`}
             onClick={() => togglePanel('profile')}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              fontFamily: 'Cinzel, serif',
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--text-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              outline: 'none'
+            }}
           >
             {profile?.initials ?? '..'}
           </button>
@@ -285,7 +308,6 @@ export default function TopbarRight() {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
         </div>
       </div>
     </>

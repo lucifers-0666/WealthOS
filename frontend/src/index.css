@@ -242,14 +242,14 @@
   .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
   .btn-primary {
-    background: linear-gradient(180deg, #f0e6c8, var(--accent-gold)) !important;
+    background: var(--color-gold) !important;
     color: var(--color-bg) !important;
-    border: 1px solid rgba(200, 179, 142,0.5) !important;
+    border: 1px solid var(--color-gold) !important;
     font-weight: 600;
-    
   }
   .btn-primary:hover:not(:disabled) {
-    background: var(--color-bg);
+    background: #B59F7A !important;
+    border-color: #B59F7A !important;
     color: var(--color-bg) !important;
   }
 
@@ -667,9 +667,7 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
-    background:
-      radial-gradient(circle at 20% 10%, rgba(200,179,142,0.06), transparent 30rem),
-      linear-gradient(145deg, var(--bg-base) 0%, var(--bg-secondary) 100%);
+    background: var(--bg-base);
   }
 
   .login-card {

@@ -7,7 +7,7 @@ import {
 
 export default function FuturesDesk() {
   const { futuresPositions, futuresContracts, isLoading } = useSandboxStore();
-  const { loadFuturesContracts, loadFuturesPositions, placeFutureOrder } = useSandboxStore(state => state.actions);
+  const { loadFuturesContracts, loadFuturesPositions, placeFutureOrder, closePosition } = useSandboxStore(state => state.actions);
 
   const [selectedUnderlying, setSelectedUnderlying] = useState('NIFTY');
   const [action, setAction] = useState('BUY');
@@ -136,20 +136,20 @@ export default function FuturesDesk() {
                 <thead>
                   <tr className="border-b border-[var(--color-border)]/50 pb-2 text-[var(--color-text-faint)] font-bold uppercase tracking-wider">
                     <th className="py-2.5 pl-2">Contract</th>
-                    <th className="py-2.5">Position Type</th>
-                    <th className="py-2.5">Quantity / Lots</th>
+                    <th className="py-2.5">Type</th>
+                    <th className="py-2.5">Lots</th>
                     <th className="py-2.5">Avg Entry Price</th>
                     <th className="py-2.5">LTP Price</th>
                     <th className="py-2.5">Blocked Margin</th>
-                    <th className="py-2.5 text-right pr-2">Simulated P&L</th>
+                    <th className="py-2.5 text-right">Simulated P&L</th>
+                    <th className="py-2.5 text-right pr-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {futuresPositions.map(pos => {
-                    const lSize = pos.quantity / pos.lots;
                     const changePct = pos.avg_price > 0 ? (pos.unrealized_pnl / (pos.avg_price * pos.quantity)) * 100 : 0;
                     return (
-                      <tr key={pos.underlying} className="border-b border-[var(--color-border)]/30 hover:bg-[var(--color-bg)]/20 transition-all">
+                      <tr key={pos.id} className="border-b border-[var(--color-border)]/30 hover:bg-[var(--color-bg)]/20 transition-all font-inter text-xs">
                         <td className="py-3 pl-2 font-cinzel font-bold text-[var(--color-text)]">
                           {pos.underlying} FUT
                         </td>
@@ -159,7 +159,7 @@ export default function FuturesDesk() {
                           </span>
                         </td>
                         <td className="py-3 font-mono font-semibold text-[var(--color-text-muted)]">
-                          {pos.lots} lot{pos.lots > 1 ? 's' : ''} ({pos.quantity} shares)
+                          {pos.lots}
                         </td>
                         <td className="py-3 font-mono text-[var(--color-text-muted)]">
                           ₹{pos.avg_price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -170,8 +170,24 @@ export default function FuturesDesk() {
                         <td className="py-3 font-mono text-[var(--color-text-muted)]">
                           ₹{pos.margin_required.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </td>
-                        <td className={`py-3 text-right pr-2 font-mono font-bold ${pos.unrealized_pnl >= 0 ? 'text-[var(--color-gain)]' : 'text-[var(--color-loss)]'}`}>
+                        <td className={`py-3 text-right font-mono font-bold ${pos.unrealized_pnl >= 0 ? 'text-[var(--color-gain)]' : 'text-[var(--color-loss)]'}`}>
                           {pos.unrealized_pnl >= 0 ? '+' : ''}₹{pos.unrealized_pnl.toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({changePct >= 0 ? '+' : ''}{changePct.toFixed(2)}%)
+                        </td>
+                        <td className="py-3 text-right pr-2">
+                          <button
+                            onClick={async () => {
+                              if (window.confirm(`Are you sure you want to square off your ${pos.underlying} Futures position?`)) {
+                                try {
+                                  await closePosition(pos.id, 'future');
+                                } catch (err) {
+                                  alert(err.message || "Failed to square off position");
+                                }
+                              }
+                            }}
+                            className="bg-[rgba(182,106,106,0.15)] hover:bg-[var(--color-loss)] hover:text-white border border-[var(--color-loss)]/30 text-[var(--color-loss)] px-2.5 py-1 rounded-[3px] text-[10px] font-bold uppercase transition-all cursor-pointer"
+                          >
+                            Square Off
+                          </button>
                         </td>
                       </tr>
                     );

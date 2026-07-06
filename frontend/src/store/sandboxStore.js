@@ -11,19 +11,26 @@ import {
   getSandboxOptionsChain,
   getSandboxFuturesContracts,
   placeSandboxFutureOrder,
-  getSandboxFuturesPositions
+  getSandboxFuturesPositions,
+  getSandboxLeaderboard,
+  getSandboxStrategies,
+  runSandboxBacktest,
+  closeSandboxPosition
 } from '../services/sandbox.js';
 
 export const useSandboxStore = create((set, get) => ({
-  wallet: { balance: 0, initial_balance: 500000, portfolio_value: 0, total_pnl: 0, total_pnl_percent: 0, realized_pnl: 0 },
+  wallet: { balance: 0, initial_balance: 1000000, portfolio_value: 0, total_pnl: 0, total_pnl_percent: 0, realized_pnl: 0, blocked_margin: 0 },
   holdings: [],
   orders: [],
   optionPositions: [],
   futuresPositions: [],
   futuresContracts: [],
+  leaderboard: [],
+  strategies: [],
+  backtestResults: null,
   selectedTicker: null,
   selectedContract: null,
-  activeTab: 'equity', // "equity" | "options" | "futures"
+  activeTab: 'equity', // "equity" | "options" | "futures" | "strategies" | "leaderboard"
   isLoading: false,
   lastPriceUpdate: null,
   
@@ -158,6 +165,56 @@ export const useSandboxStore = create((set, get) => ({
         await get().actions.loadOrders();
       } catch (e) {
         console.error("Failed to reset sandbox", e);
+      } finally {
+        set({ isLoading: false });
+      }
+    },
+
+    loadLeaderboard: async () => {
+      try {
+        const data = await getSandboxLeaderboard();
+        set({ leaderboard: data });
+      } catch (e) {
+        console.error("Failed to load leaderboard", e);
+      }
+    },
+
+    loadStrategies: async () => {
+      try {
+        const data = await getSandboxStrategies();
+        set({ strategies: data });
+      } catch (e) {
+        console.error("Failed to load strategies", e);
+      }
+    },
+
+    runBacktest: async (strategyName, symbol, parameters) => {
+      set({ isLoading: true });
+      try {
+        const data = await runSandboxBacktest(strategyName, symbol, parameters);
+        set({ backtestResults: data });
+        return data;
+      } catch (e) {
+        console.error("Backtest failed", e);
+        throw e;
+      } finally {
+        set({ isLoading: false });
+      }
+    },
+
+    closePosition: async (tradeId, type) => {
+      set({ isLoading: true });
+      try {
+        const data = await closeSandboxPosition(tradeId);
+        await get().actions.loadWallet();
+        if (type === 'equity') await get().actions.loadHoldings();
+        if (type === 'option') await get().actions.loadOptionPositions();
+        if (type === 'future') await get().actions.loadFuturesPositions();
+        await get().actions.loadOrders();
+        return data;
+      } catch (e) {
+        console.error("Close position failed", e);
+        throw e;
       } finally {
         set({ isLoading: false });
       }

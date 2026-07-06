@@ -14,7 +14,7 @@ const INDEX_TICKERS = {
 
 export default function OptionsDesk() {
   const { optionPositions, isLoading } = useSandboxStore();
-  const { loadOptionChain, placeOptionOrder, loadOptionPositions } = useSandboxStore(state => state.actions);
+  const { loadOptionChain, placeOptionOrder, loadOptionPositions, closePosition } = useSandboxStore(state => state.actions);
   
   const [underlying, setUnderlying] = useState('NIFTY');
   const [expiry, setExpiry] = useState('2026-07-30'); // Simulated standard monthly expiry
@@ -216,10 +216,11 @@ export default function OptionsDesk() {
                 <thead>
                   <tr className="border-b border-[var(--color-border)]/50 pb-2 text-[var(--color-text-faint)] font-bold uppercase tracking-wider">
                     <th className="py-2.5 pl-2">Contract</th>
-                    <th className="py-2.5">Lots Held</th>
+                    <th className="py-2.5">Lots</th>
                     <th className="py-2.5">Avg Premium</th>
                     <th className="py-2.5">LTP Premium</th>
-                    <th className="py-2.5 text-right pr-2">Simulated P&L</th>
+                    <th className="py-2.5 text-right">Simulated P&L</th>
+                    <th className="py-2.5 text-right pr-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -233,7 +234,7 @@ export default function OptionsDesk() {
                           {pos.underlying} {pos.strike_price} {pos.option_type} ({pos.expiry_date})
                         </td>
                         <td className="py-3 font-mono font-semibold text-[var(--color-text-muted)]">
-                          {pos.lots_held} lot{pos.lots_held > 1 ? 's' : ''} ({pos.lots_held * lSize} shares)
+                          {pos.lots_held}
                         </td>
                         <td className="py-3 font-mono text-[var(--color-text-muted)]">
                           ₹{parseFloat(pos.avg_premium).toFixed(2)}
@@ -241,8 +242,24 @@ export default function OptionsDesk() {
                         <td className="py-3 font-mono text-[var(--color-text-muted)]">
                           ₹{parseFloat(pos.current_premium || pos.avg_premium).toFixed(2)}
                         </td>
-                        <td className={`py-3 text-right pr-2 font-mono font-bold ${pos.unrealized_pnl >= 0 ? 'text-[var(--color-gain)]' : 'text-[var(--color-loss)]'}`}>
+                        <td className={`py-3 text-right font-mono font-bold ${pos.unrealized_pnl >= 0 ? 'text-[var(--color-gain)]' : 'text-[var(--color-loss)]'}`}>
                           {pos.unrealized_pnl >= 0 ? '+' : ''}₹{pos.unrealized_pnl.toFixed(2)} ({changePct >= 0 ? '+' : ''}{changePct.toFixed(2)}%)
+                        </td>
+                        <td className="py-3 text-right pr-2">
+                          <button
+                            onClick={async () => {
+                              if (window.confirm(`Are you sure you want to square off ${pos.underlying} ${pos.strike_price} ${pos.option_type}?`)) {
+                                try {
+                                  await closePosition(pos.id, 'option');
+                                } catch (err) {
+                                  alert(err.message || "Failed to square off position");
+                                }
+                              }
+                            }}
+                            className="bg-[rgba(182,106,106,0.15)] hover:bg-[var(--color-loss)] hover:text-white border border-[var(--color-loss)]/30 text-[var(--color-loss)] px-2.5 py-1 rounded-[3px] text-[10px] font-bold uppercase transition-all cursor-pointer"
+                          >
+                            Square Off
+                          </button>
                         </td>
                       </tr>
                     );

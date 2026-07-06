@@ -10,7 +10,7 @@ const POPULAR_TICKERS = ["RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SB
 
 export default function EquityDesk() {
   const { holdings, isLoading } = useSandboxStore();
-  const { loadHoldings, loadOrders, placeEquityOrder } = useSandboxStore(state => state.actions);
+  const { loadHoldings, loadOrders, placeEquityOrder, closePosition } = useSandboxStore(state => state.actions);
   
   const [ticker, setTicker] = useState('RELIANCE');
   const [qty, setQty] = useState(10);
@@ -171,7 +171,8 @@ export default function EquityDesk() {
                     <th className="py-2.5">Qty</th>
                     <th className="py-2.5">Avg Buy Price</th>
                     <th className="py-2.5">LTP</th>
-                    <th className="py-2.5 text-right pr-2">Simulated P&L</th>
+                    <th className="py-2.5 text-right">Simulated P&L</th>
+                    <th className="py-2.5 text-right pr-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -192,8 +193,24 @@ export default function EquityDesk() {
                         <td className="py-3 font-mono text-[var(--color-text-muted)]">
                           ₹{parseFloat(h.current_price || h.avg_buy_price).toFixed(2)}
                         </td>
-                        <td className={`py-3 text-right pr-2 font-mono font-bold ${h.unrealized_pnl >= 0 ? 'text-[var(--color-gain)]' : 'text-[var(--color-loss)]'}`}>
+                        <td className={`py-3 text-right font-mono font-bold ${h.unrealized_pnl >= 0 ? 'text-[var(--color-gain)]' : 'text-[var(--color-loss)]'}`}>
                           {h.unrealized_pnl >= 0 ? '+' : ''}₹{h.unrealized_pnl.toFixed(2)} ({changePct >= 0 ? '+' : ''}{changePct.toFixed(2)}%)
+                        </td>
+                        <td className="py-3 text-right pr-2">
+                          <button
+                            onClick={async () => {
+                              if (window.confirm(`Are you sure you want to square off ${h.ticker}?`)) {
+                                try {
+                                  await closePosition(h.id, 'equity');
+                                } catch (err) {
+                                  alert(err.message || "Failed to square off position");
+                                }
+                              }
+                            }}
+                            className="bg-[rgba(182,106,106,0.15)] hover:bg-[var(--color-loss)] hover:text-white border border-[var(--color-loss)]/30 text-[var(--color-loss)] px-2.5 py-1 rounded-[3px] text-[10px] font-bold uppercase transition-all cursor-pointer"
+                          >
+                            Square Off
+                          </button>
                         </td>
                       </tr>
                     );

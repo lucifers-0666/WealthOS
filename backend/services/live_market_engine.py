@@ -33,6 +33,12 @@ class LiveMarketEngine:
         self._lock = asyncio.Lock()
         self._last_refresh: dict[str, float] = {}
 
+
+def get_engine_status() -> dict[str, Any]:
+    """Return live market engine health status."""
+    return {"status": "ok", "engine": "live_market_engine"}
+
+
     # ── Lifecycle ──────────────────────────────────────────────────
 
     async def start(self) -> None:

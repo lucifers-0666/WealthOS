@@ -61,6 +61,7 @@ from backend.services.live_market_engine import LiveMarketEngine  # type: ignore
 from api.sandbox_routes import router as sandbox_router
 from api.signals import router as signals_router
 from api.broker import router as broker_router
+from backend.health import router as health_router
 
 live_market_engine = LiveMarketEngine()
 
@@ -80,6 +81,7 @@ async def _start_live_market_engine():
 app.include_router(sandbox_router)
 app.include_router(signals_router, tags=["Signals"])
 app.include_router(broker_router, tags=["Broker"])
+app.include_router(health_router)
 
 
 @app.on_event("shutdown")
@@ -125,11 +127,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # ── Auth helper ────────────────────────────────────────────────
-from api.auth import get_current_user
+from api.auth import get_current_user, get_user_id
 
-
-def get_user_id(current_user: dict = Depends(get_current_user)) -> str:
-    return current_user["id"]
 
 
 # ── Pydantic Models ─────────────────────────────────────────────

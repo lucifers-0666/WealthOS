@@ -6,7 +6,7 @@ chcp 65001 > $null
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 
 # Repository root
-$RepoRoot = "D:\wealthOS\WealthOS"
+$RepoRoot = $PSScriptRoot
 Set-Location -Path $RepoRoot
 
 Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
@@ -14,8 +14,12 @@ Write-Host " Starting WealthOS (development)" -ForegroundColor Cyan
 Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
 
 # Prefer .venv311 for PyTorch compatibility; fall back to .venv
-$PreferredVenv = "D:\wealthOS\.venv311"
-$FallbackVenv = "D:\wealthOS\.venv"
+$ParentDir = Split-Path -Parent $PSScriptRoot
+$PreferredVenv = Join-Path $ParentDir ".venv311"
+$FallbackVenv = Join-Path $ParentDir ".venv"
+if (-not (Test-Path "$FallbackVenv\Scripts\Activate.ps1")) {
+    $FallbackVenv = Join-Path $PSScriptRoot ".venv"
+}
 
 if (Test-Path "$PreferredVenv\Scripts\Activate.ps1") {
     $VenvActivate = "$PreferredVenv\Scripts\Activate.ps1"
@@ -42,6 +46,7 @@ if ($pyver -match "3\.13") {
 # Activate venv and install requirements quietly
 Write-Host "[1/6] Activating virtualenv: $VenvPath" -ForegroundColor Yellow
 . $VenvActivate
+$env:PYO3_USE_ABI3_FORWARD_COMPATIBILITY = "1"
 Write-Host "[2/6] Installing Python requirements..." -ForegroundColor Yellow
 pip install -r requirements.txt --quiet
 Write-Host "[2/6] Python dependencies checked." -ForegroundColor Green

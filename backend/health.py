@@ -50,7 +50,7 @@ async def deep_health_check():
 
     # ── Market engine check ────────────────────────────────────────────────────
     try:
-        from services.live_market_engine import get_engine_status
+        from backend.services.live_market_engine import get_engine_status
         engine_status = get_engine_status()
         checks["market_engine"] = engine_status
         if engine_status.get("status") == "error":
@@ -60,7 +60,7 @@ async def deep_health_check():
 
     # ── WebSocket broadcaster ──────────────────────────────────────────────────
     try:
-        from services.ws_broadcaster import get_connection_count
+        from backend.services.ws_broadcaster import get_connection_count
         checks["websocket"] = {"status": "ok", "active_connections": get_connection_count()}
     except Exception as e:
         checks["websocket"] = {"status": "unavailable", "detail": str(e)[:80]}

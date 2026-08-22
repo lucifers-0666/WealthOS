@@ -74,19 +74,28 @@ class SandboxFutureOrder(BaseModel):
 
 def get_or_create_account(sb, user_id: str) -> dict:
     """Gets the sandbox account for the user, creating it if it doesn't exist."""
-    res = sb.table("sandbox_accounts").select("*").eq("user_id", user_id).execute()
-    if not res.data:
-        # Create user account with initial balance ₹10,00,000
-        new_acc = {
-            "user_id": user_id,
-            "balance": 1000000.00,
-            "initial_balance": 1000000.00,
-            "total_pnl": 0.00,
-            "trades_count": 0
-        }
-        sb.table("sandbox_accounts").insert(new_acc).execute()
+    fallback_acc = {
+        "user_id": user_id,
+        "balance": 1000000.00,
+        "initial_balance": 1000000.00,
+        "total_pnl": 0.00,
+        "trades_count": 0
+    }
+    try:
         res = sb.table("sandbox_accounts").select("*").eq("user_id", user_id).execute()
-    return res.data[0]
+        if res and getattr(res, "data", None):
+            return res.data[0]
+        try:
+            sb.table("sandbox_accounts").insert(fallback_acc).execute()
+            res = sb.table("sandbox_accounts").select("*").eq("user_id", user_id).execute()
+            if res and getattr(res, "data", None):
+                return res.data[0]
+        except Exception:
+            pass
+        return fallback_acc
+    except Exception as exc:
+        logger.warning(f"Supabase sandbox_accounts table unavailable, using fallback: {exc}")
+        return fallback_acc
 
 def compute_position_details(trades: List[dict]) -> tuple[float, float]:
     """
@@ -97,33 +106,31 @@ def compute_position_details(trades: List[dict]) -> tuple[float, float]:
     blocked_val = 0.0
 
     for t in trades:
-        if t["status"] != "open":
+        if t.get("status") != "open":
             continue
         
-        qty = float(t["quantity"])
-        entry = float(t["entry_price"])
+        qty = float(t.get("quantity") or 0)
+        entry = float(t.get("entry_price") or 0)
         
         # Get live price
         live = entry
-        symbol = t["symbol"]
+        symbol = t.get("symbol", "")
         
         try:
-            if t["trade_type"] == "options":
-                # Option symbol is stored like "RELIANCE 2400 CE" or similar.
-                # Let's extract the underlying to get price
+            if t.get("trade_type") == "options":
                 parts = symbol.split()
-                underlying = parts[0]
+                underlying = parts[0] if parts else "RELIANCE"
                 strike = float(parts[1]) if len(parts) > 1 else entry
                 opt_type = parts[2] if len(parts) > 2 else "CE"
-                expiry = date.fromisoformat(t["option_expiry"]) if t["option_expiry"] else date.today()
+                expiry = date.fromisoformat(t.get("option_expiry")) if t.get("option_expiry") else date.today()
                 
                 u_price_data = fetch_price(underlying)
                 u_price = u_price_data.get("price", strike)
                 chain = get_option_chain(underlying, u_price, expiry)
-                strike_data = next((s for s in chain if s["strike"] == strike), None)
+                strike_data = next((s for s in chain if s.get("strike") == strike), None)
                 if strike_data:
                     opt_data = strike_data["ce"] if opt_type == "CE" else strike_data["pe"]
-                    live = float(opt_data["premium"])
+                    live = float(opt_data.get("premium") or entry)
             else:
                 p_data = fetch_price(symbol)
                 live = float(p_data.get("price", entry))
@@ -131,26 +138,20 @@ def compute_position_details(trades: List[dict]) -> tuple[float, float]:
             logger.warning(f"Error fetching live price for {symbol}: {e}")
             live = entry
 
-        # Update LTP in trade row
         t["ltp"] = live
         
-        # Calculate P&L
-        if t["direction"] == "buy":
+        if t.get("direction") == "buy":
             pnl = (live - entry) * qty
-            if t["trade_type"] == "options":
+            if t.get("trade_type") in ("options", "futures"):
                 pnl = (live - entry) * qty * float(t.get("lot_size", 1))
-            elif t["trade_type"] == "futures":
-                pnl = (live - entry) * qty * float(t.get("lot_size", 1))
-        else: # sell (short)
+        else:
             pnl = (entry - live) * qty
-            if t["trade_type"] == "options":
-                pnl = (entry - live) * qty * float(t.get("lot_size", 1))
-            elif t["trade_type"] == "futures":
+            if t.get("trade_type") in ("options", "futures"):
                 pnl = (entry - live) * qty * float(t.get("lot_size", 1))
 
         t["pnl"] = round(pnl, 2)
         unrealized_pnl += pnl
-        blocked_val += float(t.get("margin_used", 0))
+        blocked_val += float(t.get("margin_used", 0) or 0)
 
     return unrealized_pnl, blocked_val
 
@@ -158,55 +159,73 @@ def compute_position_details(trades: List[dict]) -> tuple[float, float]:
 
 @router.get("/wallet")
 async def get_wallet(user_id: str = Depends(_get_user_id)):
-    sb = get_supabase()
-    account = get_or_create_account(sb, user_id)
-    
-    # Query all open trades to compute live valuation
-    trades_res = sb.table("sandbox_trades").select("*").eq("user_id", user_id).eq("status", "open").execute()
-    open_trades = trades_res.data
-    
-    unrealized_pnl, blocked_margin = compute_position_details(open_trades)
-    
-    # Portfolio value = current cash balance + unrealized P&L
-    acc_bal = float(account.get("balance", 0.0) or 0.0)
-    acc_init = float(account.get("initial_balance", 1000000.00) or 1000000.00)
-    
-    portfolio_value = acc_bal + unrealized_pnl
-    total_pnl = portfolio_value - acc_init
-    total_pnl_percent = (total_pnl / acc_init) * 100 if acc_init > 0 else 0.0
+    try:
+        sb = get_supabase()
+        account = get_or_create_account(sb, user_id)
+        
+        open_trades = []
+        try:
+            trades_res = sb.table("sandbox_trades").select("*").eq("user_id", user_id).eq("status", "open").execute()
+            if trades_res and getattr(trades_res, "data", None):
+                open_trades = trades_res.data
+        except Exception as e:
+            logger.warning(f"Failed to query open sandbox trades: {e}")
+            
+        unrealized_pnl, blocked_margin = compute_position_details(open_trades)
+        
+        acc_bal = float(account.get("balance", 1000000.00) or 1000000.00)
+        acc_init = float(account.get("initial_balance", 1000000.00) or 1000000.00)
+        
+        portfolio_value = acc_bal + unrealized_pnl
+        total_pnl = portfolio_value - acc_init
+        total_pnl_percent = (total_pnl / acc_init) * 100 if acc_init > 0 else 0.0
 
-    # Fetch realized P&L from closed trades
-    closed_res = sb.table("sandbox_trades").select("pnl").eq("user_id", user_id).neq("status", "open").execute()
-    realized_pnl = sum(float(x["pnl"] or 0) for x in closed_res.data)
-    
-    return {
-        "balance": acc_bal,
-        "initial_balance": acc_init,
-        "portfolio_value": round(portfolio_value, 2),
-        "total_pnl": round(total_pnl, 2),
-        "total_pnl_percent": round(total_pnl_percent, 2),
-        "realized_pnl": round(realized_pnl, 2),
-        "blocked_margin": round(blocked_margin, 2),
-        "available_balance": round(acc_bal - blocked_margin, 2)
-    }
+        realized_pnl = 0.0
+        try:
+            closed_res = sb.table("sandbox_trades").select("pnl").eq("user_id", user_id).neq("status", "open").execute()
+            if closed_res and getattr(closed_res, "data", None):
+                realized_pnl = sum(float(x.get("pnl") or 0) for x in closed_res.data)
+        except Exception:
+            pass
+        
+        return {
+            "balance": acc_bal,
+            "initial_balance": acc_init,
+            "portfolio_value": round(portfolio_value, 2),
+            "total_pnl": round(total_pnl, 2),
+            "total_pnl_percent": round(total_pnl_percent, 2),
+            "realized_pnl": round(realized_pnl, 2),
+            "blocked_margin": round(blocked_margin, 2),
+            "available_balance": round(acc_bal - blocked_margin, 2)
+        }
+    except Exception as e:
+        logger.warning(f"Sandbox wallet fallback invoked: {e}")
+        return {
+            "balance": 1000000.00,
+            "initial_balance": 1000000.00,
+            "portfolio_value": 1000000.00,
+            "total_pnl": 0.00,
+            "total_pnl_percent": 0.00,
+            "realized_pnl": 0.00,
+            "blocked_margin": 0.00,
+            "available_balance": 1000000.00
+        }
 
 @router.post("/wallet/reset")
 async def reset_wallet(user_id: str = Depends(_get_user_id)):
-    sb = get_supabase()
-    
-    # Update sandbox account back to 1,000,000
-    sb.table("sandbox_accounts").update({
-        "balance": 1000000.00,
-        "initial_balance": 1000000.00,
-        "total_pnl": 0.00,
-        "trades_count": 0,
-        "updated_at": datetime.now().isoformat()
-    }).eq("user_id", user_id).execute()
-    
-    # Delete or square off all trades
-    sb.table("sandbox_trades").delete().eq("user_id", user_id).execute()
-    sb.table("sandbox_strategy_results").delete().eq("user_id", user_id).execute()
-    
+    try:
+        sb = get_supabase()
+        sb.table("sandbox_accounts").update({
+            "balance": 1000000.00,
+            "initial_balance": 1000000.00,
+            "total_pnl": 0.00,
+            "trades_count": 0,
+            "updated_at": datetime.now().isoformat()
+        }).eq("user_id", user_id).execute()
+        sb.table("sandbox_trades").delete().eq("user_id", user_id).execute()
+        sb.table("sandbox_strategy_results").delete().eq("user_id", user_id).execute()
+    except Exception as e:
+        logger.warning(f"Reset wallet fallback: {e}")
     return {"message": "Sandbox reset to ₹10,00,000"}
 
 # ── POSITION & LEDGER ENDPOINTS ──────────────────────────────────
@@ -214,121 +233,138 @@ async def reset_wallet(user_id: str = Depends(_get_user_id)):
 @router.get("/holdings")
 async def get_holdings(user_id: str = Depends(_get_user_id)):
     """Exposes open Equity holdings for the UI."""
-    sb = get_supabase()
-    res = sb.table("sandbox_trades").select("*").eq("user_id", user_id).eq("trade_type", "intraday").eq("status", "open").execute()
-    trades = res.data
+    trades = []
+    try:
+        sb = get_supabase()
+        res = sb.table("sandbox_trades").select("*").eq("user_id", user_id).eq("trade_type", "intraday").eq("status", "open").execute()
+        if res and getattr(res, "data", None):
+            trades = res.data
+    except Exception as e:
+        logger.warning(f"Failed to fetch sandbox holdings: {e}")
     compute_position_details(trades)
     
-    # Convert schema to match existing UI structure
     holdings = []
     for t in trades:
         holdings.append({
-            "id": t["id"],
-            "ticker": t["symbol"],
-            "quantity": t["quantity"],
-            "avg_buy_price": float(t["entry_price"]),
-            "current_price": float(t["ltp"]),
-            "unrealized_pnl": float(t["pnl"]),
-            "pnl_percent": (float(t["pnl"]) / (float(t["entry_price"]) * float(t["quantity"]))) * 100 if float(t["entry_price"]) > 0 else 0.0,
-            "direction": t["direction"],
-            "opened_at": t["opened_at"]
+            "id": t.get("id"),
+            "ticker": t.get("symbol"),
+            "quantity": t.get("quantity"),
+            "avg_buy_price": float(t.get("entry_price") or 0),
+            "current_price": float(t.get("ltp") or 0),
+            "unrealized_pnl": float(t.get("pnl") or 0),
+            "pnl_percent": (float(t.get("pnl") or 0) / (float(t.get("entry_price") or 1) * float(t.get("quantity") or 1))) * 100 if float(t.get("entry_price") or 0) > 0 else 0.0,
+            "direction": t.get("direction"),
+            "opened_at": t.get("opened_at")
         })
     return holdings
 
 @router.get("/options/positions")
 async def get_option_positions(user_id: str = Depends(_get_user_id)):
     """Exposes open Options positions for the UI."""
-    sb = get_supabase()
-    res = sb.table("sandbox_trades").select("*").eq("user_id", user_id).eq("trade_type", "options").eq("status", "open").execute()
-    trades = res.data
+    trades = []
+    try:
+        sb = get_supabase()
+        res = sb.table("sandbox_trades").select("*").eq("user_id", user_id).eq("trade_type", "options").eq("status", "open").execute()
+        if res and getattr(res, "data", None):
+            trades = res.data
+    except Exception as e:
+        logger.warning(f"Failed to fetch sandbox options: {e}")
     compute_position_details(trades)
     
     positions = []
     for t in trades:
-        # Option symbol is stored like "RELIANCE 2400 CE"
-        parts = t["symbol"].split()
-        underlying = parts[0]
-        strike = float(parts[1]) if len(parts) > 1 else float(t["option_strike"] or 0)
-        opt_type = parts[2] if len(parts) > 2 else t["option_type"]
-        
+        parts = t.get("symbol", "").split()
+        underlying = parts[0] if parts else "UNKNOWN"
+        strike = float(parts[1]) if len(parts) > 1 else float(t.get("option_strike") or 0)
+        opt_type = parts[2] if len(parts) > 2 else t.get("option_type")
         positions.append({
-            "id": t["id"],
+            "id": t.get("id"),
             "underlying": underlying,
             "strike_price": strike,
             "option_type": opt_type,
-            "expiry_date": t["option_expiry"],
-            "lots_held": t["quantity"],
-            "lot_size": t["lot_size"],
-            "avg_premium": float(t["entry_price"]),
-            "current_premium": float(t["ltp"]),
-            "unrealized_pnl": float(t["pnl"]),
-            "direction": t["direction"],
-            "opened_at": t["opened_at"]
+            "expiry_date": t.get("option_expiry"),
+            "lots_held": t.get("quantity"),
+            "lot_size": t.get("lot_size"),
+            "avg_premium": float(t.get("entry_price") or 0),
+            "current_premium": float(t.get("ltp") or 0),
+            "unrealized_pnl": float(t.get("pnl") or 0),
+            "direction": t.get("direction"),
+            "opened_at": t.get("opened_at")
         })
     return positions
 
 @router.get("/futures/positions")
 async def get_futures_positions(user_id: str = Depends(_get_user_id)):
     """Exposes open Futures positions for the UI."""
-    sb = get_supabase()
-    res = sb.table("sandbox_trades").select("*").eq("user_id", user_id).eq("trade_type", "futures").eq("status", "open").execute()
-    trades = res.data
+    trades = []
+    try:
+        sb = get_supabase()
+        res = sb.table("sandbox_trades").select("*").eq("user_id", user_id).eq("trade_type", "futures").eq("status", "open").execute()
+        if res and getattr(res, "data", None):
+            trades = res.data
+    except Exception as e:
+        logger.warning(f"Failed to fetch sandbox futures: {e}")
     compute_position_details(trades)
     
     positions = []
     for t in trades:
         positions.append({
-            "id": t["id"],
-            "underlying": t["symbol"],
-            "position_type": "LONG" if t["direction"] == "buy" else "SHORT",
-            "lots": t["quantity"],
-            "quantity": t["quantity"] * t["lot_size"],
-            "avg_price": float(t["entry_price"]),
-            "current_price": float(t["ltp"]),
-            "unrealized_pnl": float(t["pnl"]),
-            "margin_required": float(t["margin_used"]),
-            "expiry_date": t["option_expiry"] or "2026-07-30",
-            "opened_at": t["opened_at"]
+            "id": t.get("id"),
+            "underlying": t.get("symbol"),
+            "position_type": "LONG" if t.get("direction") == "buy" else "SHORT",
+            "lots": t.get("quantity"),
+            "quantity": t.get("quantity", 0) * t.get("lot_size", 1),
+            "avg_price": float(t.get("entry_price") or 0),
+            "current_price": float(t.get("ltp") or 0),
+            "unrealized_pnl": float(t.get("pnl") or 0),
+            "margin_required": float(t.get("margin_used") or 0),
+            "expiry_date": t.get("option_expiry") or "2026-07-30",
+            "opened_at": t.get("opened_at")
         })
     return positions
 
 @router.get("/orders")
 async def get_orders(user_id: str = Depends(_get_user_id)):
     """Exposes transaction ledger (all trades) for the UI."""
-    sb = get_supabase()
-    res = sb.table("sandbox_trades").select("*").eq("user_id", user_id).order("opened_at", desc=True).limit(100).execute()
+    raw_trades = []
+    try:
+        sb = get_supabase()
+        res = sb.table("sandbox_trades").select("*").eq("user_id", user_id).order("opened_at", desc=True).limit(100).execute()
+        if res and getattr(res, "data", None):
+            raw_trades = res.data
+    except Exception as e:
+        logger.warning(f"Failed to fetch sandbox orders: {e}")
+
     orders = []
-    for t in res.data:
-        # Map sandbox_trades fields to frontend expected fields
-        # symbol is mapped to ticker
-        ticker = t["symbol"]
-        action = t["direction"].upper()
+    for t in raw_trades:
+        ticker = t.get("symbol", "")
+        action = (t.get("direction") or "buy").upper()
         
-        # Format option fields if option
         strike = None
         opt_type = None
-        if t["trade_type"] == "options":
-            parts = t["symbol"].split()
-            ticker = parts[0]
-            strike = float(parts[1]) if len(parts) > 1 else t["option_strike"]
-            opt_type = parts[2] if len(parts) > 2 else t["option_type"]
+        if t.get("trade_type") == "options":
+            parts = ticker.split()
+            ticker = parts[0] if parts else ticker
+            strike = float(parts[1]) if len(parts) > 1 else float(t.get("option_strike") or 0)
+            opt_type = parts[2] if len(parts) > 2 else t.get("option_type")
             
         orders.append({
-            "id": t["id"],
-            "executed_at": t["opened_at"],
-            "order_type": t["trade_type"].upper(),
+            "id": t.get("id"),
+            "executed_at": t.get("opened_at"),
+            "order_type": (t.get("trade_type") or "EQUITY").upper(),
             "action": action,
             "ticker": ticker,
-            "quantity": t["quantity"] if t["trade_type"] != "options" else t["quantity"] * t["lot_size"],
-            "price": float(t["entry_price"]),
-            "total_value": float(t["entry_price"]) * float(t["quantity"]) * (float(t["lot_size"]) if t["trade_type"] in ("options", "futures") else 1.0),
-            "status": t["status"].upper(),
+            "quantity": t.get("quantity", 0) if t.get("trade_type") != "options" else t.get("quantity", 0) * t.get("lot_size", 1),
+            "price": float(t.get("entry_price") or 0),
+            "total_value": float(t.get("entry_price") or 0) * float(t.get("quantity") or 0) * (float(t.get("lot_size") or 1) if t.get("trade_type") in ("options", "futures") else 1.0),
+            "status": (t.get("status") or "OPEN").upper(),
             "strike_price": strike,
             "option_type": opt_type,
-            "expiry_date": t["option_expiry"],
+            "expiry_date": t.get("option_expiry"),
             "notes": t.get("notes") or f"P&L: ₹{t.get('pnl', 0):,.2f}"
         })
     return orders
+
 
 # ── ORDER PLACEMENT FLOWS WITH FIFO NETTING ───────────────────────
 

@@ -9,6 +9,7 @@ uvicorn[standard]>=0.29.0
 python-multipart>=0.0.9
 starlette>=0.36.0,<0.42.0
 streamlit>=1.40.0
+slowapi>=0.1.9
 
 # Database
 supabase>=2.4.0
@@ -43,6 +44,6 @@ anyio>=3.6.0,<5.0.0
 apscheduler>=3.10.4
 
 # Sandbox Trading Strategy Lab
-datasets==2.20.0
-huggingface-hub==0.23.4
-ta==0.11.0
+datasets>=2.20.0
+huggingface-hub>=0.23.4
+ta>=0.11.0

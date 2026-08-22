@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 import pandas as pd
 import yfinance as yf
 
-from api import get_user_id
+from api.auth import get_user_id
 from database import get_holdings, get_watchlist
 
 logger = logging.getLogger("wealthos-signals")

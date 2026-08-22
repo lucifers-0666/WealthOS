@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 import requests
 
-from api import get_user_id
+from api.auth import get_user_id
 from database import bulk_upsert_holdings
 
 logger = logging.getLogger("wealthos-broker")

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/useAuth.js';
+import { request } from '../lib/api.js';
 import {
   Terminal,
   ChartPie,
@@ -14,7 +15,9 @@ import {
   MagnifyingGlass,
   SquaresFour,
   Bell,
-  Sword
+  Sword,
+  List,
+  X
 } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Fuse from 'fuse.js';
@@ -73,11 +76,8 @@ const NavItem = ({ to, icon: Icon, label }) => (
 );
 
 export default function Layout() {
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [paletteQuery, setPaletteQuery] = useState('');
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [topSearch, setTopSearch] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [paletteIndex, setPaletteIndex] = useState(0);
   const paletteInputRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -87,23 +87,9 @@ export default function Layout() {
   const path = location.pathname;
   const [title, sub] = titles[path] || ['Command Center', 'Portfolio intelligence cockpit'];
 
-  // Command palette logic...
-  const commandItems = useMemo(() => {
-    return NAV.map((item) => ({
-      id: item.to,
-      label: item.label,
-      description: `Navigate to ${item.label.toLowerCase()}`,
-      keywords: [item.label, item.group, item.to],
-      action: () => navigate(item.to),
-    }));
-  }, [navigate]);
-
-  const fuse = useMemo(() => new Fuse(commandItems, { keys: ['label', 'description', 'keywords'], threshold: 0.35 }), [commandItems]);
-
-  const commandResults = useMemo(() => {
-    const query = paletteQuery.trim();
-    return !query ? commandItems.slice(0, 8) : fuse.search(query).slice(0, 7).map((result) => result.item);
-  }, [commandItems, fuse, paletteQuery]);
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [path]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -118,8 +104,13 @@ export default function Layout() {
 
   return (
     <div className="layout-shell app-shell">
+      {/* Mobile Drawer Backdrop */}
+      {mobileOpen && (
+        <div className="mobile-sidebar-backdrop" onClick={() => setMobileOpen(false)} />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside className="layout-sidebar" style={{
+      <aside className={`layout-sidebar ${mobileOpen ? 'mobile-open' : ''}`} style={{
         background: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border-default)',
         position: 'relative',
@@ -128,20 +119,15 @@ export default function Layout() {
       }}>
         {/* Top block (88px height) */}
         <div style={{ height: 88, paddingTop: 16, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {/* Logo: SVG owl-in-laurel-wreath mark, 28px × 28px */}
+          {/* Logo */}
           <div style={{ width: 28, height: 28, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.2">
-              {/* Owl body & head */}
               <path d="M14 6c-2.5 0-4.5 1.5-4.5 4.5 0 .5.1 1.2.3 1.7-.5.5-.8 1.2-.8 2 0 2 1.5 3.8 3.5 3.8h3c2 0 3.5-1.8 3.5-3.8 0-.8-.3-1.5-.8-2 .2-.5.3-1.2.3-1.7 0-3-2-4.5-4.5-4.5z" />
-              {/* Eyes */}
               <circle cx="11.5" cy="10.5" r="1.2" fill="currentColor" />
               <circle cx="16.5" cy="10.5" r="1.2" fill="currentColor" />
-              {/* Beak */}
               <polygon points="14,11.5 13,13 15,13" fill="currentColor" />
-              {/* Wreath left */}
               <path d="M7 8c-2.5 3-2.5 7.5 0 11.5c2 3.5 5 4.5 7 4.5" />
               <path d="M5.5 11l1.5.5M4 14.5l2 .5M5 18l1.5.2" />
-              {/* Wreath right */}
               <path d="M21 8c2.5 3 2.5 7.5 0 11.5c-2 3.5-5 4.5-7 4.5" />
               <path d="M22.5 11l-1.5.5M24 14.5l-2 .5M23 18l-1.5.2" />
             </svg>
@@ -182,18 +168,27 @@ export default function Layout() {
         {/* ── Topbar ── */}
         <header className="layout-topbar bg-[var(--color-surface)] h-[48px] min-h-[48px] max-h-[48px] border-b border-[var(--color-border)] px-[20px] pl-[24px] flex items-center justify-between">
           {/* Left zone */}
-          <div className="flex flex-col justify-center gap-[3px]">
-            <div className="font-inter text-[9px] font-medium tracking-[0.16em] uppercase text-[var(--color-text-faint)] leading-none">
-              WEALTH INTELLIGENCE
-            </div>
-            <div className="flex flex-row items-baseline">
-              <h1 className="font-cinzel text-[20px] font-bold text-[var(--color-text)] m-0 leading-none">{title}</h1>
-              <span className="font-inter text-[11px] font-normal text-[var(--color-text-faint)] ml-[12px] leading-none">{sub}</span>
+          <div className="flex items-center gap-[12px]">
+            <button 
+              className="mobile-hamburger-btn"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Toggle navigation menu"
+            >
+              {mobileOpen ? <X size={18} /> : <List size={18} />}
+            </button>
+            <div className="flex flex-col justify-center gap-[3px]">
+              <div className="font-inter text-[9px] font-medium tracking-[0.16em] uppercase text-[var(--color-text-faint)] leading-none">
+                WEALTH INTELLIGENCE
+              </div>
+              <div className="flex flex-row items-baseline">
+                <h1 className="font-cinzel text-[20px] font-bold text-[var(--color-text)] m-0 leading-none">{title}</h1>
+                <span className="font-inter text-[11px] font-normal text-[var(--color-text-faint)] ml-[12px] leading-none hide-mobile">{sub}</span>
+              </div>
             </div>
           </div>
 
           {/* Center zone */}
-          <div className="flex items-center gap-[8px] bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[3px] px-[10px] h-[30px] w-[320px] shrink-0 focus-within:border-[rgba(45,60,55,0.90)] transition-colors">
+          <div className="search-box-center flex items-center gap-[8px] bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[3px] px-[10px] h-[30px] w-[320px] shrink-0 focus-within:border-[rgba(45,60,55,0.90)] transition-colors">
             <MagnifyingGlass size={14} className="text-[var(--color-text-faint)] shrink-0" />
             <input
               ref={paletteInputRef}
@@ -247,7 +242,6 @@ function TickerBar() {
       try {
         const data = await request('GET', '/api/market/indices');
         if (Array.isArray(data) && data.length > 0) {
-          // Adjust labels/formats to match request
           const mapped = data.map(item => {
             if (item.label === 'INDIA VIX') return { ...item, label: 'USD/INR', price: 83.24, change_pct: -0.12 };
             if (item.label === 'BANK NIFTY') return { ...item, label: 'GOLD', price: 71200, change_pct: 1.20, isGold: true };
@@ -294,12 +288,6 @@ function TickerBar() {
             );
           })}
         </div>
-      </div>
-
-      <div className="ticker-status-wrapper" style={{ width: 180, borderLeft: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span className="nav-section-label" style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 500, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-          MARKETS OPEN 09:15 – 15:30
-        </span>
       </div>
     </div>
   );

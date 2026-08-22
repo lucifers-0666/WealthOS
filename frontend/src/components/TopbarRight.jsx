@@ -6,6 +6,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../lib/useAuth.js';
 import { supabase } from '../lib/auth.js';
+import MarketStatusBadge from './MarketStatusBadge.jsx';
+
 
 function useMarketStatus() {
   const [status, setStatus] = useState('closed')
@@ -114,27 +116,9 @@ export default function TopbarRight() {
         <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActivePanel(null)} />
       )}
         <div className="flex items-center relative z-50 gap-4" style={{ paddingRight: 20 }}>
-        {/* "MARKETS OPEN" pill */}
-        <span 
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '4px 10px',
-            background: 'var(--fill-gain)',
-            border: '1px solid var(--border-gain)',
-            borderRadius: '3px',
-            color: 'var(--status-gain)',
-            fontFamily: 'Inter, sans-serif',
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase'
-          }}
-        >
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--status-gain)', display: 'inline-block' }} />
-          MARKETS OPEN
-        </span>
+        {/* Dynamic Market Status Badge */}
+        <MarketStatusBadge />
+
 
         {/* Quick Launch */}
         <div className="relative flex items-center justify-center" style={{ width: 32, height: 32 }}>

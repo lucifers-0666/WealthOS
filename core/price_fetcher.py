@@ -68,6 +68,10 @@ def fetch_prices(symbols: list) -> dict:
     return result
 
 
+fetch_prices_bulk = fetch_prices
+
+
+
 @lru_cache(maxsize=32)
 def fetch_history(symbol: str, period: str = "1y") -> pd.DataFrame:
     """Fetch OHLCV history for a symbol."""

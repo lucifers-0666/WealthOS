@@ -1,6 +1,6 @@
 import os
 import logging
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Depends
 from database.supabase_client import get_supabase
 
 logger = logging.getLogger("wealthos.auth")
@@ -36,3 +36,8 @@ def get_current_user(authorization: str = Header(None)) -> dict:
     except Exception as e:
         logger.error(f"Authentication failed: {e}")
         raise HTTPException(status_code=401, detail="Invalid token or session expired")
+
+
+def get_user_id(current_user: dict = Depends(get_current_user)) -> str:
+    return current_user["id"]
+
